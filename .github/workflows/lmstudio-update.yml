@@ -1,0 +1,108 @@
+name: LM Studio Update
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/lmstudio-update.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    if: github.head_ref == 'ops/lmstudio-update'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          for i in 1 2 3 4 5; do
+            ssh-keyscan -T 5 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Update LM Studio headless stack
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          export HOME=/root
+          export PATH="/root/.lmstudio/bin:$PATH"
+          LMS=/root/.lmstudio/bin/lms
+
+          echo "=== BEFORE ==="
+          if [ -x "$LMS" ]; then
+            "$LMS" version --json || "$LMS" --version || true
+            "$LMS" daemon status --json || true
+            "$LMS" runtime ls || true
+          fi
+
+          echo "=== UPDATE HEADLESS LM STUDIO ==="
+          if [ -x "$LMS" ]; then
+            "$LMS" server stop >/dev/null 2>&1 || true
+            "$LMS" daemon down >/dev/null 2>&1 || true
+          fi
+
+          tmp=$(mktemp)
+          trap 'rm -f "$tmp"' EXIT
+          curl -fsSL https://lmstudio.ai/install.sh -o "$tmp"
+          bash "$tmp"
+          rm -f "$tmp"
+          trap - EXIT
+
+          export PATH="/root/.lmstudio/bin:$PATH"
+          LMS=/root/.lmstudio/bin/lms
+          test -x "$LMS"
+
+          echo "=== UPDATE DAEMON ==="
+          "$LMS" daemon down >/dev/null 2>&1 || true
+          "$LMS" daemon update || true
+          "$LMS" daemon up
+
+          echo "=== UPDATE LLAMA.CPP RUNTIME ==="
+          "$LMS" runtime update llama.cpp || "$LMS" runtime update --all || true
+
+          echo "=== START LOCAL API SERVER ==="
+          "$LMS" server stop >/dev/null 2>&1 || true
+          "$LMS" server start
+
+          echo "=== VERIFY ==="
+          "$LMS" version --json || "$LMS" --version || true
+          "$LMS" daemon status --json || true
+          "$LMS" runtime ls || true
+          "$LMS" ps || true
+          "$LMS" ls --llm || true
+
+          ok=0
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 5 http://127.0.0.1:1234/v1/models >/tmp/lms-models.json; then
+              ok=1; break
+            fi
+            sleep 1
+          done
+          test "$ok" = 1
+          python3 - /tmp/lms-models.json <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          print("api_models=", [m.get("id") for m in d.get("data",[])])
+          PY
+          rm -f /tmp/lms-models.json
+          echo LM_STUDIO_UPDATE_OK
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/key
