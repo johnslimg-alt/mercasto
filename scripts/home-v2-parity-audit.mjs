@@ -91,7 +91,9 @@ const FEATURES = [
   { id: 'adsense', group: 'Monetisation', label: 'Ad placements', legacy: [/<AdSenseBanner\b/], v2: [/<AdSenseBanner\b/] },
 
   // --- Publishing ---
-  { id: 'publish_cta', group: 'Publishing', label: 'Publish CTA / tab switch', legacy: [/setCurrentTab\('post'\)/], v2: [/setCurrentTab\('post'\)/] },
+  // V2 injects its handlers, so it calls them defensively (`setCurrentTab?.(...)`);
+  // the gate must recognise the capability, not one spelling of the call.
+  { id: 'publish_cta', group: 'Publishing', label: 'Publish CTA / tab switch', legacy: [/setCurrentTab(?:\?\.)?\('post'\)/], v2: [/setCurrentTab(?:\?\.)?\('post'\)/] },
   { id: 'how_it_works', group: 'Publishing', label: 'How Mercasto works', legacy: [/how_it_works/], v2: [/how_it_works/] },
 
   // --- Trust / discovery extras ---

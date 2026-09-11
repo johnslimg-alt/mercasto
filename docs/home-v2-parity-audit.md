@@ -1,6 +1,6 @@
 # Home V2 parity audit — Legacy vs V2
 
-Generated: 2026-09-11T00:50:29.999Z
+Generated: 2026-09-11T00:51:09.884Z
 
 - Legacy: `src/components/screens/HomeScreen.jsx` (1202 lines)
 - V2:     `src/components/screens/HomeScreenV2.jsx` (383 lines)
@@ -8,10 +8,10 @@ Generated: 2026-09-11T00:50:29.999Z
 ## Verdict
 
 - Features audited: **41**
-- V2 implemented: **26**
+- V2 implemented: **27**
 - V2 only: **1**
 - Intentionally removed: **0**
-- **MUST MIGRATE: 7**
+- **MUST MIGRATE: 6**
 - Legacy props not accepted by V2: **5**
 - App.jsx props not forwarded to V2: **7**
 - Home testids asserted by tests but absent in V2: **8**
@@ -50,7 +50,7 @@ Generated: 2026-09-11T00:50:29.999Z
 | Pricing modal opens | Monetisation | `setShowPricingModal` | `setShowPricingModal` | V2 implemented |
 | Promotion CTA | Monetisation | `promote_ad` | `promote_ad` | V2 implemented |
 | Ad placements | Monetisation | — | — | n/a |
-| Publish CTA / tab switch | Publishing | `setCurrentTab('post')` | — | MUST MIGRATE |
+| Publish CTA / tab switch | Publishing | `setCurrentTab('post')` | `setCurrentTab?.('post')` | V2 implemented |
 | How Mercasto works | Publishing | `how_it_works` | `how_it_works` | V2 implemented |
 | Popular searches / cities / newsletter | Content | `<PopularSearchesSection` | `<PopularSearchesSection` | V2 implemented |
 | Home toast feedback | Content | `home-toast` | `home-toast` | V2 implemented |
@@ -99,12 +99,6 @@ Generated: 2026-09-11T00:50:29.999Z
 
 - Group: Listings
 - Legacy evidence: `<RecommendationsWidget`
-- V2 evidence: none
-
-### Publish CTA / tab switch  `publish_cta`
-
-- Group: Publishing
-- Legacy evidence: `setCurrentTab('post')`
 - V2 evidence: none
 
 

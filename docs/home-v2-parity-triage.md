@@ -54,6 +54,30 @@ item `intentionally removed` requires an explicit owner decision recorded in the
 owner may choose to drop on the homepage (they exist elsewhere in the product):
 map block, AI recommendations, popular-searches/cities/newsletter band.
 
+## Corrected reading of two entries (verified in the legacy source)
+
+* **`dynamic_filters` is the automotive quick-filter row, not a generic
+  attribute panel.** The only use of `dynamicFilters` in `HomeScreen.jsx`
+  (line 856) builds `{ year: { min, max } }` for the automotive rail, and the
+  suite asserts `home-auto-year-filter`, `home-auto-price-filter` and
+  `home-auto-filter-row`. Migrating it means porting that row — not inventing a
+  dynamic-attribute engine on the homepage.
+* **`location_state` is genuinely at parity.** Legacy only ever calls
+  `setSelectedState` from the city grid (`applyCityFilter`); its
+  `home-open-filters` button merely does `setActiveCat(''); navigate('/listings')`.
+  V2 now selects the state the same way through its own city grid, so the item
+  is implemented rather than papered over. The richer state/city filter panel
+  with shareable URL is a §5 requirement, tracked separately from parity.
+
+## Gate fixes applied in this pass
+
+The gate must recognise a capability, not one spelling of it: V2 injects its
+handlers and therefore calls them defensively (`setCurrentTab?.(...)`), which
+the original pattern missed. The pattern now accepts both spellings — and the
+first attempt at that fix was itself wrong (it required a literal dot, which
+silently reclassified the legacy call as `V2 only`, hiding a real feature).
+Both sides are now quoted in the report so the change is visible in review.
+
 ## Planned batches
 
 1. **Wiring + correctness** — extend the V2 prop surface and `App.jsx`; replace
