@@ -271,6 +271,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user/payments', [PaymentController::class, 'getUserPayments']); // Список платежей (Пользователь)
     Route::get('/admin/payments', [PaymentController::class, 'getAdminPayments']); // Список платежей (Админ)
+    Route::get('/admin/payments/reconciliation', [PaymentController::class, 'getAdminPaymentReconciliation']); // Сверка платежей Clip (Админ)
     Route::get('/admin/coupons', [PaymentController::class, 'getCoupons']); // Список купонов (Админ)
     Route::post('/admin/coupons', [PaymentController::class, 'createCoupon']); // Создать купон (Админ)
     Route::delete('/admin/coupons/{id}', [PaymentController::class, 'deleteCoupon'])->whereNumber('id'); // Удалить купон (Админ)
