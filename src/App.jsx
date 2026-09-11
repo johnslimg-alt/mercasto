@@ -361,10 +361,9 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-  // The Home V2 route owns its own search box in the hero, so the shell drops the
-  // redundant header search entirely - desktop row and mobile row both - along with
-  // the category bar. Kept as one constant because cutover moves V2 from
-  // /design-v2 to / and only this line should change.
+  // The Home V2 route hides the category bar (its own rail replaces it). Kept as
+  // one constant because cutover moves V2 from /design-v2 to / and only this line
+  // should change. The header search stays: it is the only search on this route.
   const isHomeV2Route = location.pathname === '/design-v2';
   const { lang, setLang, loadedLangVersion, isDarkMode, setIsDarkMode } = useUI();
 
@@ -4268,7 +4267,6 @@ function App() {
         isAdminRoute={isAdminRoute}
         hideCategoryBar={isHomeV2Route}
         useCustomLanguageMenu={isHomeV2Route}
-        hideHeaderSearch={isHomeV2Route}
         isDarkMode={isDarkMode}
         isHeaderCategoryActive={isHeaderCategoryActive}
         lang={lang}

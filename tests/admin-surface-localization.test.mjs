@@ -116,12 +116,8 @@ test('admin route hides marketplace catalog search and category navigation', () 
   const header = fs.readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
   assert.ok(app.includes("const isAdminRoute = location.pathname.startsWith('/admin')"));
   assert.ok(app.includes('isAdminRoute={isAdminRoute}'));
-  assert.ok(header.includes('(isAdminRoute || hideHeaderSearch) ? "hidden" : "hidden min-w-0 flex-1 items-center lg:flex"'));
-  assert.ok(header.includes('(isAdminRoute || hideHeaderSearch) ? "hidden" : "mobile-search-row py-2.5 lg:hidden"'));
-  // Home V2 provides its own hero search, so the shell hides the redundant mobile
-  // row there; admin hiding must keep working independently of that flag.
-  assert.ok(app.includes('const isHomeV2Route = location.pathname ==='));
-  assert.ok(app.includes('hideHeaderSearch={isHomeV2Route}'));
+  assert.ok(header.includes('isAdminRoute ? "hidden" : "hidden min-w-0 flex-1 items-center lg:flex"'));
+  assert.ok(header.includes('isAdminRoute ? "hidden" : "mobile-search-row py-2.5 lg:hidden"'));
   // The shell hides the catalog bar on admin routes, and Home V2 asks for the
   // same via hideCategoryBar on /design-v2 - admin must stay hidden either way.
   assert.match(

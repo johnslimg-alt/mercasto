@@ -114,7 +114,7 @@ function AdRail({ items, renderAdCard, className = '', pending = false, skeleton
 export default function HomeScreenV2({
   activeCat, adsTotal, executeSearch, handleViewAd, lang, loadingAds, renderAdCard, serverAds,
   selectedState, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery,
-  setSelectedState, setShowPricingModal, searchLocationInput, searchQuery, user,
+  setSelectedState, setShowPricingModal, searchLocationInput, user,
   minPrice, maxPrice, setMinPrice, setMaxPrice,
   handleSaveSearchAlert, savingSearchAlert,
   realEstateAds, jobAds, serviceAds, automotiveAds, t,
@@ -263,12 +263,6 @@ export default function HomeScreenV2({
     hero: t.heroTitle,
   };
 
-  const submit = (event) => {
-    event?.preventDefault();
-    executeSearch?.(searchQuery, searchLocationInput, activeCat, {
-      minPrice, maxPrice, source:'design_v2',
-    });
-  };
 
   const reset = () => {
     setSearchQuery?.('');
@@ -312,23 +306,6 @@ export default function HomeScreenV2({
             )}
           </div>
 
-          <form onSubmit={submit} className="v2-search-form" data-testid="v2-search-form">
-            <Search className="v2-search-icon" size={20} />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery?.(e.target.value)}
-              placeholder={t.search_placeholder}
-              aria-label="Mercasto V2 search"
-            />
-            <button type="button" className={'v2-filter-button ' + (filtersOpen ? 'is-active' : '')}
-              data-testid="home-open-filters"
-              onClick={() => setFiltersOpen(v => { if (!v) events.filterOpened({ source: 'design_v2_filters' }); return !v; })} aria-expanded={filtersOpen} aria-label={t.filter}>
-              <SlidersHorizontal size={17} /><span>{t.filter}</span>
-            </button>
-            <button type="submit" className="v2-search-button" aria-label={t.search_btn}>
-              <Search size={16} /><span>{t.search_btn}</span>
-            </button>
-          </form>
 
           {filtersOpen && (
             <div className="v2-filter-panel" data-testid="v2-filter-panel">
@@ -347,6 +324,11 @@ export default function HomeScreenV2({
           )}
 
           <div className="v2-search-actions">
+            <button type="button" className={'v2-filter-button ' + (filtersOpen ? 'is-active' : '')}
+              data-testid="home-open-filters"
+              onClick={() => setFiltersOpen(v => { if (!v) events.filterOpened({ source: 'design_v2_filters' }); return !v; })} aria-expanded={filtersOpen} aria-label={t.filter}>
+              <SlidersHorizontal size={17} /><span>{t.filter}</span>
+            </button>
             <button type="button" onClick={() => handleSaveSearchAlert?.()} disabled={savingSearchAlert}>
               <Bookmark size={15} />
               {savingSearchAlert ? '…' : t.save_search}
