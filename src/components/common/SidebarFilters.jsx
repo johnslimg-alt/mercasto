@@ -18,7 +18,7 @@ function FilterAccordion({ title, children, defaultOpen = false, selectedCount =
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(value => !value)}
-        className="flex h-10 w-full items-center gap-2 px-3 text-left text-[12px] font-bold text-slate-800 transition-colors hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-800"
+        className="flex h-12 w-full items-center gap-2 px-3 text-left text-[12px] font-bold text-slate-800 transition-colors hover:bg-slate-50 xl:h-10 dark:text-slate-100 dark:hover:bg-slate-800"
       >
         <span className="min-w-0 flex-1 truncate">{title}</span>
         {selectedCount > 0 && <span className="rounded-full bg-[#84CC16]/15 px-2 py-0.5 text-[10px] font-black text-[#4D7C0F] dark:text-[#BEF264]">{selectedCount}</span>}
@@ -130,9 +130,9 @@ export default function SidebarFilters({
 
 
   const panelClass = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 shadow-sm dark:shadow-none';
-  const inputClass = 'h-10 w-full px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors';
-  const selectClass = 'h-10 w-full pl-3 pr-8 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] text-slate-700 dark:text-slate-100 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors cursor-pointer';
-  const labelClass = 'flex items-center gap-2.5 text-[12px] text-slate-700 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors';
+  const inputClass = 'h-12 w-full px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-[#84CC16] focus:bg-white xl:h-10 dark:focus:bg-slate-900 transition-colors';
+  const selectClass = 'h-12 w-full pl-3 pr-8 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] text-slate-700 dark:text-slate-100 outline-none focus:border-[#84CC16] focus:bg-white xl:h-10 dark:focus:bg-slate-900 transition-colors cursor-pointer';
+  const labelClass = 'flex min-h-12 items-center gap-2.5 text-[12px] text-slate-700 dark:text-slate-300 cursor-pointer hover:text-slate-900 xl:min-h-0 dark:hover:text-white transition-colors';
 
   // Get available cities for selected state
   const availableCities = selectedState && MEXICO_STATES_CITIES[selectedState]
@@ -149,7 +149,7 @@ export default function SidebarFilters({
             {activeCount > 0 && <p className="text-[10px] font-bold text-slate-400">{activeCount} {tr('filters') || tr('filter')}</p>}
           </div>
         </div>
-        <button type="button" data-testid="sidebar-clear-filters" onClick={clearAll} className="h-8 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-[#65A30D] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-[#BEF264]">
+        <button type="button" data-testid="sidebar-clear-filters" onClick={clearAll} className="h-12 shrink-0 rounded-lg px-3 text-[11px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-[#65A30D] xl:h-8 xl:px-2.5 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-[#BEF264]">
           {tr('clear_filters')}
         </button>
       </div>
@@ -184,7 +184,7 @@ export default function SidebarFilters({
             <div className="space-y-2">
               {['nuevo', 'usado', 'reacondicionado', 'para_piezas'].map(cond => (
                 <label key={cond} className={labelClass}>
-                  <input data-testid={`sidebar-filter-condition-${cond}`} type="checkbox" checked={conditionFilter.includes(cond)} onChange={() => setConditionFilter(prev => prev.includes(cond) ? prev.filter(value => value !== cond) : [...prev, cond])} className="h-4 w-4 rounded accent-[#84CC16]" />
+                  <input data-testid={`sidebar-filter-condition-${cond}`} type="checkbox" checked={conditionFilter.includes(cond)} onChange={() => setConditionFilter(prev => prev.includes(cond) ? prev.filter(value => value !== cond) : [...prev, cond])} className="h-5 w-5 shrink-0 rounded accent-[#84CC16] xl:h-4 xl:w-4" />
                   <span>{conditionLabels[cond] || cond}</span>
                 </label>
               ))}
@@ -206,7 +206,7 @@ export default function SidebarFilters({
                 <div className="max-h-[168px] space-y-2 overflow-y-auto pr-1 no-scrollbar">
                   {field.options.map(opt => (
                     <label key={opt.value} className={labelClass}>
-                      <input data-testid={`sidebar-filter-${field.id}-${opt.value}`} type="checkbox" checked={(Array.isArray(raw) ? raw : []).includes(opt.value)} onChange={() => handleDynamicToggle(field.id, opt.value)} className="h-4 w-4 rounded accent-[#84CC16]" />
+                      <input data-testid={`sidebar-filter-${field.id}-${opt.value}`} type="checkbox" checked={(Array.isArray(raw) ? raw : []).includes(opt.value)} onChange={() => handleDynamicToggle(field.id, opt.value)} className="h-5 w-5 shrink-0 rounded accent-[#84CC16] xl:h-4 xl:w-4" />
                       <span>{opt.label}</span>
                     </label>
                   ))}
@@ -240,7 +240,7 @@ export default function SidebarFilters({
                           const value = filterOptionValue(opt);
                           return (
                             <label key={value} className={labelClass}>
-                              <input data-testid={`sidebar-category-filter-${fieldId}-${value}`} type="checkbox" checked={(Array.isArray(raw) ? raw : []).includes(value)} onChange={() => handleDynamicToggle(fieldId, value)} className="h-4 w-4 rounded accent-[#84CC16]" />
+                              <input data-testid={`sidebar-category-filter-${fieldId}-${value}`} type="checkbox" checked={(Array.isArray(raw) ? raw : []).includes(value)} onChange={() => handleDynamicToggle(fieldId, value)} className="h-5 w-5 shrink-0 rounded accent-[#84CC16] xl:h-4 xl:w-4" />
                               <span>{filterOptionDisplayLabel(fieldId, opt, lang)}</span>
                             </label>
                           );

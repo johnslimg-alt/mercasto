@@ -287,7 +287,7 @@ export default function CatalogScreen({
                   data-testid="catalog-tablet-filter-close"
                   aria-label={t.close_btn || t.close}
                   onClick={() => setShowMobileFilters(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:text-slate-900 dark:bg-slate-800 dark:hover:text-white"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-500 transition-colors hover:text-slate-900 dark:bg-slate-800 dark:hover:text-white"
                 >
                   ✕
                 </button>
