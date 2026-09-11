@@ -4,7 +4,38 @@ Single index of everything the verification pass found, with severity, owner and
 Produced from the hybrid branch (`design/hybrid-card-catalog`); every item links to a document
 containing the measurements behind it.
 
-Nothing here has been fixed. Production was not touched and no cutover was performed.
+**Production was not touched and no cutover was performed.**
+
+## Start here
+
+**Branch:** `design/hybrid-card-catalog` · worktree `/root/mercasto-worktrees/card-hybrid`
+**Tip:** `970b08a9` · **0 commits behind `origin/main`** · working tree clean
+
+**Status:** all three blockers are closed or verified; both analytics gaps are closed. Four
+product decisions and three scoped follow-ups remain, and none of them block each other.
+
+| | Item | State |
+| --- | --- | --- |
+| 1 | CLS 0.4444 → **0.0030** (mobile 0.0239) | **fixed** `bb91d4a5` |
+| 2 | Paid *Destacados* rail: prefetch reused, no substitution | **fixed** `b4a699ec` |
+| 3 | V2 branch 6 commits behind main | **verified**, one command — see below |
+| 5 | Filter open/apply events | **fixed** `9ece7c51` |
+| 6 | `favoriteAdded` never emitted | **fixed** `9ece7c51` |
+
+**To unblock the V2 branch (5 minutes):**
+
+```bash
+cd /root/mercasto-worktrees/home-v2
+git merge origin/main
+```
+
+Verified conflict-free and green on a throwaway branch — see "Blocker 3 verified" below.
+
+**Still needs a human decision:** findings 10–13 (filler impressions, §4 select scope,
+hreflang, seller identity on the card). None is a technical blocker.
+
+**Evidence for every number:** the audit documents listed in each table row, all committed on
+this branch.
 
 ## Blockers for production readiness
 
