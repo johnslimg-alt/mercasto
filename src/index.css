@@ -1926,3 +1926,279 @@ body *::-webkit-scrollbar {
     display: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MERC ASTO MARKETPLACE — VISUAL REFRESH (2026-09)
+   ---------------------------------------------------------------------------
+   Additive layer. The locked design-token contract declared in :root above is
+   left untouched; this block only ADDS new tokens and refines shared surfaces
+   so the public marketplace (home, catalog, ad detail) reads with a calmer,
+   more confident hierarchy while keeping the lime brand identity.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --mc-radius-card: 16px;
+  --mc-radius-2xl: 22px;
+
+  --mc-elev-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --mc-elev-2: 0 4px 14px -3px rgba(15, 23, 42, 0.09), 0 2px 6px -2px rgba(15, 23, 42, 0.05);
+  --mc-elev-3: 0 22px 48px -16px rgba(15, 23, 42, 0.22), 0 8px 18px -10px rgba(15, 23, 42, 0.10);
+  --mc-elev-brand: 0 14px 32px -12px rgba(132, 204, 22, 0.55);
+
+  --mc-canvas: #F6F8FB;
+  --mc-canvas-dark: #0B1220;
+  --mc-line-soft: #EDF1F7;
+  --mc-line-soft-dark: #24314A;
+  --mc-amber: #F59E0B;
+  --mc-rose: #F43F5E;
+  --mc-sky: #0284C7;
+
+  --mc-tracking-tight: -0.021em;
+}
+
+@layer components {
+  /* ── Typography rhythm ────────────────────────────────────────────────── */
+  .mc-eyebrow {
+    @apply inline-flex items-center gap-1.5 text-[11px] font-bold uppercase;
+    letter-spacing: 0.13em;
+    color: var(--mc-muted);
+  }
+
+  .mc-section-title {
+    @apply text-[21px] font-bold leading-tight text-slate-900 sm:text-[23px] dark:text-white;
+    letter-spacing: var(--mc-tracking-tight);
+  }
+
+  .mc-price {
+    @apply font-extrabold leading-none text-slate-900 dark:text-white;
+    letter-spacing: var(--mc-tracking-tight);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mc-price-unit {
+    @apply text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500;
+    letter-spacing: 0.07em;
+  }
+
+  /* ── Chips & badges ───────────────────────────────────────────────────── */
+  .mc-chip {
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold;
+    border-color: var(--line);
+    background: var(--surface-soft);
+    color: #475569;
+  }
+
+  .mc-badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.22);
+    backdrop-filter: blur(6px);
+  }
+
+  /* ── Surfaces ─────────────────────────────────────────────────────────── */
+  .mc-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--mc-radius-2xl);
+    box-shadow: var(--mc-elev-1);
+  }
+
+  .mc-panel-flat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--mc-radius-card);
+  }
+
+  /* Refined listing card: quiet at rest, lifts on hover, no neon glow. */
+  .market-card {
+    box-shadow: var(--mc-elev-1) !important;
+  }
+
+  .market-card:hover {
+    box-shadow: var(--mc-elev-3) !important;
+    border-color: rgba(132, 204, 22, 0.42) !important;
+    transform: translateY(-3px);
+  }
+
+  .ad-result-card {
+    border-radius: var(--mc-radius-card) !important;
+  }
+
+  /* ── Hero ─────────────────────────────────────────────────────────────── */
+  .mc-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--mc-radius-2xl);
+    background:
+      radial-gradient(120% 140% at 88% 8%, rgba(132, 204, 22, 0.30), transparent 55%),
+      radial-gradient(90% 120% at 6% 0%, rgba(132, 204, 22, 0.16), transparent 50%),
+      linear-gradient(135deg, #0F172A 0%, #131F35 55%, #17253C 100%);
+    box-shadow: var(--mc-elev-2);
+  }
+
+  .mc-hero-grid {
+    position: absolute;
+    inset: 0;
+    opacity: 0.16;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(120% 100% at 78% 0%, black, transparent 72%);
+  }
+
+  .mc-stat {
+    @apply flex flex-col gap-0.5 rounded-2xl border px-3.5 py-2.5;
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── Promo tiles ──────────────────────────────────────────────────────── */
+  .mc-promo {
+    @apply relative flex h-full flex-col overflow-hidden p-5;
+    border-radius: var(--mc-radius-2xl);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: var(--mc-elev-1);
+    transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+  }
+
+  .mc-promo:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--mc-elev-3);
+    border-color: rgba(132, 204, 22, 0.45);
+  }
+
+  .mc-promo-dark {
+    border-color: transparent;
+    background:
+      radial-gradient(120% 130% at 90% 0%, rgba(132, 204, 22, 0.24), transparent 58%),
+      linear-gradient(140deg, #0F172A, #16233A);
+    color: #F8FAFC;
+  }
+
+  .mc-promo-brand {
+    border-color: transparent;
+    background: linear-gradient(140deg, #84CC16, #65A30D);
+    color: #0F172A;
+  }
+
+  /* ── Filter rail ──────────────────────────────────────────────────────── */
+  .mc-filter-section {
+    border-bottom: 1px solid var(--mc-line-soft);
+    padding-bottom: 0.9rem;
+  }
+
+  .mc-filter-section:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  html.dark .mc-filter-section {
+    border-bottom-color: var(--mc-line-soft-dark);
+  }
+
+  /* ── Segmented control ────────────────────────────────────────────────── */
+  .mc-segmented {
+    @apply inline-flex items-center gap-1 rounded-xl p-1;
+    background: var(--surface-soft);
+  }
+
+  html.dark .mc-segmented {
+    background: #0F172A;
+  }
+}
+
+/* Softer canvas: keep the lime warmth, drop the heavy navy wash.
+   #root paints over body, so the gradient must live on #root. */
+@layer base {
+  #root {
+    background:
+      radial-gradient(circle at 8% -4%, rgba(132, 204, 22, 0.10), transparent 30rem),
+      radial-gradient(circle at 96% 4%, rgba(15, 23, 42, 0.04), transparent 26rem),
+      var(--mc-canvas);
+  }
+
+  html.dark,
+  html.dark #root {
+    background:
+      radial-gradient(circle at 8% -4%, rgba(132, 204, 22, 0.09), transparent 28rem),
+      radial-gradient(circle at 96% 4%, rgba(2, 132, 199, 0.07), transparent 26rem),
+      var(--mc-canvas-dark);
+  }
+}
+
+/* Category rail: same geometry (preserves rail scroll + fade contracts),
+   softer surface and a warmer hover so the first band reads as intentional. */
+@layer components {
+  .category-pill {
+    background: var(--surface);
+    border-color: var(--line);
+    border-radius: var(--mc-radius-card);
+    box-shadow: var(--mc-elev-1);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
+  }
+
+  .category-pill:hover {
+    background: #F7FEE7;
+    border-color: rgba(132, 204, 22, 0.55);
+    box-shadow: var(--mc-elev-2);
+    transform: translateY(-1px);
+  }
+
+  .category-pill h3 {
+    color: #334155;
+    font-weight: 700;
+  }
+
+  .category-pill:hover h3 {
+    color: #365314;
+  }
+
+  .category-icon {
+    border-color: rgba(132, 204, 22, 0.28);
+    background:
+      radial-gradient(circle at 30% 20%, rgba(132, 204, 22, 0.32), transparent 46%),
+      linear-gradient(145deg, #F8FAFC, #E8EFF7);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 8px rgba(15, 23, 42, 0.05);
+  }
+
+  html.dark .category-pill:not(:hover) {
+    background: #16223A !important;
+    border-color: #2C3A55 !important;
+    box-shadow: var(--mc-elev-1) !important;
+  }
+
+  html.dark .category-pill h3 {
+    color: #CBD5E1 !important;
+  }
+}
+
+/* Dark-mode companions for the refresh primitives. The locked dark palette
+   re-declares `--line`/`--surface-soft` on body, so most surfaces follow
+   automatically; chips and eyebrows need an explicit lift for contrast. */
+@layer components {
+  html.dark .mc-chip {
+    background: #0F172A;
+    border-color: #334155;
+    color: #CBD5E1;
+  }
+
+  html.dark .mc-eyebrow {
+    color: #94A3B8;
+  }
+
+  html.dark .mc-price-unit {
+    color: #94A3B8;
+  }
+
+  html.dark .mc-promo {
+    background: #16223A;
+  }
+
+  html.dark .mc-panel,
+  html.dark .mc-panel-flat {
+    background: #16223A;
+    border-color: #2C3A55;
+  }
+}

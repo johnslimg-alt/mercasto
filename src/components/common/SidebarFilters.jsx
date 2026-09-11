@@ -13,18 +13,18 @@ function FilterAccordion({ title, children, defaultOpen = false, selectedCount =
     if (selectedCount > 0) setOpen(true);
   }, [selectedCount]);
   return (
-    <section data-testid={testId || undefined} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+    <section data-testid={testId || undefined} className="border-b border-slate-100 last:border-b-0 dark:border-slate-800">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(value => !value)}
-        className="flex h-10 w-full items-center gap-2 px-3 text-left text-[12px] font-bold text-slate-800 transition-colors hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-800"
+        className="flex min-h-11 w-full items-center gap-2 rounded-lg px-1 text-left text-[12.5px] font-bold text-slate-800 transition-colors hover:text-[#4D7C0F] dark:text-slate-100 dark:hover:text-[#BEF264]"
       >
         <span className="min-w-0 flex-1 truncate">{title}</span>
         {selectedCount > 0 && <span className="rounded-full bg-[#84CC16]/15 px-2 py-0.5 text-[10px] font-black text-[#4D7C0F] dark:text-[#BEF264]">{selectedCount}</span>}
         <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && <div className="space-y-2.5 border-t border-slate-100 px-3 py-3 dark:border-slate-800">{children}</div>}
+      {open && <div className="space-y-2.5 px-1 pb-3.5 pt-0.5">{children}</div>}
     </section>
   );
 }
@@ -129,10 +129,10 @@ export default function SidebarFilters({
     }, 0);
 
 
-  const panelClass = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 shadow-sm dark:shadow-none';
-  const inputClass = 'h-10 w-full px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors';
-  const selectClass = 'h-10 w-full pl-3 pr-8 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] text-slate-700 dark:text-slate-100 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors cursor-pointer';
-  const labelClass = 'flex items-center gap-2.5 text-[12px] text-slate-700 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors';
+  const panelClass = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.12)] dark:shadow-none';
+  const inputClass = 'h-11 w-full px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-[12.5px] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors';
+  const selectClass = 'h-11 w-full pl-3 pr-8 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-[12.5px] text-slate-700 dark:text-slate-100 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors cursor-pointer';
+  const labelClass = 'flex items-center gap-2.5 text-[12.5px] text-slate-700 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors';
 
   // Get available cities for selected state
   const availableCities = selectedState && MEXICO_STATES_CITIES[selectedState]

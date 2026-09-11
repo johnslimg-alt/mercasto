@@ -244,8 +244,8 @@ function PriceSparkline({ history, label = 'Price history', lang = 'es' }) {
     ` L${pts[pts.length - 1][0]},${H} L${pts[0][0]},${H} Z`;
 
   return (
-    <div className="mt-3 mb-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3">
-      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2">{label}</p>
+    <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-800 dark:bg-slate-900/50">
+      <p className="mc-eyebrow mb-2">{label}</p>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} className="overflow-visible">
         <defs>
           <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
@@ -344,6 +344,11 @@ export default function AdDetailScreen({
   });
   const [mapMountRef, mapReady] = useNearViewport('0px');
   const [relatedMountRef, relatedReady] = useNearViewport('300px');
+  // Aspect ratio of the hero photo. The shared MediaSlider keeps media inside an
+  // object-contain box, so the stage adopts the photo's own ratio instead of a fixed
+  // height — that is what removed the wide flat letterbox bands around portrait ads.
+  // Stored with its source URL so a different listing never reuses a stale ratio.
+  const [heroAspect, setHeroAspect] = useState(null);
 
   const adMarker = useMemo(() => {
     if (!ad) return [];
@@ -400,6 +405,29 @@ export default function AdDetailScreen({
       .catch(() => setPriceHistory([]));
   }, [API_URL, ad?.id]);
 
+  // Measure the first hero photo so the media stage can match it (kept within sane
+  // bounds so very tall or very wide uploads still get a stable frame).
+  const firstHeroImageUrl = ad && !ad.video_url
+    ? (getImageUrls(ad.image_url, ad.image) || [])[0] || ''
+    : '';
+
+  useEffect(() => {
+    if (!firstHeroImageUrl) return undefined;
+    let cancelled = false;
+    const probe = new Image();
+    probe.onload = () => {
+      if (cancelled) return;
+      const width = Number(probe.naturalWidth);
+      const height = Number(probe.naturalHeight);
+      if (width > 0 && height > 0) {
+        setHeroAspect({ url: firstHeroImageUrl, ratio: Math.min(2.1, Math.max(0.62, width / height)) });
+      }
+    };
+    probe.onerror = () => { if (!cancelled) setHeroAspect(null); };
+    probe.src = firstHeroImageUrl;
+    return () => { cancelled = true; };
+  }, [firstHeroImageUrl]);
+
   // Dynamic OG tags for social sharing
   useDocumentMeta({
     title: localizedText(ad?.title, lang) || 'Mercasto',
@@ -427,6 +455,13 @@ export default function AdDetailScreen({
   const catConfig = filterConfig[ad.category] || [];
   const publicAttributeEntries = publicListingAttributeEntries(attributes);
   const locationLabel = buildPublicLocationLabel(ad);
+  const categorySource = Array.isArray(categoriesData) ? categoriesData.find(cat => cat.slug === ad.category) : null;
+  const categoryLabel = getCatName?.(categorySource, lang)
+    || ad.category_name
+    || (ad.category ? String(ad.category).replace(/[-_]/g, ' ').replace(/^./, char => char.toUpperCase()) : '');
+  // Media stage mirrors the hero ratio (clamped) and is capped by --mc-stage-h per breakpoint.
+  const measuredAspect = heroAspect && heroAspect.url === firstHeroImageUrl ? heroAspect.ratio : null;
+  const stageAspect = measuredAspect ?? (ad.video_url ? 16 / 9 : 4 / 3);
   const telegramUsername = getSafeTelegramUsername(ad);
   // Escribir por Telegram
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
@@ -541,9 +576,13 @@ export default function AdDetailScreen({
         })}} />
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <button onClick={() => (onBack ? onBack() : setViewedAd(null))} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium transition-colors">
-          <ChevronLeft size={20} /> {t.back_results || 'Back to results'}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 lg:mb-5">
+        <button
+          type="button"
+          onClick={() => (onBack ? onBack() : setViewedAd(null))}
+          className="-ml-2 inline-flex min-h-12 items-center gap-1.5 rounded-xl px-2 text-[13.5px] font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:min-h-0 lg:py-2 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        >
+          <ChevronLeft size={18} aria-hidden="true" /> {t.back_results || 'Back to results'}
         </button>
         {isOwner && (
           <div className="flex items-center gap-2">
@@ -584,65 +623,90 @@ export default function AdDetailScreen({
           </div>
         );
       })()}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          {/* MEDIA SLIDER */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm h-[300px] md:h-[500px]">
-            <MediaSlider media={images} autoplay={sliderAutoplay} alt={localizedText(ad.title, lang) || detailCopy.imageAlt} priority />
-          </div>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_352px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_384px]">
+        <div className="min-w-0 space-y-5 lg:space-y-6">
+          {/* MEDIA STAGE — frame hugs the photo on desktop, so no flat matte is left behind */}
+          <section
+            className="mc-panel overflow-hidden bg-slate-100 p-2.5 [--mc-stage-h:25rem] sm:[--mc-stage-h:28rem] lg:mx-auto lg:max-w-[var(--mc-stage-w)] lg:[--mc-stage-h:33rem] dark:border-slate-700 dark:bg-slate-900/60"
+            style={{ '--mc-stage-w': `calc(var(--mc-stage-h) * ${stageAspect} + 1.25rem)` }}
+          >
+            <div
+              className="relative mx-auto w-full overflow-hidden rounded-[16px] bg-white shadow-sm ring-1 ring-slate-950/10 dark:bg-slate-900 dark:ring-white/10"
+              style={{
+                aspectRatio: String(stageAspect),
+                maxHeight: 'var(--mc-stage-h)',
+                maxWidth: `calc(var(--mc-stage-h) * ${stageAspect})`,
+              }}
+            >
+              <MediaSlider media={images} autoplay={sliderAutoplay} alt={localizedText(ad.title, lang) || detailCopy.imageAlt} priority />
+            </div>
+          </section>
 
-          {/* AD DETAILS */}
-          <div className="mt-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
-{isCatalogFiller && (
-  <div className="mb-5 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-slate-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-slate-100" data-catalog-reference>
-    <div className="text-[14px] font-black">{detailCopy.catalogTitle}</div>
-    <p className="mt-1 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
-      {detailCopy.catalogBody}
-    </p>
-    <button
-      type="button"
-      onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
-      className="mt-3 inline-flex items-center rounded-xl bg-[#84CC16] px-4 py-2 text-[13px] font-bold text-slate-950 transition-colors hover:bg-[#65A30D]"
-    >
-      {detailCopy.publishSimilar}
-    </button>
-  </div>
-)}
-            <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${formatNumber(ad.price, lang)} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>
+          {/* IDENTITY + META */}
+          <section className="mc-panel p-5 sm:p-6 lg:p-7 dark:border-slate-700">
+            {categoryLabel && <p className="mc-eyebrow">{categoryLabel}</p>}
+            <h1 className="mt-2 text-[25px] font-black leading-[1.15] tracking-[-0.02em] text-slate-900 sm:text-[31px] lg:text-[35px] dark:text-white">
+              {localizedText(ad.title, lang)}
+            </h1>
+            <p className="mt-3.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <span className="mc-price text-[32px] sm:text-[38px]">${formatNumber(ad.price, lang)}</span>{' '}
+              <span className="mc-price-unit">MXN</span>
+            </p>
 {ratingStats.hasReviews && !isCatalogFiller && (
-  <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+  <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
     <RatingStars rating={ratingStats.rating} />
     <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
     <span className="text-slate-400">({ratingStats.count} {t.comments || detailCopy.comments})</span>
   </div>
 )}
             {ad.old_price && ad.price_dropped_at && Number(ad.old_price) > Number(ad.price) && (
-              <div className="inline-flex flex-wrap items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-xl px-3 py-1.5 mb-5 text-[13px] font-semibold dark:bg-green-950/30 dark:border-green-500/30 dark:text-green-200">
+              <div className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3.5 py-1.5 text-[12.5px] font-semibold text-green-800 dark:border-green-500/30 dark:bg-green-950/30 dark:text-green-200">
                 <span>{detailCopy.priceDropped}</span>
                 <span>{detailCopy.before}: <span className="line-through text-green-600 dark:text-green-300">${formatNumber(ad.old_price, lang)}</span></span>
-                <span className="bg-green-200 text-green-900 rounded-full px-1.5 py-0.5 text-[11px] font-bold dark:bg-green-500/20 dark:text-green-100">
+                <span className="rounded-full bg-green-200 px-1.5 py-0.5 text-[11px] font-bold text-green-900 dark:bg-green-500/20 dark:text-green-100">
                   {Math.round(((Number(ad.old_price) - Number(ad.price)) / Number(ad.old_price)) * 100)}% {detailCopy.less}
                 </span>
               </div>
             )}
-            {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} label={t.price_history || 'Price history'} lang={lang} />}
 
-            <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 dark:text-slate-300 font-medium">
-              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || detailCopy.mexico}</span>
-              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {formatDate(ad.created_at, lang)}</span>}
-              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {formatNumber(ad.views || 0, lang)} {t.views || detailCopy.views}</span>}
-              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {filterOptionLabel('condicion', canonicalAdCondition(ad.condition), lang)}</span>
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <span className="mc-chip px-2.5 py-1 text-[12px]"><MapPin size={14} className="text-[#65A30D] dark:text-[#BEF264]" aria-hidden="true" /> {locationLabel || detailCopy.mexico}</span>
+              {!isCatalogFiller && <span className="mc-chip px-2.5 py-1 text-[12px]"><Calendar size={14} aria-hidden="true" /> {formatDate(ad.created_at, lang)}</span>}
+              {!isCatalogFiller && <span className="mc-chip px-2.5 py-1 text-[12px]"><BarChart3 size={14} aria-hidden="true" /> {formatNumber(ad.views || 0, lang)} {t.views || detailCopy.views}</span>}
+              <span className="mc-chip px-2.5 py-1 text-[12px] capitalize"><Tag size={14} aria-hidden="true" /> {filterOptionLabel('condicion', canonicalAdCondition(ad.condition), lang)}</span>
             </div>
 
+            {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} label={t.price_history || 'Price history'} lang={lang} />}
+
+            {isCatalogFiller && (
+              <div className="mt-6 flex gap-3 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-slate-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-slate-100" data-catalog-reference>
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#84CC16]/20 text-[#4D7C0F] dark:text-[#BEF264]" aria-hidden="true">
+                  <Shield size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[14px] font-black">{detailCopy.catalogTitle}</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    {detailCopy.catalogBody}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
+                    className="btn-md mt-3 bg-[#84CC16] px-4 font-bold text-slate-950 transition-colors hover:bg-[#65A30D]"
+                  >
+                    {detailCopy.publishSimilar}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {locationLabel && (
-              <div className="mb-10 overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-700 dark:bg-slate-900/30">
+              <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/40">
                 <div className="flex items-start gap-3 p-4 md:p-5">
-                  <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#84CC16]/15 text-[#65A30D]">
-                    <MapPin size={20} />
+                  <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#84CC16]/15 text-[#4D7C0F] dark:text-[#BEF264]">
+                    <MapPin size={19} aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">{t.location || 'Location'}</h3>
+                    <h2 className="text-[16px] font-bold text-slate-900 dark:text-white">{t.location || 'Location'}</h2>
                     <p className="mt-1 text-[14px] font-medium text-slate-600 dark:text-slate-300">{locationLabel}</p>
                     <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">{detailCopy.approximateLocation}</p>
                   </div>
@@ -662,14 +726,14 @@ export default function AdDetailScreen({
                     </div>
                   )}
                 </div>
-              </div>
+              </section>
             )}
 
             {/* DYNAMIC EAV ATTRIBUTES (Отображение фильтров) */}
             {publicAttributeEntries.length > 0 && (
-              <div className="mb-10">
-                <h3 className="text-[18px] font-bold text-slate-900 mb-5">{t.main_features || 'Main features'}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <section className="mt-8 border-t border-slate-100 pt-6 dark:border-slate-800">
+                <h2 className="mc-section-title">{t.main_features || 'Main features'}</h2>
+                <div className="mt-4 grid grid-cols-2 gap-2.5 md:grid-cols-3">
                   {publicAttributeEntries.map(([key, val]) => {
                     const fieldDef = catConfig.find(f => f.id === key);
                     const label = t[`filter_label_${key}`] || (fieldDef ? fieldDef.label : key);
@@ -677,64 +741,66 @@ export default function AdDetailScreen({
                       ? val.map(item => filterOptionLabel(key, item, lang)).join(', ')
                       : filterOptionLabel(key, val, lang);
                     return (
-                      <div key={key} className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                        <p className="text-[12px] text-slate-500 font-medium mb-1">{label}</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{displayVal}</p>
+                      <div key={key} className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5 dark:border-slate-800 dark:bg-slate-900/50">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">{label}</p>
+                        <p className="mt-1 text-[14px] font-semibold text-slate-900 dark:text-white">{displayVal}</p>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </section>
             )}
 
-            <h3 className="text-[18px] font-bold text-slate-900 mb-4">{t.description || 'Description'}</h3>
-            <div className="text-slate-700 leading-relaxed whitespace-pre-line text-[15px]">
-              {localizedText(ad.description, lang)}
-            </div>
+            <section className="mt-8 border-t border-slate-100 pt-6 dark:border-slate-800">
+              <h2 className="mc-section-title">{t.description || 'Description'}</h2>
+              <div className="mt-3 whitespace-pre-line text-[15px] leading-7 text-slate-700 dark:text-slate-300">
+                {localizedText(ad.description, lang)}
+              </div>
+            </section>
 
-            <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">
-              <button onClick={() => { setReportingAd(ad); setShowReportModal(true); }} className="text-slate-400 hover:text-red-500 text-[13px] font-medium flex items-center gap-1.5 transition-colors"><AlertTriangle size={16}/> {t.report_ad || 'Report listing'}</button>
+            <div className="mt-8 flex items-center gap-4 border-t border-slate-100 pt-5 dark:border-slate-800">
+              <button onClick={() => { setReportingAd(ad); setShowReportModal(true); }} className="flex items-center gap-1.5 text-[13px] font-medium text-slate-400 transition-colors hover:text-red-500"><AlertTriangle size={16} aria-hidden="true"/> {t.report_ad || 'Report listing'}</button>
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* SIDEBAR: SELLER CONTACT */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[calc(var(--mc-site-header-offset)+0.75rem)]">
+        {/* STICKY RAIL: SELLER + CONTACT + ACTIONS */}
+        <aside className="min-w-0 lg:sticky lg:top-[calc(var(--mc-site-header-offset)+1rem)]">
+          <div className="mc-panel p-5 sm:p-6 dark:border-slate-700">
 {isCatalogFiller ? (
   <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
-    <h3 className="text-[16px] font-black text-slate-900 dark:text-white">{detailCopy.sellTitle}</h3>
+    <h2 className="text-[15.5px] font-black text-slate-900 dark:text-white">{detailCopy.sellTitle}</h2>
     <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
       {detailCopy.sellBody}
     </p>
     <button
       type="button"
       onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
-      className="mt-4 w-full rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D]"
+      className="btn-md mt-4 w-full bg-[#84CC16] px-4 font-black text-slate-950 transition-colors hover:bg-[#65A30D]"
     >
       {detailCopy.publishFree}
     </button>
   </div>
 ) : (
   <>
-    <button type="button" className="w-full text-left flex items-center gap-4 mb-6 cursor-pointer group" onClick={() => handleViewCompany(ad.user)}>
+    <button type="button" className="group flex w-full cursor-pointer items-center gap-3.5 text-left" onClick={() => handleViewCompany(ad.user)}>
       {ad.user?.avatar_url ? (
-        <img src={getImageUrl(ad.user.avatar_url)} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 group-hover:border-[#84CC16] transition-colors" alt=""/>
+        <img src={getImageUrl(ad.user.avatar_url)} className="h-14 w-14 rounded-2xl border border-slate-200 object-cover transition-colors group-hover:border-[#84CC16] dark:border-slate-700" alt=""/>
       ) : (
-        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-200 group-hover:border-[#84CC16] transition-colors"><User size={24} className="text-slate-400" /></div>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 transition-colors group-hover:border-[#84CC16] dark:border-slate-700 dark:bg-slate-800"><User size={22} className="text-slate-400" /></div>
       )}
-      <div>
-        <h3 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
-          {ad.user?.name || detailCopy.user}
-          {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title={detailCopy.verifiedSeller} />}
-        </h3>
-        <p className="text-[13px] text-slate-500 mt-0.5">{formatAdDetailCopy(detailCopy.memberSince, { year: new Date(ad.user?.created_at || ad.created_at).getFullYear() })}</p>
+      <div className="min-w-0">
+        <h2 className="flex items-center gap-1.5 text-[15.5px] font-bold text-slate-900 transition-colors group-hover:text-[#65A30D] dark:text-white">
+          <span className="truncate">{ad.user?.name || detailCopy.user}</span>
+          {ad.user?.is_verified && <CheckCircle className="h-4 w-4 shrink-0 text-[#84CC16]" title={detailCopy.verifiedSeller} />}
+        </h2>
+        <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{formatAdDetailCopy(detailCopy.memberSince, { year: new Date(ad.user?.created_at || ad.created_at).getFullYear() })}</p>
       </div>
     </button>
 
     {(!currentUser || !currentUser.id) ? (
-      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
-        <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
+      <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-800/30 dark:bg-amber-950/20">
+        <p className="text-[13.5px] font-semibold leading-normal text-amber-800 dark:text-amber-300">
           {t.login_to_message_hint || detailCopy.loginToMessageHint}
         </p>
         <button
@@ -748,7 +814,7 @@ export default function AdDetailScreen({
         </button>
       </div>
     ) : (
-      <div className="space-y-3">
+      <div className="mt-5 space-y-2.5">
         {!isOwner && (
           <button
             type="button"
@@ -765,7 +831,7 @@ export default function AdDetailScreen({
   </>
 )}
 
-            <div className="flex gap-3 mt-4">
+            <div className="mt-6 flex gap-2.5">
               <button onClick={(e) => handleToggleFavorite(e, ad.id)} className={`btn-md flex-1 flex items-center justify-center gap-2 border transition-colors ${isFav ? 'bg-red-50 border-red-100 text-red-600' : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}>
                 <Heart size={18} className={isFav ? "fill-red-500" : ""} /> {isFav ? (t.ad_saved || 'Guardado') : (t.ad_favorite || 'Favorito')}
               </button>
@@ -890,27 +956,27 @@ export default function AdDetailScreen({
               </button>
             )}
           </div>
-        </div>
+        </aside>
       </div>
 
-      <div ref={relatedMountRef} data-ad-detail-related-shell className="min-h-24">
+      <div ref={relatedMountRef} data-ad-detail-related-shell className="mt-8 min-h-24 lg:mt-10">
         {relatedReady ? (
           <>
             {/* ПОХОЖИЕ ОБЪЯВЛЕНИЯ */}
             {similarAds.length > 0 && (
-              <div className="mt-10">
-                <h2 className="text-[20px] font-bold text-slate-900 mb-5">{t.similar_ads || 'You may also like'}</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <section className="mt-8">
+                <h2 className="mc-section-title mb-4">{t.similar_ads || 'You may also like'}</h2>
+                <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-4">
                   {similarAds.map(simAd => (
                     <div key={simAd.id}>
                       {renderAdCard(simAd)}
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
             {/* AI RECOMMENDATIONS */}
-            <div className="mt-10">
+            <div className="mt-8">
               <React.Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" data-ad-detail-recommendations-placeholder />}>
                 <RecommendationsWidget
                   userId={currentUser?.id}
@@ -924,7 +990,7 @@ export default function AdDetailScreen({
             </div>
           </>
         ) : (
-          <div className="mt-10 h-24" data-ad-detail-related-placeholder />
+          <div className="mt-8 h-24" data-ad-detail-related-placeholder />
         )}
       </div>
 
