@@ -13,6 +13,7 @@ from pathlib import Path
 
 DSH_HOME = Path("/root/.dsh")
 SETTINGS = DSH_HOME / "settings.yaml"
+WEB_PATCH = DSH_HOME / "profiles" / "web" / "cordis.patch.yml"
 BACKUP_DIR = DSH_HOME / "backups" / "model-rotation"
 DSH_VERSION = "0.1.5-rc.1"
 STAMP = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -56,15 +57,36 @@ def set_default(provider: str, model: str, reasoning: str = "") -> None:
     atomic_write(SETTINGS, new_text)
 
 
-def smoke(provider: str, model: str, marker: str, reasoning: str = "") -> None:
+def openrouter_patch_text() -> str:
+    return """- id: llm-pi-ai
+  config:
+    providers:
+      openrouter:
+        apiKeyEnv: OPENROUTER_API_KEY
+        api: openai-completions
+        baseURL: https://openrouter.ai/api/v1
+        defaultContextWindow: 1048576
+        defaultMaxTokens: 32768
+        models:
+          - id: z-ai/glm-5.3-flash:free
+            name: GLM-5.3 Flash Free
+            contextWindow: 1048576
+            maxTokens: 32768
+            input: [text, image]
+"""
+
+
+def smoke(provider: str, model: str, marker: str, reasoning: str = "", *, pi_ai_patch: bool = False) -> None:
     set_default(provider, model, reasoning)
     run(["npx", "--yes", f"@deepseek-ai/dsh@{DSH_VERSION}", "--profile", "web", "--dump-config"], timeout=90, capture=True)
+    patch_path = Path("/tmp/dsh-openrouter-headless.patch.yml")
+    cmd = ["npx", "--yes", f"@deepseek-ai/dsh@{DSH_VERSION}", "--profile", "headless"]
+    if pi_ai_patch:
+        patch_path.write_text(openrouter_patch_text(), encoding="utf-8")
+        cmd += ["--patch", str(patch_path)]
+    cmd.append(f"Reply with exactly: {marker}")
     try:
-        proc = run(
-            ["npx", "--yes", f"@deepseek-ai/dsh@{DSH_VERSION}", "--profile", "headless", f"Reply with exactly: {marker}"],
-            timeout=150,
-            capture=True,
-        )
+        proc = run(cmd, timeout=150, capture=True)
     except subprocess.CalledProcessError as exc:
         diagnostic = exc.stdout or ""
         diagnostic = re.sub(r"sk-[A-Za-z0-9_-]+", "<redacted>", diagnostic)
@@ -72,6 +94,11 @@ def smoke(provider: str, model: str, marker: str, reasoning: str = "") -> None:
         print("\n".join(diagnostic.splitlines()[-80:]))
         print("DSH_SMOKE_DIAGNOSTIC_END")
         raise
+    finally:
+        try:
+            patch_path.unlink()
+        except FileNotFoundError:
+            pass
     if marker not in (proc.stdout or ""):
         diagnostic = re.sub(r"sk-[A-Za-z0-9_-]+", "<redacted>", proc.stdout or "")
         print("DSH_SMOKE_DIAGNOSTIC_BEGIN")
@@ -81,6 +108,23 @@ def smoke(provider: str, model: str, marker: str, reasoning: str = "") -> None:
     print(f"{marker}=yes")
 
 
+def ensure_web_openrouter_route() -> Path:
+    WEB_PATCH.parent.mkdir(parents=True, exist_ok=True)
+    original = WEB_PATCH.read_text(encoding="utf-8") if WEB_PATCH.exists() else ""
+    backup = BACKUP_DIR / f"web-cordis.patch.pre-openrouter.{STAMP}.yml"
+    backup.write_text(original, encoding="utf-8")
+    os.chmod(backup, 0o600)
+    if re.search(r"(?m)^- id:\s*llm-pi-ai\s*$", original):
+        raise RuntimeError("web profile already has an llm-pi-ai patch; refusing ambiguous duplicate edit")
+    new_text = original
+    if new_text and not new_text.endswith("\n"):
+        new_text += "\n"
+    if new_text:
+        new_text += "\n"
+    new_text += "# OpenRouter route pinned for DeepSeek peak-window fallback.\n" + openrouter_patch_text()
+    atomic_write(WEB_PATCH, new_text, 0o600)
+    run(["npx", "--yes", f"@deepseek-ai/dsh@{DSH_VERSION}", "--profile", "web", "--dump-config"], timeout=90, capture=True)
+    return backup
 def write_rotation_runtime() -> None:
     env_text = """DSH_HOME=/root/.dsh
 DEEPSEEK_PROVIDER=deepseek-official
@@ -262,21 +306,23 @@ def main() -> int:
     shutil.copy2(SETTINGS, BACKUP)
     os.chmod(BACKUP, 0o600)
     committed = False
+    web_patch_backup: Path | None = None
     try:
         print("=== CONFIG PRECHECK ===")
         run(["npx", "--yes", f"@deepseek-ai/dsh@{DSH_VERSION}", "--profile", "web", "--dump-config"], timeout=90, capture=True)
 
         print("=== GLM FREE SMOKE ===")
-        smoke("openrouter", "z-ai/glm-5.3-flash:free", "ROTATION_GLM_FREE_OK")
+        smoke("openrouter", "z-ai/glm-5.3-flash:free", "ROTATION_GLM_FREE_OK", pi_ai_patch=True)
 
         print("=== DEEPSEEK SMOKE ===")
         smoke("deepseek-official", "deepseek-flash", "ROTATION_DEEPSEEK_OK", "max")
 
+        print("=== PIN OPENROUTER ROUTE IN WEB PROFILE ===")
+        web_patch_backup = ensure_web_openrouter_route()
+
         print("=== INSTALL ROTATION ===")
         write_rotation_runtime()
-        retire_old_pause()
         run(["systemctl", "daemon-reload"])
-        run(["systemctl", "enable", "--now", "dsh-model-rotate.timer"])
 
         env = os.environ.copy()
         for line in Path("/etc/dsh-model-rotation.env").read_text().splitlines():
@@ -298,6 +344,11 @@ def main() -> int:
         run(["systemctl", "is-active", "deepseek-harness.service"])
         run(["systemctl", "is-active", "deepseek-harness-proxy.service"])
 
+        print("=== ACTIVATE ROTATION AND RETIRE OLD PAUSE ===")
+        run(["systemctl", "enable", "--now", "dsh-model-rotate.timer"])
+        retire_old_pause()
+        run(["systemctl", "daemon-reload"])
+
         print("=== FINAL STATUS ===")
         run(["systemctl", "is-enabled", "dsh-model-rotate.timer"])
         run(["systemctl", "is-active", "dsh-model-rotate.timer"])
@@ -315,6 +366,8 @@ def main() -> int:
     finally:
         if not committed:
             shutil.copy2(BACKUP, SETTINGS)
+            if web_patch_backup is not None and web_patch_backup.exists():
+                shutil.copy2(web_patch_backup, WEB_PATCH)
             print("DSH_FINALIZE_ROLLBACK")
 
 
