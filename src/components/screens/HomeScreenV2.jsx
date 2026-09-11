@@ -6,6 +6,7 @@ import {
   CheckCircle2, ShieldCheck, MessageCircle, Sparkles,
 } from 'lucide-react';
 import { events } from '../../utils/analytics';
+import { PopularSearchesSection, CitiesSection, NewsletterSection } from '../home/HomeDiscoverySections';
 import FAQSchema from '../seo/FAQSchema';
 import ItemListSchema from '../seo/ItemListSchema';
 import './HomeScreenV2.css';
@@ -63,8 +64,8 @@ function AdRail({ items, renderAdCard, className = '' }) {
 
 export default function HomeScreenV2({
   activeCat, adsTotal, executeSearch, lang, renderAdCard, serverAds,
-  setActiveCat, setSearchLocationInput, setSearchQuery,
-  setShowPricingModal, searchLocationInput, searchQuery,
+  setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery,
+  setSelectedState, setShowPricingModal, searchLocationInput, searchQuery,
   minPrice, maxPrice, setMinPrice, setMaxPrice,
   handleSaveSearchAlert, savingSearchAlert,
   realEstateAds, jobAds, serviceAds, automotiveAds, t,
@@ -73,6 +74,8 @@ export default function HomeScreenV2({
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [showAllTrending, setShowAllTrending] = React.useState(false);
   const [featured, setFeatured] = React.useState([]);
+  const [homeToast, setHomeToast] = React.useState(null);
+  const homeToastTimerRef = React.useRef(null);
   const labels = CATEGORY_LABELS[lang] || CATEGORY_LABELS.es;
   const safeAds = Array.isArray(serverAds) ? serverAds : [];
   const trending = safeAds.slice(0, 12);
@@ -94,6 +97,42 @@ export default function HomeScreenV2({
       .catch(() => {});
     return () => { active = false; };
   }, []);
+
+  // Same feedback contract as the legacy home screen: one transient status
+  // message, announced politely, reused by the newsletter and job actions.
+  const showHomeToast = React.useCallback((message) => {
+    window.clearTimeout(homeToastTimerRef.current);
+    setHomeToast(message);
+    homeToastTimerRef.current = window.setTimeout(() => setHomeToast(null), 3200);
+  }, []);
+  React.useEffect(() => () => window.clearTimeout(homeToastTimerRef.current), []);
+
+  const runSearch = React.useCallback((term = '', category = null) => {
+    if (category !== null) setActiveCat?.(category);
+    setSearchQuery?.(term);
+    executeSearch?.(term, null, category ?? undefined);
+  }, [executeSearch, setActiveCat, setSearchQuery]);
+
+  const applyCityFilter = React.useCallback((cityName) => {
+    setSearchLocationInput?.(cityName);
+    setSelectedState?.(cityName);
+    executeSearch?.(null, cityName);
+    setCurrentTab?.('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [executeSearch, setCurrentTab, setSearchLocationInput, setSelectedState]);
+
+  const onViewAllMexico = React.useCallback(() => {
+    setSearchLocation?.(null);
+    setSearchLocationInput?.('');
+    setSelectedState?.('');
+    executeSearch?.(null, '');
+  }, [executeSearch, setSearchLocation, setSearchLocationInput, setSelectedState]);
+
+  // Entry point of the publish funnel from the homepage.
+  const publishAd = React.useCallback(() => {
+    events.publishStep('home_cta', null, { source: 'design_v2_publish' });
+    setCurrentTab?.('post');
+  }, [setCurrentTab]);
 
   const featuredRows = featured.length ? featured : safeAds.slice(0, 4);
   const sectionCopy = {
@@ -134,6 +173,11 @@ export default function HomeScreenV2({
 
   return (
     <div className="mercasto-v2" data-testid="home-v2">
+      {homeToast && (
+        <div className="v2-toast" data-testid="home-toast" role="status" aria-live="polite">
+          {homeToast}
+        </div>
+      )}
       {safeAds.length > 0 && (
         <ItemListSchema
           items={safeAds}
@@ -259,6 +303,22 @@ export default function HomeScreenV2({
             <SectionHeader title={t.jobs_board}
               action={t.see_all} onAction={() => navigate('/empleos')} />
             <AdRail items={(jobAds || []).slice(0,4)} renderAdCard={renderAdCard} />
+            <div className="v2-job-actions">
+              <button
+                data-testid="home-upload-cv"
+                type="button"
+                onClick={() => showHomeToast(t.upload_cv_available_toast)}
+              >
+                {t.upload_cv || 'Subir CV'}
+              </button>
+              <button
+                data-testid="home-create-job-alert"
+                type="button"
+                onClick={() => showHomeToast(t.job_alert_saved_toast)}
+              >
+                {t.create_job_alert || 'Crear alerta'}
+              </button>
+            </div>
           </section>
 
           <section className="v2-section">
@@ -284,6 +344,17 @@ export default function HomeScreenV2({
             </button>
           </section>
 
+          <section className="v2-publish">
+            <div className="v2-publish-copy">
+              <span className="v2-kicker"><Crown size={14} /> {t.for_sellers}</span>
+              <h2>{t.boost_ad}</h2>
+              <p>{t.boost_desc}</p>
+            </div>
+            <button type="button" className="v2-publish-cta" onClick={publishAd}>
+              {t.promote_now}<ArrowRight size={16} />
+            </button>
+          </section>
+
           <section className="v2-how">
             <SectionHeader title={t.how_it_works} />
             <div className="v2-how-grid">
@@ -293,6 +364,15 @@ export default function HomeScreenV2({
               <article><span><CheckCircle2 size={18}/></span><strong>{t.safe_payments}</strong><p>{t.safe_payments_desc}</p></article>
             </div>
           </section>
+
+          <PopularSearchesSection t={t} runSearch={runSearch} variant="v2" />
+          <CitiesSection
+            t={t}
+            applyCityFilter={applyCityFilter}
+            onViewAllMexico={onViewAllMexico}
+            variant="v2"
+          />
+          <NewsletterSection t={t} showHomeToast={showHomeToast} variant="v2" />
 
           <FAQSchema pageType="home" lang={lang} variant="v2" />
         </div>

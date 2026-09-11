@@ -1,20 +1,20 @@
 # Home V2 parity audit — Legacy vs V2
 
-Generated: 2026-09-11T00:48:15.020Z
+Generated: 2026-09-11T00:50:29.999Z
 
 - Legacy: `src/components/screens/HomeScreen.jsx` (1202 lines)
-- V2:     `src/components/screens/HomeScreenV2.jsx` (303 lines)
+- V2:     `src/components/screens/HomeScreenV2.jsx` (383 lines)
 
 ## Verdict
 
 - Features audited: **41**
-- V2 implemented: **23**
+- V2 implemented: **26**
 - V2 only: **1**
 - Intentionally removed: **0**
-- **MUST MIGRATE: 10**
-- Legacy props not accepted by V2: **8**
-- App.jsx props not forwarded to V2: **10**
-- Home testids asserted by tests but absent in V2: **10**
+- **MUST MIGRATE: 7**
+- Legacy props not accepted by V2: **5**
+- App.jsx props not forwarded to V2: **7**
+- Home testids asserted by tests but absent in V2: **8**
 - V2 i18n keys missing from one or more of the 11 runtime modules: **0**
 
 ## Feature matrix
@@ -25,7 +25,7 @@ Generated: 2026-09-11T00:48:15.020Z
 | Category rail | Discovery | `home-category-rail` | `v2-category-rail` | V2 implemented |
 | Pricing entry from rail | Discovery | `action === 'pricing'` | `openPricing('design_v2_category_rail')` | V2 implemented |
 | Location input | Discovery | `setSearchLocationInput` | `setSearchLocationInput` | V2 implemented |
-| State/city selection | Filters | `setSelectedState` | — | MUST MIGRATE |
+| State/city selection | Filters | `setSelectedState` | `setSelectedState` | V2 implemented |
 | Min/max price filters | Filters | — | `setMinPrice` | V2 only |
 | Dynamic attribute filters | Filters | `dynamicFilters` | — | MUST MIGRATE |
 | Condition filter | Filters | — | — | n/a |
@@ -52,8 +52,8 @@ Generated: 2026-09-11T00:48:15.020Z
 | Ad placements | Monetisation | — | — | n/a |
 | Publish CTA / tab switch | Publishing | `setCurrentTab('post')` | — | MUST MIGRATE |
 | How Mercasto works | Publishing | `how_it_works` | `how_it_works` | V2 implemented |
-| Popular searches / cities / newsletter | Content | `<PopularSearchesSection` | — | MUST MIGRATE |
-| Home toast feedback | Content | `home-toast` | — | MUST MIGRATE |
+| Popular searches / cities / newsletter | Content | `<PopularSearchesSection` | `<PopularSearchesSection` | V2 implemented |
+| Home toast feedback | Content | `home-toast` | `home-toast` | V2 implemented |
 | SEO component | SEO | — | — | n/a |
 | FAQ structured data | SEO | `<FAQSchema` | `<FAQSchema` | V2 implemented |
 | ItemList structured data | SEO | `<ItemListSchema` | `<ItemListSchema` | V2 implemented |
@@ -64,12 +64,6 @@ Generated: 2026-09-11T00:48:15.020Z
 | Uses production t.* keys | Platform | `t.featured_ads` | `t.all` | V2 implemented |
 
 ## MUST MIGRATE detail
-
-### State/city selection  `location_state`
-
-- Group: Filters
-- Legacy evidence: `setSelectedState`
-- V2 evidence: none
 
 ### Dynamic attribute filters  `dynamic_filters`
 
@@ -113,18 +107,6 @@ Generated: 2026-09-11T00:48:15.020Z
 - Legacy evidence: `setCurrentTab('post')`
 - V2 evidence: none
 
-### Popular searches / cities / newsletter  `discovery_sections`
-
-- Group: Content
-- Legacy evidence: `<PopularSearchesSection`
-- V2 evidence: none
-
-### Home toast feedback  `toast`
-
-- Group: Content
-- Legacy evidence: `home-toast`
-- V2 evidence: none
-
 
 ## Legacy props not accepted by V2
 
@@ -132,9 +114,6 @@ Generated: 2026-09-11T00:48:15.020Z
 - `getImageUrl`
 - `handleViewAd`
 - `selectedState`
-- `setCurrentTab`
-- `setSearchLocation`
-- `setSelectedState`
 - `user`
 
 ## App.jsx props not forwarded to V2
@@ -144,9 +123,6 @@ Generated: 2026-09-11T00:48:15.020Z
 - `handleViewAd`
 - `renderSkeletonCard`
 - `selectedState`
-- `setCurrentTab`
-- `setSearchLocation`
-- `setSelectedState`
 - `user`
 - `viewedAd`
 
@@ -159,12 +135,13 @@ Generated: 2026-09-11T00:48:15.020Z
 | `home-auto-price-filter` | yes | no |
 | `home-auto-filter-row` | yes | no |
 | `home-category-motor` | yes | no |
-| `home-upload-cv` | yes | no |
-| `home-create-job-alert` | yes | no |
+| `home-upload-cv` | yes | yes |
+| `home-create-job-alert` | yes | yes |
 | `home-newsletter-submit` | no | no |
 | `home-real-estate-rent` | yes | no |
 | `home-open-filters` | yes | no |
 | `home-real-estate-map-card` | yes | no |
+| `home-toast` | yes | yes |
 
 ## Imports present only in legacy
 
@@ -177,16 +154,15 @@ Generated: 2026-09-11T00:48:15.020Z
 - `../SEO`
 - `../common/AdSenseBanner`
 - `../common/SkeletonCard`
-- `../home/HomeDiscoverySections`
 
 ## Analytics events
 
 - Legacy: `categorySelected`
-- V2: `categorySelected`, `promotionViewed`
+- V2: `categorySelected`, `promotionViewed`, `publishStep`
 
 ## i18n gate — V2 keys across the 11 runtime language modules
 
-V2 uses **39** distinct `t.*` keys.
+V2 uses **47** distinct `t.*` keys.
 
 _All V2 keys exist in every runtime language module._
 

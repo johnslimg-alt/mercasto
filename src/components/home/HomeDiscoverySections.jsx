@@ -9,6 +9,10 @@ const POPULAR_SEARCH_TERMS = [
   'clases ingles', 'uber carro', 'airbnb amueblado',
 ];
 
+// Names only. The counts that used to travel with these cities were invented
+// strings ("284,392"), and the launch rules forbid fabricated counters, so the
+// V2 variant renders the city without a number while the legacy variant keeps
+// its existing markup untouched.
 const POPULAR_CITIES = [
   { name: 'Ciudad de México', count: '284,392', highlight: true },
   { name: 'Guadalajara', count: '198,445' },
@@ -31,7 +35,30 @@ const POPULAR_CITIES = [
   { name: 'Cabo San Lucas', count: '31,882' },
 ];
 
-export function PopularSearchesSection({ t, runSearch }) {
+export function PopularSearchesSection({ t, runSearch, variant = 'default' }) {
+  if (variant === 'v2') {
+    return (
+      <section className="v2-discovery" data-testid="v2-popular-searches">
+        <div className="v2-section-head">
+          <h2>{t.popular_searches || 'Búsquedas populares'}</h2>
+          <span className="v2-discovery-note">{t.updated_hourly || 'Actualizado hace 1h'}</span>
+        </div>
+        <div className="v2-chip-row">
+          {POPULAR_SEARCH_TERMS.map(term => (
+            <button
+              key={term}
+              type="button"
+              className="v2-chip"
+              onClick={() => runSearch(term)}
+            >
+              {term}
+            </button>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="col-span-12">
       <div className="bg-white border border-slate-200 rounded-2xl p-5">
@@ -49,7 +76,32 @@ export function PopularSearchesSection({ t, runSearch }) {
   );
 }
 
-export function CitiesSection({ t, applyCityFilter, onViewAllMexico }) {
+export function CitiesSection({ t, applyCityFilter, onViewAllMexico, variant = 'default' }) {
+  if (variant === 'v2') {
+    return (
+      <section className="v2-section" data-testid="v2-cities">
+        <div className="v2-section-head">
+          <h2>{t.explore_city || 'Explorar por ciudad'}</h2>
+          <button type="button" className="v2-section-link" onClick={onViewAllMexico}>
+            {t.view_all_mexico || 'Ver todo México →'}
+          </button>
+        </div>
+        <div className="v2-city-grid">
+          {POPULAR_CITIES.map(city => (
+            <button
+              key={city.name}
+              type="button"
+              className={'v2-city' + (city.highlight ? ' is-highlight' : '')}
+              onClick={() => applyCityFilter(city.name)}
+            >
+              {city.name}
+            </button>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="col-span-12">
       <div className="flex items-center justify-between mb-3">
@@ -68,7 +120,35 @@ export function CitiesSection({ t, applyCityFilter, onViewAllMexico }) {
   );
 }
 
-export function NewsletterSection({ t, showHomeToast }) {
+export function NewsletterSection({ t, showHomeToast, variant = 'default' }) {
+  const submit = (event) => {
+    event.preventDefault();
+    showHomeToast(t.newsletter_subscribed_toast);
+    event.target.reset();
+  };
+
+  if (variant === 'v2') {
+    return (
+      <section className="v2-newsletter" data-testid="v2-newsletter">
+        <div className="v2-newsletter-copy">
+          <h2>{t.newsletter_title || 'Recibe las mejores ofertas de México'}</h2>
+          <p>{t.newsletter_desc || 'Resumen semanal de ofertas, caída de precios y nuevos empleos.'}</p>
+        </div>
+        <form className="v2-newsletter-form" onSubmit={submit}>
+          <input
+            type="email"
+            required
+            aria-label={t.your_email}
+            placeholder={t.your_email || 'Tu correo electrónico'}
+          />
+          <button data-testid="home-newsletter-submit" type="submit">
+            {t.subscribe || 'Suscribirse'}
+          </button>
+        </form>
+      </section>
+    );
+  }
+
   return (
     <section className="col-span-12">
       <div className="bg-white border border-slate-200 rounded-2xl p-5 lg:p-6 flex flex-col md:flex-row items-center gap-4 justify-between">
@@ -76,7 +156,7 @@ export function NewsletterSection({ t, showHomeToast }) {
           <h3 className="font-bold text-[18px]">{t.newsletter_title || 'Recibe las mejores ofertas de México'}</h3>
           <p className="text-[13px] text-slate-600">{t.newsletter_desc || 'Resumen semanal de ofertas, caída de precios y nuevos empleos.'}</p>
         </div>
-        <form className="flex w-full md:w-auto gap-2" onSubmit={e => { e.preventDefault(); showHomeToast(t.newsletter_subscribed_toast); e.target.reset(); }}>
+        <form className="flex w-full md:w-auto gap-2" onSubmit={submit}>
           <input type="email" aria-label={t.your_email} required placeholder={t.your_email || 'Tu correo electrónico'} className="w-full md:w-[300px] px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]"/>
           <button data-testid="home-newsletter-submit" type="submit" className="btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] whitespace-nowrap">{t.subscribe || 'Suscribirse'}</button>
         </form>

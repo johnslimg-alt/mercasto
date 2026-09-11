@@ -169,3 +169,43 @@
 .v2-faq-item[open] summary span{transform:rotate(45deg)}
 .dark .v2-faq-item summary span{color:#a3e635}
 .v2-faq-item p{margin:0;padding:0 14px 13px;color:var(--v2-muted);font-size:13px;line-height:1.55}
+
+/* Transient status feedback (newsletter, job actions) */
+.v2-toast{position:fixed;left:50%;top:96px;z-index:120;transform:translateX(-50%);max-width:calc(100vw - 32px);padding:11px 16px;border:1px solid var(--v2-lime);border-radius:14px;background:var(--v2-card);color:var(--v2-ink);font-size:13px;font-weight:600;box-shadow:0 18px 40px rgba(15,23,42,.16)}
+
+/* Discovery: popular searches, cities, newsletter */
+.v2-discovery{margin-top:26px;padding:20px;border:1px solid var(--v2-line);border-radius:16px;background:var(--v2-card)}
+.v2-discovery-note{color:var(--v2-muted);font-size:11px;font-weight:600}
+.v2-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.v2-chip{padding:6px 12px;border:1px solid var(--v2-line);border-radius:999px;background:var(--v2-soft);color:var(--v2-ink);font-size:12px;font-weight:600;cursor:pointer}
+.v2-chip:hover{border-color:var(--v2-lime);color:var(--v2-lime-dark)}
+.dark .v2-chip:hover{color:#bef264}
+.v2-city-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
+.v2-city{padding:10px 12px;border:1px solid var(--v2-line);border-radius:12px;background:var(--v2-card);color:var(--v2-ink);font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+.v2-city:hover{border-color:var(--v2-lime)}
+.v2-city.is-highlight{border-color:var(--v2-lime);box-shadow:inset 0 0 0 1px rgba(132,204,22,.35)}
+.v2-newsletter{display:flex;flex-direction:column;gap:14px;margin-top:26px;padding:20px;border:1px solid var(--v2-line);border-radius:16px;background:var(--v2-card)}
+.v2-newsletter-copy h2{margin:0;font-size:18px;font-weight:800;letter-spacing:-.01em}
+.v2-newsletter-copy p{margin:6px 0 0;color:var(--v2-muted);font-size:13px}
+.v2-newsletter-form{display:flex;flex-direction:column;gap:8px}
+.v2-newsletter-form input{height:42px;padding:0 13px;border:1px solid var(--v2-line);border-radius:12px;background:var(--v2-soft);color:var(--v2-ink);font-size:14px}
+.v2-newsletter-form input:focus{outline:none;border-color:var(--v2-lime)}
+.v2-newsletter-form button{height:42px;border:0;border-radius:12px;background:var(--v2-lime);color:#1a2e05;font-size:13px;font-weight:800;cursor:pointer}
+.v2-newsletter-form button:hover{background:#a3e635}
+
+/* Job actions and the publish entry point */
+.v2-job-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.v2-job-actions button{padding:9px 14px;border:1px solid var(--v2-line);border-radius:11px;background:var(--v2-card);color:var(--v2-ink);font-size:12px;font-weight:700;cursor:pointer}
+.v2-job-actions button:hover{border-color:var(--v2-lime);color:var(--v2-lime-dark)}
+.dark .v2-job-actions button:hover{color:#bef264}
+.v2-publish{display:flex;flex-direction:column;gap:14px;margin-top:26px;padding:22px;border:1px solid rgba(132,204,22,.4);border-radius:16px;background:var(--v2-card)}
+.v2-publish-copy h2{margin:8px 0 0;font-size:20px;font-weight:800;letter-spacing:-.01em}
+.v2-publish-copy p{margin:6px 0 0;color:var(--v2-muted);font-size:13px}
+.v2-publish-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border:0;border-radius:12px;background:var(--v2-ink);color:var(--v2-card);font-size:13px;font-weight:800;cursor:pointer}
+@media(min-width:768px){
+  .v2-city-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .v2-newsletter{flex-direction:row;align-items:center;justify-content:space-between}
+  .v2-newsletter-form{flex-direction:row}
+  .v2-newsletter-form input{width:280px}
+  .v2-publish{flex-direction:row;align-items:center;justify-content:space-between}
+}

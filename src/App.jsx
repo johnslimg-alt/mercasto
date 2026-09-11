@@ -4035,8 +4035,11 @@ function App() {
       renderAdCard={renderAdCard}
       serverAds={serverAds}
       setActiveCat={setActiveCat}
+      setCurrentTab={setCurrentTab}
+      setSearchLocation={setSearchLocation}
       setSearchLocationInput={setSearchLocationInput}
       setSearchQuery={setSearchQuery}
+      setSelectedState={setSelectedState}
       setShowPricingModal={setShowPricingModal}
       searchLocationInput={searchLocationInput}
       searchQuery={searchQuery}
