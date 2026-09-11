@@ -22,7 +22,7 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
           <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
             <div className="p-5 flex justify-between items-center">
               <h3 id="pricing-modal-title" className="font-bold text-[22px] text-slate-900 dark:text-white flex items-center gap-2"><Crown className="w-6 h-6 text-[#84CC16]"/> {t.pricing_title}</h3>
-              <button ref={initialFocusRef} type="button" aria-label={t.close_btn} onClick={closeModal} className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"><XCircle size={26}/></button>
+              <button ref={initialFocusRef} type="button" aria-label={t.close_btn} onClick={closeModal} className="p-3.5 -m-2.5 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"><XCircle size={26}/></button>
             </div>
             <div className="flex px-5 gap-6 border-t border-slate-100 dark:border-slate-800">
               <button onClick={() => setPriceTab('particular')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'particular' ? 'border-[#84CC16] text-[#65A30D] dark:text-[#84CC16]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>{t.pm_tab_plans}</button>

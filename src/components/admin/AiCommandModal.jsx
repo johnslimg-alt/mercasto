@@ -39,7 +39,7 @@ export default function AiCommandModal({
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
       <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       <div role="dialog" aria-modal="true" aria-labelledby="ai-command-title" className="bg-slate-900 w-full max-w-3xl rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95 border border-slate-700 flex flex-col max-h-[90vh]">
-        <button type="button" aria-label={closeLabel} onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><XCircle size={24}/></button>
+        <button type="button" aria-label={closeLabel} onClick={onClose} className="absolute top-4 right-4 -m-3.5 p-3.5 text-slate-400 hover:text-white transition-colors"><XCircle size={24}/></button>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center"><Sparkles className="text-indigo-400 w-6 h-6"/></div>
           <div>

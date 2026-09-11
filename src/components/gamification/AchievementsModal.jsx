@@ -33,7 +33,7 @@ export default function AchievementsModal({ isOpen, onClose, lang = 'es' }) {
             type="button"
             aria-label={closeLabel}
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            className="flex h-12 w-12 items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
