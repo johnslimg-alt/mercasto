@@ -1,0 +1,90 @@
+name: LM Studio Runtime Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/lmstudio-runtime-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: github.head_ref == 'ops/lmstudio-runtime-probe'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          for i in 1 2 3 4 5; do
+            ssh-keyscan -T 5 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Inspect LM Studio
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "=== BINARIES ==="
+          command -v lms || true
+          command -v lmstudio || true
+          command -v llama-server || true
+          find /root /opt /usr/local -maxdepth 4 -type f \( -name lms -o -name lmstudio -o -name llama-server \) -perm -111 2>/dev/null | head -40
+
+          echo "=== PROCESSES ==="
+          ps -eo pid,ppid,etimes,%cpu,%mem,rss,args | grep -E '[l]lama-server|[l]ms |[l]mstudio' || true
+
+          echo "=== LISTENERS ==="
+          ss -lntp | grep -E 'llama-server|:(1234|1235|8080|8081|11434)\b' || true
+
+          echo "=== SERVICES ==="
+          systemctl list-units --type=service --all --no-pager | grep -Ei 'lm.?studio|llama|ollama' || true
+          systemctl list-unit-files --type=service --no-pager | grep -Ei 'lm.?studio|llama|ollama' || true
+
+          echo "=== LMS STATUS ==="
+          if command -v lms >/dev/null 2>&1; then
+            lms --version || true
+            lms ps || true
+            lms ls || true
+          fi
+
+          echo "=== LOCAL API PROBES ==="
+          for port in 1234 1235 8080 8081 11434; do
+            code=$(curl -sS -o "/tmp/p-$port" -w '%{http_code}' --max-time 3 "http://127.0.0.1:$port/v1/models" || true)
+            if [ "$code" != "000" ] && [ "$code" != "" ]; then
+              echo "port=$port http=$code"
+              python3 - "/tmp/p-$port" <<'PY'
+          import json,sys
+          try:
+              d=json.load(open(sys.argv[1]))
+              if isinstance(d,dict) and isinstance(d.get("data"),list):
+                  print("models=", [x.get("id") for x in d["data"][:20]])
+              else:
+                  print(str(d)[:500])
+          except Exception:
+              print(open(sys.argv[1],errors="ignore").read()[:500])
+          PY
+            fi
+          done
+
+          echo "=== LM STUDIO DIRS ==="
+          find /root -maxdepth 3 -type d \( -iname '*lmstudio*' -o -iname '.lmstudio' \) 2>/dev/null | head -40
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/key
