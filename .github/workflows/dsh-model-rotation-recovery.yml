@@ -1,0 +1,492 @@
+name: DSH Model Rotation Recovery
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dsh-model-rotation-recovery
+  cancel-in-progress: false
+
+jobs:
+  operate:
+    if: >-
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      (
+        github.event.comment.body == 'RUN:dsh_rotation_preflight:MERCASTO' ||
+        github.event.comment.body == 'RUN:dsh_rotation_install_zai:MERCASTO' ||
+        github.event.comment.body == 'RUN:dsh_rotation_install_zai-coding:MERCASTO'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Resolve operation
+        id: op
+        shell: bash
+        env:
+          BODY: \${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          case "$BODY" in
+            RUN:dsh_rotation_preflight:MERCASTO)
+              echo "mode=preflight" >> "$GITHUB_OUTPUT"
+              ;;
+            RUN:dsh_rotation_install_zai:MERCASTO)
+              echo "mode=install_zai" >> "$GITHUB_OUTPUT"
+              ;;
+            RUN:dsh_rotation_install_zai-coding:MERCASTO)
+              echo "mode=install_zai-coding" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              exit 64
+              ;;
+          esac
+
+      - name: Validate recovery secrets
+        shell: bash
+        env:
+          SERVER_HOST: \${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: \${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: \${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: \${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/dsh_rotation_key
+          chmod 600 ~/.ssh/dsh_rotation_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Run DSH rotation operation
+        shell: bash
+        env:
+          SERVER_HOST: \${{ secrets.SERVER_HOST }}
+          MODE: \${{ steps.op.outputs.mode }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/dsh_rotation_key "root@$SERVER_HOST" "MODE='$MODE' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          SETTINGS=/root/.dsh/settings.yaml
+          CREDENTIALS=/root/.dsh/.credentials.yaml
+          PROFILE=/root/.dsh/profiles/web
+          DSH_VERSION=0.1.5-rc.1
+
+          echo "=== DSH ROTATION OPERATION ==="
+          echo "mode=$MODE"
+          echo "utc=$(date -u +%FT%TZ)"
+          test -f "$SETTINGS"
+          test -d "$PROFILE"
+
+          echo "=== HARNESS HEALTH ==="
+          systemctl is-active deepseek-harness.service
+          ss -lntp | grep -E ':(3080|3081)\b'
+
+          show_default() {
+            python3 - "$SETTINGS" <<'PY'
+          import re, sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          lines = p.read_text(encoding="utf-8").splitlines()
+          out = []
+          active = False
+          for line in lines:
+              if re.match(r"^agent-default-model:\s*(?:#.*)?$", line):
+                  active = True
+                  out.append(line)
+                  continue
+              if active and re.match(r"^[A-Za-z0-9_.-]+:\s*", line):
+                  break
+              if active:
+                  if re.match(r"^\s+(provider|model|reasoningEffort):", line):
+                      out.append(line)
+          print("\n".join(out) if out else "agent-default-model: <unset>")
+          PY
+          }
+
+          credential_namespaces() {
+            python3 - "$CREDENTIALS" <<'PY'
+          import sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          if not p.exists():
+              print("credentials_missing=yes")
+              raise SystemExit
+          for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+              if line and not line[0].isspace() and ":" in line:
+                  key = line.split(":", 1)[0].strip()
+                  if key and all(c.isalnum() or c in "._-" for c in key):
+                      print(key)
+          PY
+          }
+
+          echo "=== CURRENT DEFAULT ==="
+          show_default
+
+          echo "=== CREDENTIAL NAMESPACES ==="
+          credential_namespaces
+
+          echo "=== SANITIZED MODEL REFERENCES ==="
+          grep -RHIinE 'glm-5\.3-flash|deepseek-flash|deepseek-official|zai-coding|(^|[^A-Za-z])zai([^A-Za-z]|$)' \
+            "$SETTINGS" "$PROFILE" 2>/dev/null \
+            | sed -E 's/(api[_-]?key|token|secret|password)[^:]*:.*/\1: <redacted>/Ig' \
+            | head -160 || true
+
+          if [ "$MODE" = "preflight" ]; then
+            echo "DSH_ROTATION_PREFLIGHT_OK"
+            exit 0
+          fi
+
+          case "$MODE" in
+            install_zai)
+              GLM_PROVIDER=zai
+              ;;
+            install_zai-coding)
+              GLM_PROVIDER=zai-coding
+              ;;
+            *)
+              echo "unsupported mode=$MODE" >&2
+              exit 64
+              ;;
+          esac
+
+          echo "selected_glm_provider=$GLM_PROVIDER"
+
+          BACKUP_DIR=/root/.dsh/backups/model-rotation
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          install -d -m 0700 "$BACKUP_DIR"
+          cp -a "$SETTINGS" "$BACKUP_DIR/settings.yaml.pre-install.$STAMP"
+          chmod 0600 "$BACKUP_DIR/settings.yaml.pre-install.$STAMP"
+          tar -C /root -czf "$BACKUP_DIR/web-profile.pre-install.$STAMP.tgz" .dsh/profiles/web
+
+          cat >/etc/dsh-model-rotation.env <<EOF
+          DSH_HOME=/root/.dsh
+          DEEPSEEK_PROVIDER=deepseek-official
+          DEEPSEEK_MODEL=deepseek-flash
+          GLM_PROVIDER=$GLM_PROVIDER
+          GLM_MODEL=glm-5.3-flash
+          EOF
+          chmod 0600 /etc/dsh-model-rotation.env
+
+          cat >/usr/local/sbin/dsh-model-rotate <<'PY'
+          #!/usr/bin/env python3
+          from __future__ import annotations
+
+          import datetime as dt
+          import fcntl
+          import os
+          import re
+          import shutil
+          import sys
+          import tempfile
+          from pathlib import Path
+
+          VALID_ID = re.compile(r"^[A-Za-z0-9._-]+$")
+
+          DSH_HOME = Path(os.environ.get("DSH_HOME", "/root/.dsh"))
+          SETTINGS = DSH_HOME / "settings.yaml"
+          BACKUP_DIR = DSH_HOME / "backups" / "model-rotation"
+          LOCK_FILE = Path("/run/lock/dsh-model-rotate.lock")
+
+          def env_id(name: str, default: str | None = None) -> str:
+              value = os.environ.get(name, default)
+              if not value:
+                  raise RuntimeError(f"missing environment variable {name}")
+              if not VALID_ID.fullmatch(value):
+                  raise RuntimeError(f"unsafe identifier in {name}: {value!r}")
+              return value
+
+          CONFIG = {
+              "deepseek": {
+                  "provider": env_id("DEEPSEEK_PROVIDER", "deepseek-official"),
+                  "model": env_id("DEEPSEEK_MODEL", "deepseek-flash"),
+              },
+              "glm": {
+                  "provider": env_id("GLM_PROVIDER"),
+                  "model": env_id("GLM_MODEL", "glm-5.3-flash"),
+              },
+          }
+
+          def desired_now() -> str:
+              now = dt.datetime.now(dt.timezone.utc)
+              minute = now.hour * 60 + now.minute
+              weekday = now.weekday() < 5
+              peak = weekday and (
+                  60 <= minute < 240
+                  or 360 <= minute < 600
+              )
+              return "glm" if peak else "deepseek"
+
+          def bounds(lines: list[str]) -> tuple[int, int] | None:
+              start = None
+              for i, line in enumerate(lines):
+                  if re.match(r"^agent-default-model:\s*(?:#.*)?$", line.rstrip("\n")):
+                      start = i
+                      break
+              if start is None:
+                  return None
+              end = len(lines)
+              for i in range(start + 1, len(lines)):
+                  if re.match(r"^[A-Za-z0-9_.-]+:\s*", lines[i]):
+                      end = i
+                      break
+              return start, end
+
+          def read_current(text: str) -> dict[str, str]:
+              lines = text.splitlines(keepends=True)
+              b = bounds(lines)
+              result: dict[str, str] = {}
+              if b is None:
+                  return result
+              start, end = b
+              for line in lines[start + 1:end]:
+                  m = re.match(
+                      r"^\s+(provider|model|reasoningEffort):\s*([A-Za-z0-9._-]+)\s*(?:#.*)?$",
+                      line.rstrip("\n"),
+                  )
+                  if m:
+                      result[m.group(1)] = m.group(2)
+              return result
+
+          def render(kind: str) -> str:
+              c = CONFIG[kind]
+              return (
+                  "agent-default-model:\n"
+                  f"  provider: {c['provider']}\n"
+                  f"  model: {c['model']}\n"
+              )
+
+          def replace_section(text: str, block: str) -> str:
+              lines = text.splitlines(keepends=True)
+              b = bounds(lines)
+              if b is None:
+                  prefix = text
+                  if prefix and not prefix.endswith("\n"):
+                      prefix += "\n"
+                  if prefix and not prefix.endswith("\n\n"):
+                      prefix += "\n"
+                  return prefix + block
+              start, end = b
+              return "".join(lines[:start]) + block + "".join(lines[end:])
+
+          def matches(current: dict[str, str], kind: str) -> bool:
+              c = CONFIG[kind]
+              return (
+                  current.get("provider") == c["provider"]
+                  and current.get("model") == c["model"]
+              )
+
+          def write_atomic(new_text: str) -> Path:
+              BACKUP_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+              stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+              backup = BACKUP_DIR / f"settings.yaml.auto.{stamp}"
+              shutil.copy2(SETTINGS, backup)
+              os.chmod(backup, 0o600)
+              st = SETTINGS.stat()
+              fd, tmp = tempfile.mkstemp(
+                  prefix=".settings.yaml.rotation.",
+                  dir=str(SETTINGS.parent),
+                  text=True,
+              )
+              try:
+                  with os.fdopen(fd, "w", encoding="utf-8") as h:
+                      h.write(new_text)
+                      h.flush()
+                      os.fsync(h.fileno())
+                  os.chmod(tmp, st.st_mode & 0o777)
+                  os.replace(tmp, SETTINGS)
+              finally:
+                  if os.path.exists(tmp):
+                      os.unlink(tmp)
+              return backup
+
+          def main() -> int:
+              if not SETTINGS.is_file():
+                  raise RuntimeError(f"settings not found: {SETTINGS}")
+
+              mode = sys.argv[1] if len(sys.argv) > 1 else "reconcile"
+              if mode == "reconcile":
+                  target = desired_now()
+              elif mode in ("deepseek", "glm"):
+                  target = mode
+              elif mode == "status":
+                  target = desired_now()
+              else:
+                  raise RuntimeError("usage: dsh-model-rotate [reconcile|deepseek|glm|status]")
+
+              LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+              with LOCK_FILE.open("w") as lock:
+                  fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+                  text = SETTINGS.read_text(encoding="utf-8")
+                  current = read_current(text)
+                  desired = CONFIG[target]
+
+                  if mode == "status":
+                      print(
+                          f"desired={target} "
+                          f"desired_provider={desired['provider']} "
+                          f"desired_model={desired['model']} "
+                          f"current_provider={current.get('provider','<unset>')} "
+                          f"current_model={current.get('model','<unset>')} "
+                          f"match={'yes' if matches(current,target) else 'no'}"
+                      )
+                      return 0
+
+                  if matches(current, target):
+                      print(
+                          f"rotation desired={target} provider={desired['provider']} "
+                          f"model={desired['model']} changed=no"
+                      )
+                      return 0
+
+                  if os.environ.get("DRY_RUN") == "1":
+                      print(
+                          f"rotation desired={target} provider={desired['provider']} "
+                          f"model={desired['model']} changed=would-change"
+                      )
+                      return 0
+
+                  new_text = replace_section(text, render(target))
+                  backup = write_atomic(new_text)
+                  print(
+                      f"rotation desired={target} provider={desired['provider']} "
+                      f"model={desired['model']} changed=yes backup={backup}"
+                  )
+              return 0
+
+          if __name__ == "__main__":
+              try:
+                  raise SystemExit(main())
+              except Exception as exc:
+                  print(f"dsh-model-rotate: ERROR: {exc}", file=sys.stderr)
+                  raise SystemExit(1)
+          PY
+          chmod 0755 /usr/local/sbin/dsh-model-rotate
+          python3 -m py_compile /usr/local/sbin/dsh-model-rotate
+
+          cat >/etc/systemd/system/dsh-model-rotate.service <<'EOF'
+          [Unit]
+          Description=Reconcile DeepSeek Harness default model
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=oneshot
+          User=root
+          Group=root
+          UMask=0077
+          EnvironmentFile=/etc/dsh-model-rotation.env
+          ExecStartPre=/usr/bin/test -r /root/.dsh/settings.yaml
+          ExecStart=/usr/local/sbin/dsh-model-rotate reconcile
+          EOF
+
+          cat >/etc/systemd/system/dsh-model-rotate.timer <<'EOF'
+          [Unit]
+          Description=DeepSeek peak-price model rotation
+
+          [Timer]
+          OnCalendar=Mon..Fri *-*-* 01:00:00 UTC
+          OnCalendar=Mon..Fri *-*-* 04:00:00 UTC
+          OnCalendar=Mon..Fri *-*-* 06:00:00 UTC
+          OnCalendar=Mon..Fri *-*-* 10:00:00 UTC
+          Persistent=true
+          AccuracySec=1s
+          Unit=dsh-model-rotate.service
+
+          [Install]
+          WantedBy=timers.target
+          EOF
+
+          systemd-analyze calendar 'Mon..Fri *-*-* 01:00:00 UTC' >/dev/null
+          systemd-analyze calendar 'Mon..Fri *-*-* 04:00:00 UTC' >/dev/null
+          systemd-analyze calendar 'Mon..Fri *-*-* 06:00:00 UTC' >/dev/null
+          systemd-analyze calendar 'Mon..Fri *-*-* 10:00:00 UTC' >/dev/null
+          systemctl daemon-reload
+
+          set -a
+          . /etc/dsh-model-rotation.env
+          set +a
+
+          echo "=== DRY RUN ==="
+          DRY_RUN=1 /usr/local/sbin/dsh-model-rotate glm
+          DRY_RUN=1 /usr/local/sbin/dsh-model-rotate deepseek
+          /usr/local/sbin/dsh-model-rotate status
+
+          ORIGINAL="$BACKUP_DIR/settings.yaml.pre-install.$STAMP"
+
+          rollback() {
+            echo "ROLLBACK"
+            systemctl disable --now dsh-model-rotate.timer >/dev/null 2>&1 || true
+            cp -a "$ORIGINAL" "$SETTINGS"
+            systemctl daemon-reload || true
+          }
+
+          echo "=== GLM FORCED TEST ==="
+          /usr/local/sbin/dsh-model-rotate glm
+          show_default
+          set +e
+          timeout 150s npx --yes @deepseek-ai/dsh@"$DSH_VERSION" --profile headless \
+            'Reply with exactly: ROTATION_GLM_OK' \
+            > /tmp/dsh-rotation-glm.out 2>&1
+          GLM_RC=$?
+          set -e
+          tail -80 /tmp/dsh-rotation-glm.out | sed -E 's/(sk-[A-Za-z0-9_-]+|Bearer [A-Za-z0-9._-]+)/<redacted>/g'
+          if [ "$GLM_RC" -ne 0 ] || ! grep -q 'ROTATION_GLM_OK' /tmp/dsh-rotation-glm.out; then
+            echo "GLM_SMOKE_FAIL rc=$GLM_RC" >&2
+            rollback
+            exit 20
+          fi
+          echo "GLM_SMOKE_OK"
+
+          echo "=== DEEPSEEK FORCED TEST ==="
+          /usr/local/sbin/dsh-model-rotate deepseek
+          show_default
+          set +e
+          timeout 150s npx --yes @deepseek-ai/dsh@"$DSH_VERSION" --profile headless \
+            'Reply with exactly: ROTATION_DEEPSEEK_OK' \
+            > /tmp/dsh-rotation-deepseek.out 2>&1
+          DEEPSEEK_RC=$?
+          set -e
+          tail -80 /tmp/dsh-rotation-deepseek.out | sed -E 's/(sk-[A-Za-z0-9_-]+|Bearer [A-Za-z0-9._-]+)/<redacted>/g'
+          if [ "$DEEPSEEK_RC" -ne 0 ] || ! grep -q 'ROTATION_DEEPSEEK_OK' /tmp/dsh-rotation-deepseek.out; then
+            echo "DEEPSEEK_SMOKE_FAIL rc=$DEEPSEEK_RC" >&2
+            rollback
+            exit 21
+          fi
+          echo "DEEPSEEK_SMOKE_OK"
+
+          echo "=== RECONCILE CURRENT WINDOW ==="
+          /usr/local/sbin/dsh-model-rotate reconcile
+          /usr/local/sbin/dsh-model-rotate status
+          show_default
+
+          systemctl enable --now dsh-model-rotate.timer
+          systemctl start dsh-model-rotate.service
+
+          echo "=== TIMER ==="
+          systemctl is-enabled dsh-model-rotate.timer
+          systemctl is-active dsh-model-rotate.timer
+          systemctl list-timers dsh-model-rotate.timer --all --no-pager
+
+          echo "=== FINAL HEALTH ==="
+          systemctl is-active deepseek-harness.service
+          ss -lntp | grep -E ':(3080|3081)\b'
+          curl -sSI --max-time 20 https://harness.flyaicrm.com/ | head -12
+          echo "DSH_ROTATION_INSTALL_OK provider=$GLM_PROVIDER"
+          REMOTE
+
+      - name: Cleanup SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/dsh_rotation_key
