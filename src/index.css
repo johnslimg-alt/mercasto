@@ -2211,6 +2211,8 @@ body *::-webkit-scrollbar {
 .mobile-theme-icon,
 .mobile-language-select,
 .mobile-location-select-top,
+.mobile-account-button,
+.mobile-account-button--top,
 .header-user-button {
   border-radius: var(--mc-radius-md);
 }

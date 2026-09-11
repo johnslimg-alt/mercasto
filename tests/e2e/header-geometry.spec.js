@@ -7,7 +7,9 @@ test('desktop header controls share one geometry system', async ({ page }, testI
 
   for (const width of DESKTOP_WIDTHS) {
     await page.setViewportSize({ width, height: 1000 });
-    await page.goto('/');
+    // /listings, not /: the Home V2 route hides the header search because its hero
+    // owns one, and this test measures that search box.
+    await page.goto('/listings');
     await expect(page.getByTestId('desktop-header-row')).toBeVisible();
     await page.waitForTimeout(250);
 
