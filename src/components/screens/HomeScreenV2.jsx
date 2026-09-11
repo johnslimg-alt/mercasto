@@ -60,7 +60,7 @@ function AdRail({ items, renderAdCard, className = '' }) {
 }
 
 export default function HomeScreenV2({
-  activeCat, executeSearch, lang, renderAdCard, serverAds,
+  activeCat, adsTotal, executeSearch, lang, renderAdCard, serverAds,
   setActiveCat, setSearchLocationInput, setSearchQuery,
   setShowPricingModal, searchLocationInput, searchQuery,
   minPrice, maxPrice, setMinPrice, setMaxPrice,
@@ -74,6 +74,11 @@ export default function HomeScreenV2({
   const labels = CATEGORY_LABELS[lang] || CATEGORY_LABELS.es;
   const safeAds = Array.isArray(serverAds) ? serverAds : [];
   const trending = safeAds.slice(0, 12);
+  // No fake counters: `safeAds.length` is the size of the loaded page, not the
+  // number of ads on the marketplace. The real total comes from the API
+  // (`adsTotal`, set from `data.total`) and is shown only when it is known.
+  const parsedAdsTotal = Number(adsTotal);
+  const realAdsTotal = Number.isFinite(parsedAdsTotal) && parsedAdsTotal > 0 ? parsedAdsTotal : 0;
 
   React.useEffect(() => {
     let active = true;
@@ -132,7 +137,9 @@ export default function HomeScreenV2({
           <div className="v2-hero-copy">
             <span className="v2-kicker"><Sparkles size={14} /> Mercasto AI</span>
             <h1>{sectionCopy.hero}</h1>
-            <p>{safeAds.length.toLocaleString()} {sectionCopy.found}</p>
+            {realAdsTotal > 0 && (
+              <p>{realAdsTotal.toLocaleString()} {sectionCopy.found}</p>
+            )}
           </div>
 
           <form onSubmit={submit} className="v2-search-form" data-testid="v2-search-form">

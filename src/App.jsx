@@ -4029,6 +4029,7 @@ function App() {
   const renderHomeV2Screen = () => (
     <HomeScreenV2
       activeCat={activeCat}
+      adsTotal={adsTotal}
       executeSearch={executeSearch}
       lang={lang}
       renderAdCard={renderAdCard}
