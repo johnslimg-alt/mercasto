@@ -4050,6 +4050,9 @@ function App() {
       handleSaveSearchAlert={handleSaveSearchAlert}
       savingSearchAlert={savingSearchAlert}
       realEstateAds={realEstateAds}
+      selectedState={selectedState}
+      handleViewAd={handleViewAd}
+      user={user}
       jobAds={jobAds}
       serviceAds={serviceAds}
       automotiveAds={automotiveAds}

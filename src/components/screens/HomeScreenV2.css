@@ -221,6 +221,18 @@
 .dark .v2-recent-price{color:#bef264}
 .v2-recent-price small{color:var(--v2-muted);font-size:10px;font-weight:500}
 .v2-recent-loc{padding:0 10px;color:var(--v2-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Recommendations arrive lazily; the map waits for intent before loading Leaflet. */
+.v2-rec-skeleton{height:190px;border-radius:16px;background:var(--v2-line);opacity:.35}
+.v2-map-card{position:relative;min-height:320px;margin-top:14px;border:1px solid var(--v2-line);border-radius:16px;overflow:hidden;background:var(--v2-soft)}
+.v2-map-canvas{position:absolute;inset:0;width:100%;height:100%}
+.v2-map-skeleton{position:absolute;inset:0;background:var(--v2-line);opacity:.35}
+.v2-map-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--v2-muted);font-size:12px;font-weight:600;cursor:pointer}
+.v2-map-placeholder svg{color:var(--v2-lime)}
+.v2-map-footer{position:absolute;left:14px;right:14px;bottom:14px;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--v2-line);border-radius:12px;background:var(--v2-card);font-size:12px}
+.v2-map-footer span{font-weight:600}
+.v2-map-footer button{border:0;background:none;color:var(--v2-lime-dark);font-size:12px;font-weight:700;cursor:pointer}
+.dark .v2-map-footer button{color:#bef264}
 @media(min-width:768px){
   .v2-city-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
   .v2-newsletter{flex-direction:row;align-items:center;justify-content:space-between}

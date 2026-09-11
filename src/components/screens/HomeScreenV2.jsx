@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, SlidersHorizontal, Bookmark, Car, Home as HomeIcon, Briefcase,
   Wrench, ShoppingBag, Store, Compass, Ticket, Crown, ArrowRight,
-  CheckCircle2, ShieldCheck, MessageCircle, Sparkles,
+  CheckCircle2, ShieldCheck, MessageCircle, Sparkles, MapPin,
 } from 'lucide-react';
 import { events } from '../../utils/analytics';
 import { formatNumber } from '../../utils/localeFormat';
@@ -13,7 +13,13 @@ import { AUTOMOTIVE_PRICE_OPTIONS, AUTOMOTIVE_QUICK_BRANDS, getAutomotiveQuickYe
 import { PopularSearchesSection, CitiesSection, NewsletterSection } from '../home/HomeDiscoverySections';
 import FAQSchema from '../seo/FAQSchema';
 import ItemListSchema from '../seo/ItemListSchema';
+import { formatHomePropertiesLabel, getHomeMapCopy } from '../../utils/homeMapCopy';
 import './HomeScreenV2.css';
+
+// Leaflet (~215 kB) and the recommendation widget stay out of the initial
+// parse/paint: both are lazy, exactly as on the legacy screen.
+const MapV3 = React.lazy(() => import('../common/MapV3'));
+const RecommendationsWidget = React.lazy(() => import('../common/RecommendationsWidget'));
 
 const CATEGORY_META = [
   ['motor', '/motor', Car],
@@ -67,9 +73,9 @@ function AdRail({ items, renderAdCard, className = '' }) {
 }
 
 export default function HomeScreenV2({
-  activeCat, adsTotal, executeSearch, lang, renderAdCard, serverAds,
-  setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery,
-  setSelectedState, setShowPricingModal, searchLocationInput, searchQuery,
+  activeCat, adsTotal, executeSearch, handleViewAd, lang, renderAdCard, serverAds,
+  selectedState, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery,
+  setSelectedState, setShowPricingModal, searchLocationInput, searchQuery, user,
   minPrice, maxPrice, setMinPrice, setMaxPrice,
   handleSaveSearchAlert, savingSearchAlert,
   realEstateAds, jobAds, serviceAds, automotiveAds, t,
@@ -151,6 +157,11 @@ export default function HomeScreenV2({
     clearRecentlyViewed();
     setRecentAds([]);
   }, []);
+
+  const homeMapCopy = React.useMemo(() => getHomeMapCopy(lang), [lang]);
+  // The map only mounts once the visitor shows intent, so Leaflet never loads
+  // for someone who just reads the page.
+  const [reMapLoaded, setReMapLoaded] = React.useState(false);
 
   // Automotive quick filters mirror the legacy row one-for-one: a year window
   // and a max-price bucket, both expressed as a search the user can share.
@@ -237,6 +248,7 @@ export default function HomeScreenV2({
               aria-label="Mercasto V2 search"
             />
             <button type="button" className={'v2-filter-button ' + (filtersOpen ? 'is-active' : '')}
+              data-testid="home-open-filters"
               onClick={() => setFiltersOpen(v => !v)} aria-expanded={filtersOpen} aria-label={t.filter}>
               <SlidersHorizontal size={17} /><span>{t.filter}</span>
             </button>
@@ -272,9 +284,9 @@ export default function HomeScreenV2({
 
       <section className="v2-categories-zone">
         <div className="v2-wrap">
-          <div className="v2-category-rail v2-scroll" data-testid="v2-category-rail">
+          <div className="v2-category-rail v2-scroll" data-testid="home-category-rail">
             {CATEGORY_META.map(([slug,path,Icon], i) => (
-              <button type="button" key={slug} onClick={() => openVertical(slug, path, 'design_v2_category_rail')} className="v2-category-pill">
+              <button type="button" key={slug} data-testid={`home-category-${slug}`} onClick={() => openVertical(slug, path, 'design_v2_category_rail')} className="v2-category-pill">
                 <span><Icon size={19} /></span>
                 <strong>{labels[i]}</strong>
               </button>
@@ -369,6 +381,18 @@ export default function HomeScreenV2({
             </button>
           </section>
 
+          <section className="v2-section" data-testid="v2-recommendations">
+            <React.Suspense fallback={<div className="v2-rec-skeleton" />}>
+              <RecommendationsWidget
+                userId={user?.id}
+                limit={12}
+                onAdClick={handleViewAd}
+                lang={lang}
+                t={t}
+              />
+            </React.Suspense>
+          </section>
+
           <section className="v2-section">
             <SectionHeader title={t.re_spotlight}
               action={t.see_all} onAction={() => navigate('/inmuebles')} />
@@ -381,6 +405,36 @@ export default function HomeScreenV2({
                 onClick={() => runSearch('comercial', 'inmobiliaria')}>{t.commercial || 'Comercial'}</button>
             </div>
             <AdRail items={(realEstateAds || []).slice(0,4)} renderAdCard={renderAdCard} />
+
+            <div
+              className="v2-map-card"
+              data-testid="home-real-estate-map-card"
+              onMouseEnter={() => setReMapLoaded(true)}
+              onTouchStart={() => setReMapLoaded(true)}
+            >
+              {reMapLoaded ? (
+                <React.Suspense fallback={<div className="v2-map-skeleton" />}>
+                  <MapV3
+                    ads={(realEstateAds || []).slice(0, 20)}
+                    category="inmobiliaria"
+                    title={selectedState || t.all_mexico}
+                    onMarkerClick={handleViewAd}
+                    className="v2-map-canvas"
+                  />
+                </React.Suspense>
+              ) : (
+                <div className="v2-map-placeholder">
+                  <MapPin size={24} />
+                  <span>{homeMapCopy.loading}</span>
+                </div>
+              )}
+              <div className="v2-map-footer">
+                <span>{formatHomePropertiesLabel(lang, selectedState)}</span>
+                <button type="button" onClick={onViewAllMexico}>
+                  {t.view_all_mexico} →
+                </button>
+              </div>
+            </div>
           </section>
 
           <section className="v2-section">

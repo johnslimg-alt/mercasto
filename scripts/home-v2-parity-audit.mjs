@@ -41,6 +41,17 @@ const v2Css = fs.existsSync(path.join(ROOT, V2_CSS_PATH)) ? read(V2_CSS_PATH) : 
 const legacyAll = legacy + '\n' + legacyCss;
 const v2All = v2 + '\n' + v2Css;
 
+// Both screens delegate the discovery band to a shared component, so a testid
+// that lives there is part of the rendered homepage for either screen. Scanning
+// only the screen file would report the same phantom break in both columns.
+const DELEGATED_SECTIONS = ['src/components/home/HomeDiscoverySections.jsx'];
+const delegatedSections = DELEGATED_SECTIONS
+  .filter((rel) => fs.existsSync(path.join(ROOT, rel)))
+  .map((rel) => read(rel))
+  .join('\n');
+const legacySurface = legacy + '\n' + delegatedSections;
+const v2Surface = v2 + '\n' + delegatedSections;
+
 /* ─────────────────────────────────────────────────────────────────────────────
    1. Feature matrix
    Each entry lists evidence patterns. `re` is matched against the source and
@@ -216,8 +227,8 @@ function testIdPresent(source, id) {
 const homeTestIds = testIdsUsedInTests().filter(id => id.startsWith('home-'));
 const testIdContract = homeTestIds.map(id => ({
   id,
-  inLegacy: testIdPresent(legacy, id),
-  inV2: testIdPresent(v2, id),
+  inLegacy: testIdPresent(legacySurface, id),
+  inV2: testIdPresent(v2Surface, id),
 }));
 
 /* ─────────────────────────────────────────────────────────────────────────────
