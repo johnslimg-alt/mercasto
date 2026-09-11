@@ -1,6 +1,6 @@
 # Home V2 parity audit — Legacy vs V2
 
-Generated: 2026-09-11T00:42:43.924Z
+Generated: 2026-09-11T00:45:11.421Z
 
 - Legacy: `src/components/screens/HomeScreen.jsx` (1202 lines)
 - V2:     `src/components/screens/HomeScreenV2.jsx` (285 lines)
@@ -11,7 +11,7 @@ Generated: 2026-09-11T00:42:43.924Z
 - V2 implemented: **20**
 - V2 only: **1**
 - Intentionally removed: **0**
-- **MUST MIGRATE: 14**
+- **MUST MIGRATE: 13**
 - Legacy props not accepted by V2: **9**
 - App.jsx props not forwarded to V2: **11**
 - Home testids asserted by tests but absent in V2: **10**
@@ -44,19 +44,19 @@ Generated: 2026-09-11T00:42:43.924Z
 | Services block | Verticals | `serviceAds` | `serviceAds` | V2 implemented |
 | Automotive block | Verticals | `automotiveAds` | `automotiveAds` | V2 implemented |
 | Real-estate quick filters (rent/buy/commercial) | Verticals | `home-real-estate-rent` | — | MUST MIGRATE |
-| Map usage on home | Verticals | `MapV3` | — | MUST MIGRATE |
-| AI recommendations widget | Listings | `RecommendationsWidget` | — | MUST MIGRATE |
+| Map usage on home | Verticals | `<MapV3` | — | MUST MIGRATE |
+| AI recommendations widget | Listings | `<RecommendationsWidget` | — | MUST MIGRATE |
 | Accurate total counter (adsTotal) | Listings | `adsTotal` | — | MUST MIGRATE |
 | Pricing modal opens | Monetisation | `setShowPricingModal` | `setShowPricingModal` | V2 implemented |
 | Promotion CTA | Monetisation | `promote_ad` | `promote_ad` | V2 implemented |
-| Ad placements | Monetisation | `AdSenseBanner` | — | MUST MIGRATE |
+| Ad placements | Monetisation | — | — | n/a |
 | Publish CTA / tab switch | Publishing | `setCurrentTab('post')` | — | MUST MIGRATE |
 | How Mercasto works | Publishing | `how_it_works` | `how_it_works` | V2 implemented |
-| Popular searches / cities / newsletter | Content | `PopularSearchesSection` | — | MUST MIGRATE |
+| Popular searches / cities / newsletter | Content | `<PopularSearchesSection` | — | MUST MIGRATE |
 | Home toast feedback | Content | `home-toast` | — | MUST MIGRATE |
 | SEO component | SEO | — | — | n/a |
-| FAQ structured data | SEO | `FAQSchema` | — | MUST MIGRATE |
-| ItemList structured data | SEO | `ItemListSchema` | — | MUST MIGRATE |
+| FAQ structured data | SEO | `<FAQSchema` | — | MUST MIGRATE |
+| ItemList structured data | SEO | `<ItemListSchema` | — | MUST MIGRATE |
 | Home H1 | SEO | `<h1` | `<h1` | V2 implemented |
 | Analytics events | Platform | `events.` | `events.` | V2 implemented |
 | Cookie/consent interaction | Platform | — | — | n/a |
@@ -98,25 +98,19 @@ Generated: 2026-09-11T00:42:43.924Z
 ### Map usage on home  `map`
 
 - Group: Verticals
-- Legacy evidence: `MapV3`
+- Legacy evidence: `<MapV3`
 - V2 evidence: none
 
 ### AI recommendations widget  `recommendations`
 
 - Group: Listings
-- Legacy evidence: `RecommendationsWidget`
+- Legacy evidence: `<RecommendationsWidget`
 - V2 evidence: none
 
 ### Accurate total counter (adsTotal)  `ads_total`
 
 - Group: Listings
 - Legacy evidence: `adsTotal`
-- V2 evidence: none
-
-### Ad placements  `adsense`
-
-- Group: Monetisation
-- Legacy evidence: `AdSenseBanner`
 - V2 evidence: none
 
 ### Publish CTA / tab switch  `publish_cta`
@@ -128,7 +122,7 @@ Generated: 2026-09-11T00:42:43.924Z
 ### Popular searches / cities / newsletter  `discovery_sections`
 
 - Group: Content
-- Legacy evidence: `PopularSearchesSection`
+- Legacy evidence: `<PopularSearchesSection`
 - V2 evidence: none
 
 ### Home toast feedback  `toast`
@@ -140,13 +134,13 @@ Generated: 2026-09-11T00:42:43.924Z
 ### FAQ structured data  `faq_schema`
 
 - Group: SEO
-- Legacy evidence: `FAQSchema`
+- Legacy evidence: `<FAQSchema`
 - V2 evidence: none
 
 ### ItemList structured data  `itemlist_schema`
 
 - Group: SEO
-- Legacy evidence: `ItemListSchema`
+- Legacy evidence: `<ItemListSchema`
 - V2 evidence: none
 
 

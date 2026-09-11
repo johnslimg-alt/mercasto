@@ -75,27 +75,33 @@ const FEATURES = [
   { id: 'vertical_services', group: 'Verticals', label: 'Services block', legacy: [/serviceAds/], v2: [/serviceAds/] },
   { id: 'vertical_auto', group: 'Verticals', label: 'Automotive block', legacy: [/automotiveAds/], v2: [/automotiveAds/] },
   { id: 'vertical_re_quickfilters', group: 'Verticals', label: 'Real-estate quick filters (rent/buy/commercial)', legacy: [/home-real-estate-rent/], v2: [/home-real-estate-rent/] },
-  { id: 'map', group: 'Verticals', label: 'Map usage on home', legacy: [/MapV3/, /home-real-estate-map-card/], v2: [/MapV3|home-real-estate-map-card/] },
-  { id: 'recommendations', group: 'Listings', label: 'AI recommendations widget', legacy: [/RecommendationsWidget/], v2: [/RecommendationsWidget/] },
+  // Component-backed features match an actual render (`<Name`), not the bare
+  // identifier: a component that is only imported is not a homepage capability,
+  // and treating it as one invents regressions that do not exist.
+  { id: 'map', group: 'Verticals', label: 'Map usage on home', legacy: [/<MapV3\b/, /home-real-estate-map-card/], v2: [/<MapV3\b|home-real-estate-map-card/] },
+  { id: 'recommendations', group: 'Listings', label: 'AI recommendations widget', legacy: [/<RecommendationsWidget\b/], v2: [/<RecommendationsWidget\b/] },
   { id: 'ads_total', group: 'Listings', label: 'Accurate total counter (adsTotal)', legacy: [/adsTotal/], v2: [/adsTotal/] },
 
   // --- Monetisation ---
   { id: 'pricing_modal', group: 'Monetisation', label: 'Pricing modal opens', legacy: [/setShowPricingModal/], v2: [/setShowPricingModal/] },
   { id: 'promotion', group: 'Monetisation', label: 'Promotion CTA', legacy: [/promote_ad|promote_now/], v2: [/promote_ad|promote_now/] },
-  { id: 'adsense', group: 'Monetisation', label: 'Ad placements', legacy: [/AdSenseBanner/], v2: [/AdSenseBanner/] },
+  // Legacy HomeScreen only *imports* AdSenseBanner and never renders it (the
+  // banner is rendered inside AdDetailScreen). Render-based matching is what
+  // makes this correctly report n/a instead of a phantom regression.
+  { id: 'adsense', group: 'Monetisation', label: 'Ad placements', legacy: [/<AdSenseBanner\b/], v2: [/<AdSenseBanner\b/] },
 
   // --- Publishing ---
   { id: 'publish_cta', group: 'Publishing', label: 'Publish CTA / tab switch', legacy: [/setCurrentTab\('post'\)/], v2: [/setCurrentTab\('post'\)/] },
   { id: 'how_it_works', group: 'Publishing', label: 'How Mercasto works', legacy: [/how_it_works/], v2: [/how_it_works/] },
 
   // --- Trust / discovery extras ---
-  { id: 'discovery_sections', group: 'Content', label: 'Popular searches / cities / newsletter', legacy: [/PopularSearchesSection|CitiesSection|NewsletterSection/], v2: [/PopularSearchesSection|CitiesSection|NewsletterSection/] },
+  { id: 'discovery_sections', group: 'Content', label: 'Popular searches / cities / newsletter', legacy: [/<PopularSearchesSection\b|<CitiesSection\b|<NewsletterSection\b/], v2: [/<PopularSearchesSection\b|<CitiesSection\b|<NewsletterSection\b/] },
   { id: 'toast', group: 'Content', label: 'Home toast feedback', legacy: [/home-toast/], v2: [/home-toast/] },
 
   // --- SEO / metadata ---
   { id: 'seo_component', group: 'SEO', label: 'SEO component', legacy: [/<SEO\b/], v2: [/<SEO\b/] },
-  { id: 'faq_schema', group: 'SEO', label: 'FAQ structured data', legacy: [/FAQSchema/], v2: [/FAQSchema/] },
-  { id: 'itemlist_schema', group: 'SEO', label: 'ItemList structured data', legacy: [/ItemListSchema/], v2: [/ItemListSchema/] },
+  { id: 'faq_schema', group: 'SEO', label: 'FAQ structured data', legacy: [/<FAQSchema\b/], v2: [/<FAQSchema\b/] },
+  { id: 'itemlist_schema', group: 'SEO', label: 'ItemList structured data', legacy: [/<ItemListSchema\b/], v2: [/<ItemListSchema\b/] },
   { id: 'h1', group: 'SEO', label: 'Home H1', legacy: [/<h1/], v2: [/<h1/] },
 
   // --- Platform ---
