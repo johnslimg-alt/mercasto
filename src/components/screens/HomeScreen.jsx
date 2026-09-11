@@ -946,9 +946,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                   </div>
                   <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
                     {recentAds.map(ad => {
-                      const imgSrc = ad.thumbnail
-                        ? (ad.thumbnail.startsWith('http') ? ad.thumbnail : `https://mercasto.com/storage/${ad.thumbnail}`)
-                        : '/placeholder-ad.svg';
+                      const imgSrc = ad.thumbnail ? getImageUrl(ad.thumbnail) : '/placeholder-ad.svg';
                       const locationStr = ad.state || ad.location?.split(',')[0] || 'México';
                       return (
                         <button type="button" key={ad.id} onClick={() => { runSearch(localizedText(ad.title)); }} className="shrink-0 w-[160px] text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md dark:hover:shadow-black/50 transition-shadow cursor-pointer group">

@@ -24,24 +24,27 @@ export const getImageUrl = (path, fallback = null) => {
     if (path.length > 0) {
       const first = path[0];
       if (first && (first.startsWith('http') || first.startsWith('data:'))) return safeExternalImage(first);
-      return `${STORAGE_URL}/${first}`;
+      if (first === '/placeholder-ad.svg' || (typeof first === 'string' && first.startsWith('/storage/'))) return first;
+      return `${STORAGE_URL}/${String(first).replace(/^\/+/, '')}`;
     }
     return fallback || '/placeholder-ad.svg';
   }
 
   if (typeof path === 'string') {
     if (path.startsWith('http') || path.startsWith('data:')) return safeExternalImage(path);
+    if (path === '/placeholder-ad.svg' || path.startsWith('/storage/')) return path;
     if (path.startsWith('[')) {
       try {
         const arr = JSON.parse(path);
         if (arr && arr.length > 0) {
           const first = arr[0];
           if (first.startsWith('http') || first.startsWith('data:')) return safeExternalImage(first);
-          return `${STORAGE_URL}/${first}`;
+          if (first === '/placeholder-ad.svg' || first.startsWith('/storage/')) return first;
+          return `${STORAGE_URL}/${first.replace(/^\/+/, '')}`;
         }
       } catch (e) {}
     }
-    return `${STORAGE_URL}/${path}`;
+    return `${STORAGE_URL}/${path.replace(/^\/+/, '')}`;
   }
 
   return fallback || '/placeholder-ad.svg';

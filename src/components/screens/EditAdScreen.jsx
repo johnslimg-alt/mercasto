@@ -319,7 +319,10 @@ export default function EditAdScreen({ t, lang }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 pb-24 text-slate-900 dark:text-white">
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#25D366]'}`}>
+        <div
+          data-testid="edit-ad-toast"
+          className={`fixed bottom-[96px] right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium md:bottom-6 ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#25D366]'}`}
+        >
           {toast.message}
         </div>
       )}

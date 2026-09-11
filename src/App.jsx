@@ -201,23 +201,26 @@ const getImageUrl = (path, fallback = null) => {
     if (path.length > 0) {
       const first = path[0];
       if (first && (first.startsWith('http') || first.startsWith('data:'))) return safeExternalImage(first);
-      return `${STORAGE_URL}/${first}`;
+      if (first === '/placeholder-ad.svg' || (typeof first === 'string' && first.startsWith('/storage/'))) return first;
+      return `${STORAGE_URL}/${String(first).replace(/^\/+/, '')}`;
     }
     return defaultFallback;
   }
   if (typeof path === 'string') {
     if (path.startsWith('http') || path.startsWith('data:')) return safeExternalImage(path);
+    if (path === '/placeholder-ad.svg' || path.startsWith('/storage/')) return path;
     if (path.startsWith('[')) {
       try {
         const arr = JSON.parse(path);
         if (arr && arr.length > 0) {
           const first = arr[0];
           if (first.startsWith('http') || first.startsWith('data:')) return safeExternalImage(first);
-          return `${STORAGE_URL}/${first}`;
+          if (first === '/placeholder-ad.svg' || first.startsWith('/storage/')) return first;
+          return `${STORAGE_URL}/${first.replace(/^\/+/, '')}`;
         }
       } catch (e) {}
     }
-    return `${STORAGE_URL}/${path}`;
+    return `${STORAGE_URL}/${path.replace(/^\/+/, '')}`;
   }
   return defaultFallback;
 };
@@ -592,6 +595,20 @@ function App() {
         if (opener?.isConnected) opener.focus();
       });
     }
+  }, [showAuthModal]);
+
+  useEffect(() => {
+    if (!showAuthModal) return undefined;
+    const body = document.body;
+    const root = document.documentElement;
+    const previousBodyOverflowY = body.style.overflowY;
+    const previousRootOverflowY = root.style.overflowY;
+    body.style.overflowY = 'hidden';
+    root.style.overflowY = 'hidden';
+    return () => {
+      body.style.overflowY = previousBodyOverflowY;
+      root.style.overflowY = previousRootOverflowY;
+    };
   }, [showAuthModal]);
 
   useEffect(() => {
@@ -4424,18 +4441,18 @@ function App() {
       )}
 
       {showAuthModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onKeyDown={handleAuthModalKeyDown}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto no-scrollbar overscroll-contain p-3 sm:p-4" onKeyDown={handleAuthModalKeyDown}>
           <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { if (!authLoading) setShowAuthModal(false); }} />
           {requiresTwoFactor ? (
-            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-              <button type="button" aria-label={t.close_btn} disabled={authLoading} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"><XCircle size={24}/></button>
-              <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_two_factor_title}</h2>
+            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm max-h-[calc(100dvh-1.5rem)] overflow-y-auto no-scrollbar overscroll-contain rounded-3xl p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+              <button type="button" data-testid="auth-modal-close" aria-label={t.close_btn} disabled={authLoading} onClick={() => setShowAuthModal(false)} className="absolute top-2 right-2 sm:top-4 sm:right-4 flex h-12 w-12 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white transition-colors disabled:opacity-50"><XCircle size={24}/></button>
+              <h2 id="auth-modal-title" className="px-10 text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_two_factor_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
                 {t.ai_brand_tagline}
               </p>
               <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">{t.auth_two_factor_desc}</p>
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
-                <input name="code" aria-label={t.auth_two_factor_placeholder} required autoFocus placeholder={t.auth_two_factor_placeholder} maxLength="32" className="w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                <input name="code" aria-label={t.auth_two_factor_placeholder} required autoFocus placeholder={t.auth_two_factor_placeholder} maxLength="32" className="min-h-12 w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                 <div className="pt-2">
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] flex items-center justify-center">
                     {authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_two_factor_verify}
@@ -4444,33 +4461,33 @@ function App() {
               </form>
             </div>
           ) : authMode === 'phone_request' || authMode === 'phone_verify' ? (
-            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-              <button type="button" aria-label={t.close_btn} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-              <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_phone_title}</h2>
+            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm max-h-[calc(100dvh-1.5rem)] overflow-y-auto no-scrollbar overscroll-contain rounded-3xl p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+              <button type="button" data-testid="auth-modal-close" aria-label={t.close_btn} onClick={() => setShowAuthModal(false)} className="absolute top-2 right-2 sm:top-4 sm:right-4 flex h-12 w-12 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+              <h2 id="auth-modal-title" className="px-10 text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_phone_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
                 {t.ai_brand_tagline}
               </p>
 
               {authMode === 'phone_request' ? (
                 <form onSubmit={handlePhoneRequestSubmit} className="space-y-3.5">
-                  <input name="phone_number" aria-label={t.auth_phone_placeholder} required type="tel" placeholder={t.auth_phone_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                  <input name="phone_number" aria-label={t.auth_phone_placeholder} required type="tel" placeholder={t.auth_phone_placeholder} className="min-h-12 w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_sms_receive}</button>
                 </form>
               ) : (
                 <form onSubmit={handlePhoneVerifySubmit} className="space-y-3.5">
                   <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] -mt-2 mb-4">{t.auth_code_sent_to} <br/><strong>{authPhone}</strong></p>
-                  <input name="code" aria-label={t.auth_code_placeholder} required autoFocus placeholder={t.auth_code_placeholder} maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                  <input name="code" aria-label={t.auth_code_placeholder} required autoFocus placeholder={t.auth_code_placeholder} maxLength="6" className="min-h-12 w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_phone_verify}</button>
                 </form>
               )}
               <div className="mt-6 text-center">
-                 <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">{t.auth_back_to_login}</button>
+                 <button type="button" onClick={() => setAuthMode('login')} className="inline-flex min-h-12 w-full items-center justify-center text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">{t.auth_back_to_login}</button>
               </div>
             </div>
           ) : (
-            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-                <button type="button" aria-label={t.close_btn} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-                <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">
+            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm max-h-[calc(100dvh-1.5rem)] overflow-y-auto no-scrollbar overscroll-contain rounded-3xl p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+                <button type="button" data-testid="auth-modal-close" aria-label={t.close_btn} onClick={() => setShowAuthModal(false)} className="absolute top-2 right-2 sm:top-4 sm:right-4 flex h-12 w-12 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+                <h2 id="auth-modal-title" className="px-10 text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}
                 </h2>
                 <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
@@ -4483,29 +4500,29 @@ function App() {
                   </div>
                 )}
                 <form onSubmit={handleAuthSubmit} className="space-y-3.5">
-                    {authMode === 'register' && <input name="name" aria-label={t.name} required placeholder={t.name} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
-                    {authMode !== 'reset_password' && <input name="email" aria-label={t.email} type="email" required placeholder={t.email} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
-                    {(authMode === 'login' || authMode === 'register') && <input name="password" aria-label={t.password} type="password" required placeholder={t.password} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
+                    {authMode === 'register' && <input name="name" aria-label={t.name} required placeholder={t.name} className="min-h-12 w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
+                    {authMode !== 'reset_password' && <input name="email" aria-label={t.email} type="email" required placeholder={t.email} className="min-h-12 w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
+                    {(authMode === 'login' || authMode === 'register') && <input name="password" aria-label={t.password} type="password" required placeholder={t.password} className="min-h-12 w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
                     {authMode === 'register' && (
                       <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/60 px-3.5 py-3">
-                        <label className="flex items-start gap-3 text-[12px] leading-relaxed text-slate-600 dark:text-slate-300 cursor-pointer">
+                        <label className="flex min-h-12 items-start gap-3 text-[12px] leading-relaxed text-slate-600 dark:text-slate-300 cursor-pointer">
                           <input
                             name="age_confirmed"
                             type="checkbox"
                             required
                             checked={registrationConsentAccepted}
                             onChange={(event) => setRegistrationConsentAccepted(event.target.checked)}
-                            className="mt-0.5 h-4 w-4 shrink-0 accent-[#84CC16]"
+                            className="mt-0.5 h-5 w-5 shrink-0 accent-[#84CC16]"
                           />
                           <span>
                             {t.registration_legal_consent || 'Confirmo que tengo al menos 18 años y acepto los términos y el aviso de privacidad.'}
                           </span>
                         </label>
                         <div className="mt-2 ml-7 flex flex-wrap gap-x-3 gap-y-1 text-[12px] font-semibold">
-                          <a href="/terms" target="_blank" rel="noreferrer" className="text-[#65A30D] hover:underline">
+                          <a href="/terms" target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center text-[#65A30D] hover:underline">
                             {t.terms_of_use || 'Términos de uso'}
                           </a>
-                          <a href="/privacy" target="_blank" rel="noreferrer" className="text-[#65A30D] hover:underline">
+                          <a href="/privacy" target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center text-[#65A30D] hover:underline">
                             {t.privacy_policy || 'Aviso de Privacidad'}
                           </a>
                         </div>
@@ -4513,8 +4530,8 @@ function App() {
                     )}
                     {authMode === 'reset_password' && (
                       <>
-                        <input name="password" aria-label={t.new_password} type="password" required minLength="8" placeholder={t.new_password} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
-                        <input name="password_confirmation" aria-label={t.conf_password || 'Confirmar nueva contraseña'} type="password" required minLength="8" placeholder={t.conf_password || 'Confirmar nueva contraseña'} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                        <input name="password" aria-label={t.new_password} type="password" required minLength="8" placeholder={t.new_password} className="min-h-12 w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                        <input name="password_confirmation" aria-label={t.conf_password || 'Confirmar nueva contraseña'} type="password" required minLength="8" placeholder={t.conf_password || 'Confirmar nueva contraseña'} className="min-h-12 w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                       </>
                     )}
                     <div className="pt-2">
@@ -4645,21 +4662,21 @@ function App() {
 
                 <div className="mt-6 text-center flex flex-col gap-2.5">
                     {(authMode === 'login' || authMode === 'register') && (
-                        <button type="button" onClick={() => {
+                        <button type="button" data-testid="auth-mode-switch" onClick={() => {
                           const nextMode = authMode === 'login' ? 'register' : 'login';
                           setAuthMode(nextMode);
                           if (nextMode === 'login') setRegistrationConsentAccepted(false);
-                        }} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">
+                        }} className="inline-flex min-h-12 w-full items-center justify-center text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">
                             {authMode === 'login' ? t.auth_no_account_join : t.auth_have_account}
                         </button>
                     )}
                     {authMode === 'login' && (
-                        <button type="button" onClick={() => setAuthMode('forgot_password')} className="text-[12px] font-medium text-slate-400 hover:text-[#84CC16] transition-colors">
+                        <button type="button" data-testid="auth-forgot-password" onClick={() => setAuthMode('forgot_password')} className="inline-flex min-h-12 w-full items-center justify-center text-[12px] font-medium text-slate-400 hover:text-[#84CC16] transition-colors">
                             {t.forgot_password}
                         </button>
                     )}
                     {(authMode === 'forgot_password' || authMode === 'reset_password' || authMode === 'phone_request' || authMode === 'phone_verify') && (
-                        <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">
+                        <button type="button" onClick={() => setAuthMode('login')} className="inline-flex min-h-12 w-full items-center justify-center text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">
                             {t.auth_back_to_login}
                         </button>
                     )}

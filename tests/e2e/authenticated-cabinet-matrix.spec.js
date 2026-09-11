@@ -542,3 +542,45 @@ test('mobile global toast stays clear of the tabbar', async ({ page, request }, 
   });
   expect(tabbarCenterHit).toBeTruthy();
 });
+
+
+test('edit-ad toast stays above the mobile tabbar', async ({ page, request }, testInfo) => {
+  test.skip(!testInfo.project.name.includes('mobile'), 'mobile-only geometry regression');
+  const session = await authenticate(request, 'seller');
+  const ads = await sellerAds(request, session);
+  const ad = ads.find((item) => item.title === 'Mercasto E2E Active Listing') || ads[0];
+  expect(ad?.id).toBeTruthy();
+  await installSession(page, session);
+
+  await page.route('**/api/ads/generate-description', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ description: 'Generated E2E description' }),
+    });
+  });
+
+  await page.goto('/anuncio/' + ad.id + '/editar');
+  await expect(page.getByTestId('edit-ad-title')).toBeVisible();
+  const tabbar = page.locator('.mobile-tabbar');
+  await expect(tabbar).toBeVisible();
+  const descriptionResponsePromise = page.waitForResponse((response) => (
+    new URL(response.url()).pathname === '/api/ads/generate-description'
+  ));
+  await page.getByTestId('edit-ad-generate-ai').evaluate((button) => button.click());
+  await descriptionResponsePromise;
+
+  const toast = page.getByTestId('edit-ad-toast');
+  await expect(toast).toBeVisible();
+  const result = await page.evaluate(() => {
+    const toast = document.querySelector('[data-testid="edit-ad-toast"]');
+    const tab = document.querySelector('.mobile-tabbar');
+    if (!toast || !tab) return null;
+    const a = toast.getBoundingClientRect();
+    const b = tab.getBoundingClientRect();
+    const overlap = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+    const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return { overlap, tabHit: Boolean(hit && tab.contains(hit)) };
+  });
+  expect(result).toEqual({ overlap: 0, tabHit: true });
+});
