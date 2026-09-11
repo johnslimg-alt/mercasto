@@ -18,6 +18,16 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      # DeepSeek Harness owns harness.flyaicrm.com on the same edge container.
+      # Its vhost lives outside the checkout for the same reason as above:
+      # appending it to the tracked default.conf used to make the production
+      # checkout dirty and broke the post-deploy main checkout guard.
+      - type: bind
+        source: /etc/mercasto-edge/harness.conf
+        target: /etc/nginx/conf.d/harness.conf
+        read_only: true
+        bind:
+          create_host_path: false
 
   mercasto-scheduler:
     depends_on:
