@@ -211,6 +211,16 @@
 .v2-quick:hover{border-color:var(--v2-lime)}
 .v2-quick.is-active{background:var(--v2-ink);color:var(--v2-card);border-color:var(--v2-ink)}
 .v2-quick-select{flex:none;height:34px;padding:0 10px;border:1px solid var(--v2-line);border-radius:10px;background:var(--v2-card);color:var(--v2-ink);font-size:12px;font-weight:600;cursor:pointer}
+
+/* Recently viewed — personal rail restored from localStorage */
+.v2-recent-card{flex:0 0 160px;display:flex;flex-direction:column;gap:4px;padding:0 0 8px;border:1px solid var(--v2-line);border-radius:12px;background:var(--v2-card);color:var(--v2-ink);text-align:left;cursor:pointer;overflow:hidden}
+.v2-recent-card:hover{border-color:var(--v2-lime)}
+.v2-recent-card img{width:100%;height:100px;object-fit:cover;background:var(--v2-soft)}
+.v2-recent-card strong{padding:0 10px;font-size:13px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.v2-recent-price{padding:0 10px;color:var(--v2-lime-dark);font-size:13px;font-weight:700}
+.dark .v2-recent-price{color:#bef264}
+.v2-recent-price small{color:var(--v2-muted);font-size:10px;font-weight:500}
+.v2-recent-loc{padding:0 10px;color:var(--v2-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(min-width:768px){
   .v2-city-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
   .v2-newsletter{flex-direction:row;align-items:center;justify-content:space-between}

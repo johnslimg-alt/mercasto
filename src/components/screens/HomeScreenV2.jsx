@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { events } from '../../utils/analytics';
 import { formatNumber } from '../../utils/localeFormat';
+import { localizedText } from '../../utils/localize';
+import { clearRecentlyViewed, getRecentlyViewed } from '../../utils/recentlyViewed';
 import { AUTOMOTIVE_PRICE_OPTIONS, AUTOMOTIVE_QUICK_BRANDS, getAutomotiveQuickYears } from '../../utils/automotiveQuickFilters';
 import { PopularSearchesSection, CitiesSection, NewsletterSection } from '../home/HomeDiscoverySections';
 import FAQSchema from '../seo/FAQSchema';
@@ -137,6 +139,18 @@ export default function HomeScreenV2({
   }, [setCurrentTab]);
 
   const automotiveQuickYears = React.useMemo(() => getAutomotiveQuickYears(), []);
+
+  // Recently viewed is a localStorage snapshot of the minimal card fields, so an
+  // entry still renders after the listing itself is gone.
+  const [recentAds, setRecentAds] = React.useState(() => {
+    const stored = getRecentlyViewed();
+    return Array.isArray(stored) ? stored : [];
+  });
+
+  const clearRecent = React.useCallback(() => {
+    clearRecentlyViewed();
+    setRecentAds([]);
+  }, []);
 
   // Automotive quick filters mirror the legacy row one-for-one: a year window
   // and a max-price bucket, both expressed as a search the user can share.
@@ -293,6 +307,49 @@ export default function HomeScreenV2({
               <button type="button" className="v2-more" onClick={() => setShowAllTrending(true)}>{sectionCopy.showMore}</button>
             )}
           </section>
+
+          {recentAds.length > 0 && (
+            <section className="v2-section" data-testid="v2-recently-viewed">
+              <div className="v2-section-head">
+                <h2>{t.recently_viewed || 'Vistos recientemente'}</h2>
+                <button type="button" className="v2-section-link" onClick={clearRecent}>
+                  {t.clear_history || 'Borrar historial'}
+                </button>
+              </div>
+              <div className="v2-ad-rail v2-scroll">
+                {recentAds.map(ad => {
+                  const thumb = ad.thumbnail;
+                  const imgSrc = thumb
+                    ? (thumb.startsWith('http') ? thumb : `https://mercasto.com/storage/${thumb}`)
+                    : '/placeholder-ad.svg';
+                  const locationStr = ad.state || ad.location?.split(',')[0] || 'México';
+                  const title = localizedText(ad.title);
+                  return (
+                    <button
+                      type="button"
+                      key={ad.id}
+                      className="v2-recent-card"
+                      onClick={() => runSearch(title)}
+                    >
+                      <img
+                        src={imgSrc}
+                        loading="lazy"
+                        alt={title}
+                        onError={(e) => {
+                          if (!e.currentTarget.src.endsWith('/placeholder-ad.svg')) {
+                            e.currentTarget.src = '/placeholder-ad.svg';
+                          }
+                        }}
+                      />
+                      <strong>{title}</strong>
+                      <span className="v2-recent-price">${formatNumber(ad.price || 0, lang)} <small>MXN</small></span>
+                      <span className="v2-recent-loc">{locationStr}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="v2-promo-rail v2-scroll" aria-label="Mercasto promos">
             <button type="button" onClick={() => openVertical('productos', '/productos', 'design_v2_promo')} className="v2-promo v2-promo-orange">

@@ -1,17 +1,17 @@
 # Home V2 parity audit — Legacy vs V2
 
-Generated: 2026-09-11T00:53:18.763Z
+Generated: 2026-09-11T00:54:09.974Z
 
 - Legacy: `src/components/screens/HomeScreen.jsx` (1201 lines)
-- V2:     `src/components/screens/HomeScreenV2.jsx` (440 lines)
+- V2:     `src/components/screens/HomeScreenV2.jsx` (497 lines)
 
 ## Verdict
 
 - Features audited: **41**
-- V2 implemented: **29**
+- V2 implemented: **30**
 - V2 only: **1**
 - Intentionally removed: **0**
-- **MUST MIGRATE: 4**
+- **MUST MIGRATE: 3**
 - Legacy props not accepted by V2: **5**
 - App.jsx props not forwarded to V2: **7**
 - Home testids asserted by tests but absent in V2: **4**
@@ -34,7 +34,7 @@ Generated: 2026-09-11T00:53:18.763Z
 | Save search alert | Account | `handleSaveSearchAlert` | `handleSaveSearchAlert` | V2 implemented |
 | Favourites wiring | Account | — | — | n/a |
 | Auth-aware rendering (user prop) | Account | `user }` | — | MUST MIGRATE |
-| Recently viewed | Account | `getRecentlyViewed` | — | MUST MIGRATE |
+| Recently viewed | Account | `getRecentlyViewed` | `getRecentlyViewed` | V2 implemented |
 | Referral hooks | Account | — | — | n/a |
 | Ad cards via renderAdCard | Listings | `renderAdCard` | `renderAdCard` | V2 implemented |
 | Promoted / featured listings | Listings | `featuredAds` | `featured` | V2 implemented |
@@ -69,12 +69,6 @@ Generated: 2026-09-11T00:53:18.763Z
 
 - Group: Account
 - Legacy evidence: `user }`
-- V2 evidence: none
-
-### Recently viewed  `recently_viewed`
-
-- Group: Account
-- Legacy evidence: `getRecentlyViewed`
 - V2 evidence: none
 
 ### Map usage on home  `map`
@@ -130,8 +124,6 @@ Generated: 2026-09-11T00:53:18.763Z
 - `../../constants/locationsAndCategories`
 - `../../utils/homeMapCopy`
 - `../../utils/imageHelpers`
-- `../../utils/localize`
-- `../../utils/recentlyViewed`
 - `../SEO`
 - `../common/AdSenseBanner`
 - `../common/SkeletonCard`
@@ -143,7 +135,7 @@ Generated: 2026-09-11T00:53:18.763Z
 
 ## i18n gate — V2 keys across the 11 runtime language modules
 
-V2 uses **50** distinct `t.*` keys.
+V2 uses **52** distinct `t.*` keys.
 
 _All V2 keys exist in every runtime language module._
 
