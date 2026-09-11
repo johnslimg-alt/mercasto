@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodically reap orphaned Mercasto test processes on the CI host
+Documentation=https://github.com/johnslimg-alt/mercasto/blob/main/docs/runner-oom-stability.md
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=__CLEANUP_INTERVAL__
+AccuracySec=1min
+Persistent=true
+Unit=mercasto-runner-orphan-cleanup.service
+
+[Install]
+WantedBy=timers.target

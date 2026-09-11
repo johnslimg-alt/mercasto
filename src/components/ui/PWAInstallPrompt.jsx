@@ -85,7 +85,7 @@ export default function PWAInstallPrompt() {
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-5 z-50 animate-slide-up">
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+          className="absolute top-3 right-3 -m-2.5 p-3.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
           aria-label="Cerrar"
         >
           <X size={20} className="text-gray-500 dark:text-gray-400" />
@@ -141,7 +141,7 @@ export default function PWAInstallPrompt() {
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-5 z-50 animate-slide-up">
       <button
         onClick={handleDismiss}
-        className="absolute top-3 right-3 p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+        className="absolute top-3 right-3 -m-2.5 p-3.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
         aria-label="Cerrar"
       >
         <X size={20} className="text-gray-500 dark:text-gray-400" />

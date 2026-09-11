@@ -10,7 +10,7 @@ export default function ProfileModal({ handleProfileSubmit, profileForm, profile
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="profile-modal-title" onKeyDown={handleKeyDown} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-          <button ref={initialFocusRef} type="button" aria-label={t.close_btn} onClick={closeModal} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+          <button ref={initialFocusRef} type="button" aria-label={t.close_btn} onClick={closeModal} className="absolute top-6 right-6 -m-3.5 p-3.5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
           <h2 id="profile-modal-title" className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">{t.edit_profile_title}</h2>
 
           <form onSubmit={handleProfileSubmit} className="space-y-5">

@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-10T04:25:02Z
-Commit: 06bf731e-dirty
+Generated at: 2026-09-11T05:49:53Z
+Commit: a15173f3
 Source: php artisan route:list --except-vendor -v
 
 ```text
@@ -103,6 +103,9 @@ Source: php artisan route:list --except-vendor -v
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
   GET|HEAD  api/admin/payments generated::<auto> › Api\PaymentController@getAdminPayments
+            ⇂ api
+            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+  GET|HEAD  api/admin/payments/reconciliation generated::<auto> › Api\PaymentController@getAdminPaymentReconciliation
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
   GET|HEAD  api/admin/placements generated::<auto> › Api\AdBannerController@placements
@@ -753,6 +756,6 @@ Source: php artisan route:list --except-vendor -v
   GET|HEAD  vendedores generated::<auto> › SeoShellController@publicPage
             ⇂ web
 
-                                                          Showing [250] routes
+                                                          Showing [251] routes
 
 ```

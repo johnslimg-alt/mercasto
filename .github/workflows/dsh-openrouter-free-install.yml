@@ -1,0 +1,285 @@
+name: DSH OpenRouter Free Install
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dsh-openrouter-free-install
+  cancel-in-progress: false
+
+jobs:
+  install:
+    if: >-
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      startsWith(github.event.comment.body, 'RUN:dsh_openrouter_free_install:') &&
+      endsWith(github.event.comment.body, ':MERCASTO')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate recovery secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/dsh_openrouter_key
+          chmod 600 ~/.ssh/dsh_openrouter_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Install encrypted OpenRouter credential and model rotation
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          prefix='RUN:dsh_openrouter_free_install:'
+          suffix=':MERCASTO'
+          payload="${BODY#"$prefix"}"
+          payload="${payload%"$suffix"}"
+          [[ "$payload" =~ ^[A-Za-z0-9+/=]{300,500}$ ]]
+          printf '%s' "$payload" | base64 -d > /tmp/openrouter.enc
+          chmod 600 /tmp/openrouter.enc
+          scp -q -i ~/.ssh/dsh_openrouter_key /tmp/openrouter.enc "root@$SERVER_HOST:/root/.dsh/.openrouter-key.enc"
+
+          ssh -i ~/.ssh/dsh_openrouter_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          DSH=/root/.dsh
+          SETTINGS="$DSH/settings.yaml"
+          CREDS="$DSH/.credentials.yaml"
+          PRIV="$DSH/.openrouter-install-private.pem"
+          ENC="$DSH/.openrouter-key.enc"
+          BACKUP="$DSH/backups/model-rotation"
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          install -d -m 0700 "$BACKUP"
+
+          test -s "$PRIV"
+          test -s "$ENC"
+          openssl pkeyutl -decrypt -inkey "$PRIV" \
+            -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 \
+            -pkeyopt rsa_mgf1_md:sha256 \
+            -in "$ENC" -out /run/openrouter-api-key
+          chmod 600 /run/openrouter-api-key
+          KEY="$(cat /run/openrouter-api-key)"
+          case "$KEY" in sk-or-v1-*) ;; *) exit 31 ;; esac
+
+          cp -a "$SETTINGS" "$BACKUP/settings.yaml.pre-openrouter.$STAMP"
+          cp -a "$CREDS" "$BACKUP/credentials.yaml.pre-openrouter.$STAMP"
+          chmod 0600 "$BACKUP/settings.yaml.pre-openrouter.$STAMP" "$BACKUP/credentials.yaml.pre-openrouter.$STAMP"
+
+          python3 - "$CREDS" /run/openrouter-api-key <<'PY'
+          import os,sys,tempfile,yaml
+          from pathlib import Path
+          p=Path(sys.argv[1]); key=Path(sys.argv[2]).read_text().strip()
+          d=yaml.safe_load(p.read_text()) or {}
+          d.setdefault("refs",{})["OPENROUTER_API_KEY"]=key
+          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".credentials.",text=True)
+          try:
+              with os.fdopen(fd,"w") as h:
+                  yaml.safe_dump(d,h,sort_keys=False); h.flush(); os.fsync(h.fileno())
+              os.chmod(tmp,0o600); os.replace(tmp,p)
+          finally:
+              if os.path.exists(tmp): os.unlink(tmp)
+          PY
+
+          python3 - "$SETTINGS" <<'PY'
+          import os,sys,tempfile,yaml
+          from pathlib import Path
+          p=Path(sys.argv[1]); d=yaml.safe_load(p.read_text()) or {}
+          providers=d.setdefault("llm-pi-ai",{}).setdefault("providers",{})
+          providers["openrouter"]={
+              "apiKeyEnv":"OPENROUTER_API_KEY",
+              "api":"openai-completions",
+              "baseURL":"https://openrouter.ai/api/v1",
+              "models":[{
+                  "id":"z-ai/glm-5.3-flash:free",
+                  "input":["text","image","video"],
+                  "contextWindow":1048576
+              }]
+          }
+          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".settings.",text=True)
+          try:
+              with os.fdopen(fd,"w") as h:
+                  yaml.safe_dump(d,h,sort_keys=False); h.flush(); os.fsync(h.fileno())
+              os.chmod(tmp,p.stat().st_mode & 0o777); os.replace(tmp,p)
+          finally:
+              if os.path.exists(tmp): os.unlink(tmp)
+          PY
+
+          HTTP="$(curl -sS -o /tmp/or-models.json -w '%{http_code}' -H "Authorization: Bearer $KEY" https://openrouter.ai/api/v1/models)"
+          test "$HTTP" = 200
+          python3 - /tmp/or-models.json <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          target="z-ai/glm-5.3-flash:free"
+          ids={x.get("id") for x in d.get("data",[])}
+          print("openrouter_target_present=" + ("yes" if target in ids else "no"))
+          if target not in ids: raise SystemExit(41)
+          PY
+          rm -f /tmp/or-models.json
+
+          cat >/etc/dsh-model-rotation.env <<'EOF'
+          DSH_HOME=/root/.dsh
+          DEEPSEEK_PROVIDER=deepseek-official
+          DEEPSEEK_MODEL=deepseek-flash
+          GLM_PROVIDER=openrouter
+          GLM_MODEL=z-ai/glm-5.3-flash:free
+          EOF
+          chmod 0600 /etc/dsh-model-rotation.env
+
+          cat >/usr/local/sbin/dsh-model-rotate <<'PY'
+          #!/usr/bin/env python3
+          import datetime as dt,fcntl,os,re,shutil,sys,tempfile
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+          P=re.compile(r"^[A-Za-z0-9._-]+$")
+          M=re.compile(r"^[A-Za-z0-9._:/-]+$")
+          H=Path(os.environ.get("DSH_HOME","/root/.dsh")); S=H/"settings.yaml"
+          B=H/"backups"/"model-rotation"; L=Path("/run/lock/dsh-model-rotate.lock")
+          def e(n,d=None,m=False):
+              v=os.environ.get(n,d)
+              if not v or not (M if m else P).fullmatch(v): raise RuntimeError(n)
+              return v
+          C={
+            "deepseek":{"provider":e("DEEPSEEK_PROVIDER","deepseek-official"),"model":e("DEEPSEEK_MODEL","deepseek-flash",True)},
+            "glm":{"provider":e("GLM_PROVIDER"),"model":e("GLM_MODEL",m=True)}
+          }
+          def desired():
+              n=dt.datetime.now(ZoneInfo("America/Mexico_City")); x=n.hour*60+n.minute
+              return "glm" if (0<=x<240 or 960<=x<1320) else "deepseek"
+          def bounds(lines):
+              a=None
+              for i,line in enumerate(lines):
+                  if re.match(r"^agent-default-model:\s*(?:#.*)?$",line.rstrip()): a=i; break
+              if a is None:return None
+              b=len(lines)
+              for i in range(a+1,len(lines)):
+                  if re.match(r"^[A-Za-z0-9_.-]+:\s*",lines[i]): b=i; break
+              return a,b
+          def current(t):
+              q={}; lines=t.splitlines(True); z=bounds(lines)
+              if not z:return q
+              for line in lines[z[0]+1:z[1]]:
+                  m=re.match(r"^\s+(provider|model):\s*([^\s#]+)",line.rstrip())
+                  if m:q[m.group(1)]=m.group(2)
+              return q
+          def replace(t,k):
+              c=C[k]; block=f"agent-default-model:\n  provider: {c['provider']}\n  model: {c['model']}\n"
+              lines=t.splitlines(True); z=bounds(lines)
+              if not z:return t.rstrip()+"\n\n"+block
+              return "".join(lines[:z[0]])+block+"".join(lines[z[1]:])
+          def main():
+              mode=sys.argv[1] if len(sys.argv)>1 else "reconcile"
+              k=desired() if mode in ("reconcile","status") else mode
+              if k not in C: raise RuntimeError("mode")
+              L.parent.mkdir(parents=True,exist_ok=True)
+              with L.open("w") as h:
+                  fcntl.flock(h.fileno(),fcntl.LOCK_EX)
+                  t=S.read_text(); q=current(t); c=C[k]
+                  match=q.get("provider")==c["provider"] and q.get("model")==c["model"]
+                  if mode=="status":
+                      print(f"desired={k} desired_provider={c['provider']} desired_model={c['model']} current_provider={q.get('provider','<unset>')} current_model={q.get('model','<unset>')} match={'yes' if match else 'no'}"); return
+                  if match: print(f"rotation desired={k} changed=no"); return
+                  B.mkdir(mode=0o700,parents=True,exist_ok=True)
+                  stamp=dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                  backup=B/f"settings.yaml.auto.{stamp}"; shutil.copy2(S,backup); os.chmod(backup,0o600)
+                  fd,tmp=tempfile.mkstemp(dir=str(S.parent),prefix=".rotation.",text=True)
+                  try:
+                      with os.fdopen(fd,"w") as o:o.write(replace(t,k));o.flush();os.fsync(o.fileno())
+                      os.chmod(tmp,S.stat().st_mode & 0o777);os.replace(tmp,S)
+                  finally:
+                      if os.path.exists(tmp):os.unlink(tmp)
+                  print(f"rotation desired={k} changed=yes")
+          if __name__=="__main__":
+              main()
+          PY
+          chmod 0755 /usr/local/sbin/dsh-model-rotate
+          python3 -m py_compile /usr/local/sbin/dsh-model-rotate
+
+          cat >/etc/systemd/system/dsh-model-rotate.service <<'EOF'
+          [Unit]
+          Description=Reconcile DeepSeek Harness default model
+          After=network-online.target
+          [Service]
+          Type=oneshot
+          EnvironmentFile=/etc/dsh-model-rotation.env
+          ExecStart=/usr/local/sbin/dsh-model-rotate reconcile
+          EOF
+
+          cat >/etc/systemd/system/dsh-model-rotate.timer <<'EOF'
+          [Unit]
+          Description=Daily Mexico City DeepSeek/GLM rotation
+          [Timer]
+          OnCalendar=*-*-* 00:00:00 America/Mexico_City
+          OnCalendar=*-*-* 04:00:00 America/Mexico_City
+          OnCalendar=*-*-* 16:00:00 America/Mexico_City
+          OnCalendar=*-*-* 22:00:00 America/Mexico_City
+          Persistent=true
+          AccuracySec=1s
+          [Install]
+          WantedBy=timers.target
+          EOF
+
+          for x in 00:00:00 04:00:00 16:00:00 22:00:00; do
+            systemd-analyze calendar "*-*-* $x America/Mexico_City" >/dev/null
+          done
+
+          set -a; . /etc/dsh-model-rotation.env; set +a
+          /usr/local/sbin/dsh-model-rotate glm
+          timeout 150s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless 'Reply with exactly: ROTATION_GLM_FREE_OK' >/tmp/glm-smoke 2>&1
+          grep -q ROTATION_GLM_FREE_OK /tmp/glm-smoke
+          echo GLM_FREE_SMOKE_OK
+
+          /usr/local/sbin/dsh-model-rotate deepseek
+          timeout 150s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless 'Reply with exactly: ROTATION_DEEPSEEK_OK' >/tmp/ds-smoke 2>&1
+          grep -q ROTATION_DEEPSEEK_OK /tmp/ds-smoke
+          echo DEEPSEEK_SMOKE_OK
+
+          systemctl disable --now dsh-pause.timer dsh-resume.timer 2>/dev/null || true
+          /usr/local/sbin/dsh-deepseek-credential-gate resume >/dev/null 2>&1 || true
+          if [ -f /etc/systemd/system/deepseek-harness.service.d/20-ai-window-guard.conf ]; then
+            cp -a /etc/systemd/system/deepseek-harness.service.d/20-ai-window-guard.conf "$BACKUP/20-ai-window-guard.conf.$STAMP"
+            rm -f /etc/systemd/system/deepseek-harness.service.d/20-ai-window-guard.conf
+          fi
+
+          systemctl daemon-reload
+          systemctl enable --now dsh-model-rotate.timer
+          /usr/local/sbin/dsh-model-rotate reconcile
+          systemctl restart deepseek-harness.service
+          systemctl restart deepseek-harness-proxy.service
+          sleep 3
+
+          echo "=== FINAL ==="
+          /usr/local/sbin/dsh-model-rotate status
+          systemctl is-enabled dsh-model-rotate.timer
+          systemctl is-active dsh-model-rotate.timer
+          systemctl is-active deepseek-harness.service
+          systemctl is-active deepseek-harness-proxy.service
+          curl -sSI --max-time 20 https://harness.flyaicrm.com/ | head -12
+
+          rm -f /run/openrouter-api-key "$ENC" "$PRIV" "$DSH/.openrouter-install-public.pem" /tmp/glm-smoke /tmp/ds-smoke
+          echo DSH_OPENROUTER_FREE_ROTATION_OK
+          REMOTE
+
+      - name: Cleanup local SSH material
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/dsh_openrouter_key /tmp/openrouter.enc
