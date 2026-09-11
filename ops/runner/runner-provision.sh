@@ -22,6 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 APPLY=0
+RESTART_RUNNERS=0
 RUNNER_UNITS=""
 CONFIG_DIR="/etc/mercasto-runner"
 SYSTEMD_DIR="/etc/systemd/system"
@@ -29,7 +30,7 @@ CLEANUP_LOG="/var/log/mercasto-runner-orphan-cleanup.log"
 OOM_SCORE_ADJUST="${MERC_RUNNER_OOM_SCORE_ADJUST:-500}"
 MEMORY_HIGH="${MERC_RUNNER_MEMORY_HIGH:-}"
 MIN_AVAILABLE_MB="${MERC_CI_MIN_AVAILABLE_MB:-4096}"
-MAX_AGE_SECONDS="${MERC_RUNNER_ORPHAN_MAX_AGE_SECONDS:-1800}"
+MAX_AGE_SECONDS="${MERC_RUNNER_ORPHAN_MAX_AGE_SECONDS:-14400}"
 CLEANUP_INTERVAL="${MERC_RUNNER_CLEANUP_INTERVAL:-15min}"
 
 usage() {
@@ -38,6 +39,10 @@ Usage: ops/runner/runner-provision.sh [options]
 
   --apply                  write the changes (default: dry-run plan only)
   --dry-run                print the plan without touching the host
+  --repo <path>            checkout the timer must run from
+                           (default: the repository this script lives in)
+  --restart-runners        restart the runner units so drop-ins apply now;
+                           skipped by default because it kills in-flight jobs
   --runner-unit <unit>     provision one specific runner unit (repeatable);
                            default: every actions.runner.*.service unit
   --cleanup-interval <v>   systemd timer interval (default 15min)
@@ -53,6 +58,8 @@ while [ "$#" -gt 0 ]; do
     --apply) APPLY=1; shift ;;
     --dry-run) APPLY=0; shift ;;
     --runner-unit) RUNNER_UNITS="${RUNNER_UNITS} ${2:?--runner-unit requires a value}"; shift 2 ;;
+    --repo) REPO_DIR="${2:?--repo requires a value}"; shift 2 ;;
+    --restart-runners) RESTART_RUNNERS=1; shift ;;
     --cleanup-interval) CLEANUP_INTERVAL="${2:?--cleanup-interval requires a value}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
@@ -93,6 +100,15 @@ write_file() {
   fi
 }
 
+if [ ! -e "$REPO_DIR/.git" ]; then
+  echo "--repo must point at a Mercasto checkout (no .git in $REPO_DIR)" >&2
+  exit 2
+fi
+if [ ! -f "$REPO_DIR/scripts/runner-orphan-cleanup.sh" ]; then
+  echo "note: $REPO_DIR/scripts/runner-orphan-cleanup.sh is not present yet;" \
+    "the cleanup unit stays dormant until it lands (ConditionPathExists)."
+fi
+
 discover_units() {
   command -v systemctl >/dev/null 2>&1 || return 0
   systemctl list-units --type=service --all --no-legend --plain 'actions.runner.*' 2>/dev/null \
@@ -114,6 +130,7 @@ done
 echo "== Mercasto runner provisioning =="
 echo "repository:      $REPO_DIR"
 echo "mode:            $( [ "$APPLY" -eq 1 ] && echo apply || echo dry-run )"
+echo "restart runners: $( [ "$RESTART_RUNNERS" -eq 1 ] && echo yes || echo 'no (drop-ins apply on next restart)' )"
 echo "runner units:    ${INSTALLED_UNITS[*]:-<none discovered>}"
 echo "cleanup timer:   mercasto-runner-orphan-cleanup.timer every ${CLEANUP_INTERVAL}"
 echo
@@ -143,10 +160,20 @@ MemoryHigh=${MEMORY_HIGH}"
 
   if [ "$APPLY" -eq 1 ]; then
     systemctl daemon-reload
-    systemctl restart "$unit" >/dev/null 2>&1 || true
-    echo "reloaded $unit"
+    if [ "$RESTART_RUNNERS" -eq 1 ]; then
+      # Restarting a runner unit kills whatever job it is executing, so this is
+      # opt-in. Without it the drop-ins apply on the next natural restart.
+      systemctl restart "$unit" >/dev/null 2>&1 || true
+      echo "reloaded $unit"
+    else
+      echo "drop-ins installed for $unit; they apply on the next runner restart"
+    fi
   else
-    echo "DRY-RUN: systemctl daemon-reload && systemctl restart $unit"
+    if [ "$RESTART_RUNNERS" -eq 1 ]; then
+      echo "DRY-RUN: systemctl daemon-reload && systemctl restart $unit"
+    else
+      echo "DRY-RUN: systemctl daemon-reload (no restart of $unit)"
+    fi
   fi
 done
 
