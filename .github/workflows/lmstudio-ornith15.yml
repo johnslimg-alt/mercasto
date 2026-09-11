@@ -1,4 +1,4 @@
-name: LM Studio Ornith 1.5 Import Fix
+name: LM Studio Qwen vs Ornith Smoke
 
 on:
   pull_request:
@@ -10,10 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  install:
+  benchmark:
     if: github.head_ref == 'ops/lmstudio-ornith15'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Prepare SSH
         shell: bash
@@ -31,7 +31,7 @@ jobs:
           done
           exit 1
 
-      - name: Finalize Ornith filename and verify LM Studio
+      - name: A/B Qwen3.8 9B and Ornith 1.5 9B
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -42,37 +42,101 @@ jobs:
           export HOME=/root
           export PATH="/root/.lmstudio/bin:$PATH"
           LMS=/root/.lmstudio/bin/lms
-          DIR=/root/.lmstudio/models/ornith-ai/Ornith-1.5-9B-GGUF
-          PART="$DIR/Ornith-1.5-9B-Q4_K_M.gguf.part"
-          FINAL="$DIR/Ornith-1.5-9B-Q4_K_M.gguf"
+          "$LMS" daemon up >/dev/null
+          "$LMS" server start >/dev/null 2>&1 || true
 
-          if [ -f "$PART" ] && [ ! -f "$FINAL" ]; then
-            mv "$PART" "$FINAL"
-          fi
-          test -f "$FINAL"
-          size=$(stat -c '%s' "$FINAL")
-          echo "ornith_bytes=$size"
-          test "$size" -eq 5780090816
+          cat >/tmp/tool-request.json <<'JSON'
+          {
+            "messages":[
+              {"role":"system","content":"You are a coding agent. Use tools when a tool can answer the request."},
+              {"role":"user","content":"Read package.json before telling me the project version. Use the provided tool."}
+            ],
+            "tools":[{
+              "type":"function",
+              "function":{
+                "name":"read_file",
+                "description":"Read a file from the repository",
+                "parameters":{
+                  "type":"object",
+                  "properties":{"path":{"type":"string"}},
+                  "required":["path"]
+                }
+              }
+            }],
+            "tool_choice":"auto",
+            "temperature":0
+          }
+          JSON
 
-          echo "=== LM STUDIO MODELS ==="
-          "$LMS" ls --llm --detailed
-          "$LMS" ls --llm --json > /tmp/lms-llm.json
-          python3 - /tmp/lms-llm.json <<'PY'
+          cat >/tmp/code-request.json <<'JSON'
+          {
+            "messages":[
+              {"role":"user","content":"You are reviewing Python. What is wrong with this function and give the corrected function only:\n\ndef dedupe(items):\n    seen = set()\n    return [x for x in items if x not in seen and not seen.add(x)]\n\nRequirement: preserve first occurrence order and support unhashable dict/list values too."}
+            ],
+            "temperature":0,
+            "max_tokens":500
+          }
+          JSON
+
+          run_model() {
+            key="$1"; ident="$2"
+            echo "=== $ident LOAD ==="
+            "$LMS" unload --all >/dev/null 2>&1 || true
+            start=$(date +%s%3N)
+            "$LMS" load "$key" --identifier "$ident" --context-length 8192 --gpu off --ttl 120 -y >/tmp/load-$ident.txt 2>&1
+            end=$(date +%s%3N)
+            echo "load_ms=$((end-start))"
+            "$LMS" ps
+
+            python3 - "$ident" /tmp/tool-request.json <<'PY'
+          import json,sys
+          ident=sys.argv[1]; p=sys.argv[2]
+          d=json.load(open(p)); d["model"]=ident
+          json.dump(d,open(f"/tmp/tool-{ident}.json","w"))
+          PY
+            start=$(date +%s%3N)
+            curl -fsS --max-time 120 -H 'Content-Type: application/json'               -d @"/tmp/tool-$ident.json" http://127.0.0.1:1234/v1/chat/completions >"/tmp/tool-$ident.out"
+            end=$(date +%s%3N)
+            echo "tool_ms=$((end-start))"
+            python3 - "/tmp/tool-$ident.out" <<'PY'
           import json,sys
           d=json.load(open(sys.argv[1]))
-          text=json.dumps(d).lower()
-          ok="ornith" in text and "1.5" in text
-          print("ornith_visible=" + ("yes" if ok else "no"))
-          if not ok: raise SystemExit(41)
+          m=d["choices"][0]["message"]
+          calls=m.get("tool_calls") or []
+          print("tool_calls=",len(calls))
+          if calls:
+              print("tool_name=",calls[0].get("function",{}).get("name"))
+              print("tool_args=",calls[0].get("function",{}).get("arguments"))
+          else:
+              print("content=",str(m.get("content",""))[:400].replace("\n"," "))
           PY
-          rm -f /tmp/lms-llm.json
 
-          echo "=== MEMORY ESTIMATE ==="
-          key=$("$LMS" ls --llm --json | python3 -c 'import json,sys; d=json.load(sys.stdin); xs=d if isinstance(d,list) else d.get("models",d.get("data",[])); print(next((x.get("modelKey") or x.get("key") or x.get("path") for x in xs if "ornith" in str(x).lower()),""))')
-          echo "ornith_model_key=$key"
-          test -n "$key"
-          "$LMS" load "$key" --context-length 8192 --gpu off --estimate-only || true
-          echo ORNITH15_READY_OK
+            python3 - "$ident" /tmp/code-request.json <<'PY'
+          import json,sys
+          ident=sys.argv[1]; p=sys.argv[2]
+          d=json.load(open(p)); d["model"]=ident
+          json.dump(d,open(f"/tmp/code-{ident}.json","w"))
+          PY
+            start=$(date +%s%3N)
+            curl -fsS --max-time 180 -H 'Content-Type: application/json'               -d @"/tmp/code-$ident.json" http://127.0.0.1:1234/v1/chat/completions >"/tmp/code-$ident.out"
+            end=$(date +%s%3N)
+            echo "code_ms=$((end-start))"
+            python3 - "/tmp/code-$ident.out" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          m=d["choices"][0]["message"]
+          print("finish_reason=",d["choices"][0].get("finish_reason"))
+          print("answer=",str(m.get("content",""))[:1200].replace("\n","\\n"))
+          print("usage=",d.get("usage"))
+          PY
+          }
+
+          run_model qwen3.8-9b qwen38
+          run_model ornith-1.5-9b ornith15
+
+          "$LMS" unload --all >/dev/null 2>&1 || true
+          rm -f /tmp/tool-request.json /tmp/code-request.json /tmp/tool-*.json /tmp/code-*.json /tmp/tool-*.out /tmp/code-*.out /tmp/load-*.txt
+          echo LM_STUDIO_AB_SMOKE_OK
           REMOTE
 
       - name: Cleanup
