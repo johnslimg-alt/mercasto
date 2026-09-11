@@ -10,6 +10,7 @@ import AdminBusinessVerifications from './AdminBusinessVerifications';
 import AdminKycVerifications from './AdminKycVerifications';
 import AdminSeoMeasurement from '../admin/AdminSeoMeasurement';
 import AdminPaymentReconciliation from '../admin/AdminPaymentReconciliation';
+import AdminEconomicsDashboard from '../admin/AdminEconomicsDashboard';
 import AdminReportLifecycleActions from '../admin/AdminReportLifecycleActions';
 
 const AdminDataLoadError = ({ testId, onRetry, t }) => (
@@ -339,6 +340,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                   </button>
                 </div>
               ) : null}
+              <AdminEconomicsDashboard token={token} lang={lang} />
               {/* Audit Table Section */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
