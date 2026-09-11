@@ -77,3 +77,40 @@ separately whether filter selects should be replaced.
 The visual rendering of a native `<select>` popup is OS-controlled and cannot be styled or
 captured reliably; only the closed control is compared here. That is itself an argument for
 the custom menu on user-facing surfaces.
+
+## 5. Correction and scoped migration plan
+
+An earlier summary of this audit called enabling the menu everywhere "a one-line condition
+change". That was wrong, and the check that invalidates it is worth recording.
+
+Four specs drive the **native** select, so flipping the condition would break them:
+
+| Spec | What it does with the native select |
+| --- | --- |
+| `production-i18n-qa.spec.js` | on `/`, asserts the native select contains **exactly the 11 active language codes** and excludes `he`/`yi` |
+| `header-geometry.spec.js` | reads `desktop-language-select` |
+| `archived-language-fallback.spec.js` | reads `desktop-language-select` |
+| `mobile-shell-touch-targets.spec.js` | checks `mobile-language-select` for a 48px target |
+
+The first one is the §8 eleven-language gate, so enabling the custom menu on `/` without
+migrating it would trade a UI improvement for a lost language-verification gate.
+
+### Prepared groundwork (done)
+
+Each option in the custom menu now carries `data-testid={`language-option-${code}`}`, so the
+migration is mechanical: open the trigger, read the option testids, click one. Verified that
+the menu still passes its full behavioural suite (14/14) after the addition, and the change is
+purely additive.
+
+### Migration steps for whoever takes it
+
+1. Add a small shared helper in the specs: open `desktop-language-menu-button`, then assert or
+   click via `language-option-<code>`.
+2. Port `production-i18n-qa` to enumerate `language-option-*` instead of native `<option>`
+   values, keeping the same 11-code assertion and the `he`/`yi` exclusions.
+3. Port the other three specs off `*-language-select`.
+4. Only then disable the native branch, i.e. drop the `useCustomLanguageMenu` condition.
+5. Re-run the four specs plus this audit.
+
+Steps 1–4 touch shared test infrastructure and the production QA gate, which is why this is
+scoped as a follow-up rather than done alongside the homepage work.

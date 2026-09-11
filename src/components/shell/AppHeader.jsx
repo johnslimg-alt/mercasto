@@ -57,6 +57,7 @@ function HeaderLanguageMenu({ LANGUAGE_OPTIONS, lang, setLang, label, compact = 
               role="option"
               aria-selected={lang === code}
               key={code}
+              data-testid={`language-option-${code}`}
               onClick={() => { setLang(code); setOpen(false); }}
               className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-[12px] font-bold uppercase transition-colors ${lang === code ? 'bg-[#84CC16]/15 text-[#4D7C0F] dark:text-[#BEF264]' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}
             >
