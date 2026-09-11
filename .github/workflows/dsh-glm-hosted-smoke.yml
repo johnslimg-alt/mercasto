@@ -1,4 +1,4 @@
-name: DSH GLM Hosted Smoke
+name: DSH Free Model Candidate Probe
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ jobs:
   smoke:
     if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Prepare SSH
         shell: bash
@@ -31,7 +31,7 @@ jobs:
           done
           exit 1
 
-      - name: Smoke GLM Free through DSH
+      - name: Probe free models through DSH
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -40,10 +40,10 @@ jobs:
           ssh -i ~/.ssh/key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           S=/root/.dsh/settings.yaml
-          SAVE=/tmp/dsh-settings-before-glm-smoke.yaml
+          SAVE=/tmp/dsh-settings-before-free-probe.yaml
           cp -a "$S" "$SAVE"
 
-          cat >/tmp/glm-smoke.patch.yml <<'YAML'
+          cat >/tmp/free-probe.patch.yml <<'YAML'
           - id: llm-pi-ai
             config:
               providers:
@@ -53,25 +53,42 @@ jobs:
                   api: openai-completions
                   baseURL: https://openrouter.ai/api/v1
                   models:
-                    - id: z-ai/glm-5.2:free
-                      name: GLM 5.2 Free
+                    - id: z-ai/glm-5.1:free
+                      name: GLM 5.1 Free
+                      contextWindow: 202752
+                      maxTokens: 65536
+                      input: [text]
+                    - id: deepseek/deepseek-v4-flash:free
+                      name: DeepSeek V4 Flash Free
                       contextWindow: 1048576
-                      maxTokens: 131072
+                      maxTokens: 65536
+                      input: [text]
+                    - id: minimax/minimax-m3:free
+                      name: MiniMax M3 Free
+                      contextWindow: 1048576
+                      maxTokens: 65536
+                      input: [text]
+                    - id: nvidia/nemotron-3-ultra-550b-a55b:free
+                      name: Nemotron 3 Ultra Free
+                      contextWindow: 1000000
+                      maxTokens: 65536
                       input: [text]
           YAML
 
           restore() {
             cp -a "$SAVE" "$S"
-            rm -f "$SAVE" /tmp/glm-smoke.patch.yml /tmp/glm-smoke.out
+            rm -f "$SAVE" /tmp/free-probe.patch.yml /tmp/free-probe.out
           }
           trap restore EXIT
 
-          python3 - "$S" <<'PY'
+          set_default() {
+            python3 - "$S" "$1" <<'PY'
           import os,re,sys,tempfile
           from pathlib import Path
-          p=Path(sys.argv[1]); text=p.read_text()
-          block="agent-default-model:\n  provider: openrouter\n  model: z-ai/glm-5.2:free\n"
-          lines=text.splitlines(True); start=None
+          p=Path(sys.argv[1]); model=sys.argv[2]
+          text=p.read_text()
+          block=f"agent-default-model:\n  provider: openrouter\n  model: {model}\n"
+          lines=text.splitlines(keepends=True); start=None
           for i,line in enumerate(lines):
               if re.match(r"^agent-default-model:\s*(?:#.*)?$",line.rstrip("\n")):
                   start=i; break
@@ -83,26 +100,37 @@ jobs:
                   if re.match(r"^[A-Za-z0-9_.-]+:\s*",lines[i]):
                       end=i; break
               new="".join(lines[:start])+block+"".join(lines[end:])
-          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".smoke.",text=True)
+          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".probe.",text=True)
           with os.fdopen(fd,"w") as h:
               h.write(new); h.flush(); os.fsync(h.fileno())
           os.chmod(tmp,p.stat().st_mode & 0o777); os.replace(tmp,p)
           PY
+          }
 
-          python3 - <<'PY'
-          import yaml
-          d=yaml.safe_load(open("/root/.dsh/.credentials.yaml")) or {}
-          print("OPENROUTER_REF=" + ("YES" if "OPENROUTER_API_KEY" in (d.get("refs") or {}) else "NO"))
-          PY
-
-          set +e
-          timeout 120s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless --patch /tmp/glm-smoke.patch.yml 'Reply with exactly: GLM_FREE_DSH_OK' >/tmp/glm-smoke.out 2>&1
-          rc=$?
-          set -e
-          sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' /tmp/glm-smoke.out | tail -100
-          test "$rc" -eq 0
-          grep -q GLM_FREE_DSH_OK /tmp/glm-smoke.out
-          echo GLM_FREE_DSH_SMOKE_OK
+          models=(
+            'z-ai/glm-5.1:free'
+            'deepseek/deepseek-v4-flash:free'
+            'minimax/minimax-m3:free'
+            'nvidia/nemotron-3-ultra-550b-a55b:free'
+          )
+          successes=0
+          for model in "${models[@]}"; do
+            echo "=== CANDIDATE $model ==="
+            set_default "$model"
+            set +e
+            timeout 90s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless --patch /tmp/free-probe.patch.yml 'Reply with exactly: FREE_PROBE_OK' >/tmp/free-probe.out 2>&1
+            rc=$?
+            set -e
+            sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' /tmp/free-probe.out | tail -30
+            if [ "$rc" -eq 0 ] && grep -q FREE_PROBE_OK /tmp/free-probe.out; then
+              echo "CANDIDATE_OK $model"
+              successes=$((successes+1))
+            else
+              echo "CANDIDATE_FAIL $model rc=$rc"
+            fi
+          done
+          echo "FREE_CANDIDATE_SUCCESSES=$successes"
+          test "$successes" -gt 0
           restore
           trap - EXIT
           REMOTE
