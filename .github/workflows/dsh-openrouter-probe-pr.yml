@@ -1,4 +1,4 @@
-name: Emergency Harness Duplicate Plugin Repair
+name: Locate Duplicate llm-pi-ai
 
 on:
   pull_request:
@@ -10,10 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  repair:
+  locate:
     if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     steps:
       - name: Prepare SSH
         shell: bash
@@ -22,88 +22,45 @@ jobs:
           SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
           set -euo pipefail
-          test -n "$SERVER_HOST"
-          test -n "$SERVER_SSH_KEY"
           install -d -m 0700 ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/harness_fix_key
-          chmod 600 ~/.ssh/harness_fix_key
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/harness_locate_key
+          chmod 600 ~/.ssh/harness_locate_key
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      - name: Remove duplicate llm-pi-ai and restart Harness
+      - name: Locate duplicate
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/harness_fix_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
-          set -euo pipefail
-          S=/root/.dsh/settings.yaml
-          B=/root/.dsh/backups/emergency-502
-          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-          install -d -m 0700 "$B"
-          cp -a "$S" "$B/settings.yaml.before-dedupe.$STAMP"
-          chmod 0600 "$B/settings.yaml.before-dedupe.$STAMP"
-
-          python3 - "$S" <<'PY'
-          import os,sys,tempfile,yaml
+          ssh -i ~/.ssh/harness_locate_key "root@$SERVER_HOST" 'python3 - <<'"'"'PY'"'"'
           from pathlib import Path
-          p=Path(sys.argv[1])
-          d=yaml.safe_load(p.read_text()) or {}
-          removed="llm-pi-ai" in d
-          d.pop("llm-pi-ai",None)
-          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".settings.dedupe.",text=True)
-          try:
-              with os.fdopen(fd,"w",encoding="utf-8") as h:
-                  yaml.safe_dump(d,h,sort_keys=False)
-                  h.flush(); os.fsync(h.fileno())
-              os.chmod(tmp,p.stat().st_mode & 0o777)
-              os.replace(tmp,p)
-          finally:
-              if os.path.exists(tmp): os.unlink(tmp)
-          print("removed_duplicate_llm_pi_ai=" + ("yes" if removed else "no"))
-          print("agent_default_model=",d.get("agent-default-model"))
-          PY
-
-          rm -f /etc/systemd/system/deepseek-harness.service.d/20-ai-window-guard.conf
-          systemctl disable --now dsh-pause.timer dsh-resume.timer 2>/dev/null || true
-          if [ -x /usr/local/sbin/dsh-deepseek-credential-gate ]; then
-            /usr/local/sbin/dsh-deepseek-credential-gate resume >/dev/null 2>&1 || true
-          fi
-
-          systemctl daemon-reload
-          systemctl reset-failed deepseek-harness.service || true
-          systemctl restart deepseek-harness.service
-          systemctl restart deepseek-harness-proxy.service
-
-          ok=0
-          for i in $(seq 1 30); do
-            if systemctl is-active --quiet deepseek-harness.service && ss -lnt | grep -q '127.0.0.1:3080'; then
-              ok=1
-              break
-            fi
-            sleep 2
-          done
-
-          echo "=== VERIFY ==="
-          systemctl show deepseek-harness.service --no-pager -p ActiveState -p SubState -p Result -p NRestarts -p ExecMainStatus
-          systemctl show deepseek-harness-proxy.service --no-pager -p ActiveState -p SubState -p Result
-          ss -lntp | grep -E ':(3080|3081)\b' || true
-          echo "=== LOCAL HTTP ==="
-          curl -sSI --max-time 15 http://127.0.0.1:3080/ | head -12 || true
-          echo "=== PUBLIC HTTPS ==="
-          curl -skSI --max-time 20 https://harness.flyaicrm.com/ | head -12 || true
-          echo "=== GRAPHIFY ==="
-          pgrep -af 'graphify\.serve' || true
-
-          if [ "$ok" != 1 ]; then
-            echo "=== FAILURE ==="
-            journalctl -u deepseek-harness.service -n 100 --no-pager 2>&1 \
-              | sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' | tail -100
-            exit 42
-          fi
-          echo HARNESS_DUPLICATE_PLUGIN_REPAIR_OK
-          REMOTE
+          roots=[Path("/root/.dsh/profiles/web"),Path("/root/.dsh")]
+          seen=set()
+          for root in roots:
+              for p in root.rglob("*"):
+                  if not p.is_file() or p in seen: continue
+                  seen.add(p)
+                  try:
+                      text=p.read_text(errors="ignore")
+                  except Exception:
+                      continue
+                  if "llm-pi-ai" not in text:
+                      continue
+                  print(f"FILE {p}")
+                  lines=text.splitlines()
+                  for i,line in enumerate(lines,1):
+                      if "llm-pi-ai" in line:
+                          lo=max(1,i-3); hi=min(len(lines),i+4)
+                          for n in range(lo,hi+1):
+                              s=lines[n-1]
+                              low=s.lower()
+                              if any(x in low for x in ("api_key:","apikey:","token:","secret:","password:")):
+                                  s=s.split(":",1)[0]+": <redacted>"
+                              print(f"{n:04d}: {s}")
+                          print("---")
+          PY'
 
       - name: Cleanup
         if: always()
-        run: rm -f ~/.ssh/harness_fix_key
+        run: rm -f ~/.ssh/harness_locate_key
