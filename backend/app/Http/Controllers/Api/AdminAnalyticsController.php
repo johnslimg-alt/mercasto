@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\EconomicsMetrics;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -240,6 +241,7 @@ class AdminAnalyticsController extends Controller
                 'real_ads_by_status' => $realAdsByStatus,
                 'last_real_ad_created_at' => $lastRealAdCreatedAt,
             ],
+            'economics' => app(EconomicsMetrics::class)->forPeriod($since),
         ]);
     }
 }
