@@ -93,6 +93,7 @@ export default function AppHeader({
   highlightedIndex,
   isAdminRoute,
   hideCategoryBar = false,
+  hideMobileSearch = false,
   isDarkMode,
   isHeaderCategoryActive,
   lang,
@@ -388,7 +389,7 @@ export default function AppHeader({
             </div>
           </div>
           {/* Mobile Search + Location + Account */}
-          <div className={isAdminRoute ? "hidden" : "mobile-search-row py-2.5 lg:hidden"}>
+          <div className={(isAdminRoute || hideMobileSearch) ? "hidden" : "mobile-search-row py-2.5 lg:hidden"}>
             <div ref={mobileSearchRef} className="relative min-w-0">
               <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-full focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />

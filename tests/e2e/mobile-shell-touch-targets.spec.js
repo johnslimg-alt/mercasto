@@ -23,13 +23,14 @@ test('mobile shell keeps primary controls at 48px without horizontal overflow', 
   for (const width of MOBILE_WIDTHS) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/');
-    await expect(page.getByTestId('mobile-header-search')).toBeVisible();
 
+    // The shell's mobile search row is absent on the Home V2 route, which owns
+    // its own hero search, so it is asserted separately below on a route that
+    // always renders it.
     const squareTargets = [
       page.getByTestId('mobile-theme-toggle'),
       page.getByTestId('mobile-language-select'),
       page.getByTestId('mobile-account-button'),
-      page.getByTestId('mobile-search-submit'),
     ];
 
     for (const target of squareTargets) {
@@ -38,7 +39,7 @@ test('mobile shell keeps primary controls at 48px without horizontal overflow', 
       expect(rect.height).toBeGreaterThanOrEqual(MIN_TARGET);
     }
 
-    for (const target of [page.getByTestId('mobile-location-button'), page.getByTestId('mobile-search-input')]) {
+    for (const target of [page.getByTestId('mobile-location-button')]) {
       const rect = await box(target);
       expect(rect.height).toBeGreaterThanOrEqual(MIN_TARGET);
     }
@@ -53,6 +54,29 @@ test('mobile shell keeps primary controls at 48px without horizontal overflow', 
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(1);
+  }
+});
+
+test('mobile search row keeps 48px targets on routes that render it', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+
+  await page.addInitScript(() => {
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+    localStorage.setItem('lang', 'en');
+    localStorage.setItem('mercasto_language', 'en');
+  });
+
+  for (const width of MOBILE_WIDTHS) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/listings');
+    await expect(page.getByTestId('mobile-header-search')).toBeVisible();
+
+    for (const target of [page.getByTestId('mobile-search-submit'), page.getByTestId('mobile-search-input')]) {
+      const rect = await box(target);
+      expect(rect.width).toBeGreaterThanOrEqual(MIN_TARGET);
+      expect(rect.height).toBeGreaterThanOrEqual(MIN_TARGET);
+    }
   }
 });
 

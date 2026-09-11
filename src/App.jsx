@@ -361,6 +361,10 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  // The Home V2 route owns its own search box in the hero, so the shell drops the
+  // redundant mobile search row and the category bar there. Kept as one constant
+  // because cutover moves V2 from /design-v2 to / and only this line should change.
+  const isHomeV2Route = location.pathname === '/design-v2';
   const { lang, setLang, loadedLangVersion, isDarkMode, setIsDarkMode } = useUI();
 
   // Page-view tracking. Keep filtered/catalog/detail states out of homepage conversion metrics.
@@ -4260,8 +4264,9 @@ function App() {
         headerCategories={headerCategories}
         highlightedIndex={highlightedIndex}
         isAdminRoute={isAdminRoute}
-        hideCategoryBar={location.pathname === '/design-v2'}
-        useCustomLanguageMenu={location.pathname === '/design-v2'}
+        hideCategoryBar={isHomeV2Route}
+        useCustomLanguageMenu={isHomeV2Route}
+        hideMobileSearch={isHomeV2Route}
         isDarkMode={isDarkMode}
         isHeaderCategoryActive={isHeaderCategoryActive}
         lang={lang}
