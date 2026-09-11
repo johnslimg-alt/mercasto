@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
-import { trackPageView, events } from './utils/analytics';
+import { trackPageView, events, clearAnalyticsUser, setAnalyticsUser } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { getTranslations } from './utils/translations';
 import { localizedText } from './utils/localize';
@@ -7,6 +7,7 @@ import { formatDate, formatMXN, formatNumber } from './utils/localeFormat';
 import { formatPaymentActionCopy, getPaymentActionCopy } from './utils/paymentActionCopy';
 import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlState';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
+import { registrationAttributionPayload } from './utils/registrationAttribution';
 import { isOpenAIAdsMeasurementAllowed } from './utils/trackingConsent';
 import { clearPublishDraft } from './utils/publishDraft';
 import { isAdCreditPromotionEligible } from './utils/adBulkEligibility';
@@ -1460,6 +1461,7 @@ function App() {
     const oauthNewUser = params.get('new_user') === '1';
     const oauthRegistrationEventId = params.get('registration_event_id');
     const oauthRegistrationMethod = params.get('registration_method') || 'oauth';
+    const oauthRegistrationProvider = params.get('provider') || params.get('registration_provider') || '';
 
     // Обработка возврата с платежного шлюза
     if (paymentStatus === 'success') {
@@ -1547,12 +1549,14 @@ function App() {
           setUser(data.user);
           setUserRole(data.user.role || 'individual');
           localStorage.setItem('user', JSON.stringify(data.user));
+          setAnalyticsUser(data.user);
           if (oauthNewUser && oauthRegistrationEventId) {
             localStorage.setItem('just_registered', '1');
             events.registered({
               event_id: oauthRegistrationEventId,
               meta_event_id: oauthRegistrationEventId,
               method: oauthRegistrationMethod,
+              provider: oauthRegistrationProvider,
             });
           }
           if (!data.user.referred_by) applyPendingReferral(data.access_token);
@@ -2756,9 +2760,16 @@ function App() {
       );
       return null;
     }
-    return createRegistrationConsentPayload('web', new Date(), {
-      includeEventId: true,
-    });
+    // Consent fields stay exactly as the consent gate defines them; the
+    // attribution slice is additive and travels with every registration channel
+    // (email body, SMS body, Telegram body and the OAuth redirect URL) so the
+    // campaign can be joined to the account afterwards.
+    return {
+      ...createRegistrationConsentPayload('web', new Date(), {
+        includeEventId: true,
+      }),
+      ...registrationAttributionPayload(),
+    };
   };
 
   const handleOAuthStart = (provider) => {
@@ -2834,6 +2845,8 @@ function App() {
           setUser(result.user);
           setUserRole(result.user.role || 'individual');
           localStorage.setItem('user', JSON.stringify(result.user));
+          // Authenticated identity for analytics joins (GA4 user_id).
+          setAnalyticsUser(result.user);
           if (result.access_token) {
             localStorage.setItem('auth_token', result.access_token);
             if (authMode === 'register') await applyPendingReferral(result.access_token);
@@ -2841,6 +2854,12 @@ function App() {
           // Mark new registrations for onboarding
           if (authMode === 'register') {
             localStorage.setItem('just_registered', '1');
+            // The email/password conversion is emitted exactly once by the
+            // registration fetch interceptor in utils/metaCapiBridge.js, which
+            // observes this POST /api/register response and emits sign_up with
+            // method: 'email' and the shared event id. Emitting again here would
+            // double count the primary signup path, so this branch must not call
+            // events.registered().
           }
           setShowAuthModal(false);
         }
@@ -2943,6 +2962,7 @@ function App() {
         }
         setUser(result.user); setUserRole(result.user.role || 'individual');
         localStorage.setItem('user', JSON.stringify(result.user));
+        setAnalyticsUser(result.user);
         if (result.access_token) localStorage.setItem('auth_token', result.access_token);
         if (result.is_new_user && result.registration_event_id) {
           localStorage.setItem('just_registered', '1');
@@ -2950,6 +2970,7 @@ function App() {
             event_id: result.registration_event_id,
             meta_event_id: result.registration_event_id,
             method: result.registration_method || 'phone',
+            provider: result.registration_provider || 'phone',
           });
         }
         setPendingPhoneRegistrationConsent(null);
@@ -2982,6 +3003,8 @@ function App() {
     localStorage.removeItem('user');
     localStorage.removeItem('auth_token');
     localStorage.removeItem('token');
+    // Anonymous events after logout must not be stitched to the previous account.
+    clearAnalyticsUser();
     setFavoriteIds([]);
     setUserAds([]);
     setFavoriteAds([]);
@@ -4558,12 +4581,14 @@ function App() {
                               setUser(data.user);
                               setUserRole(data.user.role || 'individual');
                               localStorage.setItem('user', JSON.stringify(data.user));
+                              setAnalyticsUser(data.user);
                               if (data.is_new_user && data.registration_event_id) {
                                 localStorage.setItem('just_registered', '1');
                                 events.registered({
                                   event_id: data.registration_event_id,
                                   meta_event_id: data.registration_event_id,
                                   method: data.registration_method || 'telegram',
+                                  provider: data.registration_provider || 'telegram',
                                 });
                               }
                               setShowAuthModal(false);

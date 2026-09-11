@@ -4,6 +4,7 @@ import { AlertCircle, Bell, Camera, CheckCircle, ChevronLeft, Globe, Lock, MapPi
 import BusinessProfileEditor from '../profile/BusinessProfileEditor';
 import { useUI } from '../../contexts/UIContext';
 import { getTranslations } from '../../utils/translations';
+import { events } from '../../utils/analytics';
 import { formatDateTime } from '../../utils/localeFormat';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -232,6 +233,12 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
       const data = await response.json();
       if (response.ok) {
         showToast(t.phone_verified_success);
+        // Phone verification is the activation step for SMS-reachable sellers,
+        // so it must be measurable on its own (not only as part of signup).
+        events.phoneVerified({
+          source: 'profile_phone_otp',
+          phone_verified: true,
+        });
         setProfile(prev => ({ ...prev, phone_verified: true, phone_number: phoneInput }));
         setOtpSent(false);
         setOtpInput('');

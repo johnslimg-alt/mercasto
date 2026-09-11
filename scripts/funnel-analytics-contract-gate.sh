@@ -60,5 +60,19 @@ if grep -qF "events.registered({ event_id: metaEventId })" src/contexts/AuthCont
   exit 1
 fi
 
+# Registration must have exactly one emitter per channel. The email/password
+# path is emitted by the registration fetch interceptor, so App.jsx must not add
+# a second sign_up call for the same path.
+if grep -qE "events\.registered\(\{[^}]*method: 'email'" src/App.jsx; then
+  echo "Email registration is already emitted by the registration fetch interceptor." >&2
+  exit 1
+fi
+
+if grep -qF "phone_verified: 'CompleteRegistration'" src/utils/analytics.js; then
+  echo "phone_verified must not inflate the Meta CompleteRegistration conversion." >&2
+  exit 1
+fi
+
 node --test "$TEST"
+node --test tests/funnel-measurement-emission.test.mjs
 echo "unified funnel analytics contract gate OK"

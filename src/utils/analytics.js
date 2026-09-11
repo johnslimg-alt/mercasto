@@ -48,7 +48,10 @@ const META_STANDARD_EVENT_MAP = {
   ad_posted: 'Lead',
   listing_published: 'Lead',
   sign_up: 'CompleteRegistration',
-  phone_verified: 'CompleteRegistration',
+  // phone_verified is deliberately NOT mapped to CompleteRegistration: verifying
+  // a phone number is an account-activation step, not a new registration, and
+  // mapping it there would inflate the Meta registration conversion for existing
+  // users. It is sent as a custom event instead (TikTok maps it to Lead).
   purchase: 'Purchase',
 };
 
@@ -143,6 +146,67 @@ function sanitizeParams(params = {}) {
     if (value !== undefined && value !== '') out[key] = value;
   });
   return out;
+}
+
+/**
+ * Authenticated identity for measurement joins.
+ *
+ * GA4 (and the dataLayer/Meta copies) carry `user_id` so a session can be
+ * stitched to the account that produced it. The value is the numeric account
+ * id only — never an email, phone number or name.
+ */
+const USER_ID_STORAGE_KEY = 'mercasto.analytics.user_id.v1';
+let currentAnalyticsUserId = '';
+
+function normalizeUserId(value) {
+  const raw = value && typeof value === 'object' ? (value.id ?? value.user_id) : value;
+  if (raw === null || raw === undefined || raw === '') return '';
+  const asString = cleanString(raw, 40);
+  return /^[0-9]+$/.test(asString) ? asString : '';
+}
+
+/** Reads the account id from memory, then from storage, then from the cached user. */
+export function getAnalyticsUserId() {
+  if (currentAnalyticsUserId) return currentAnalyticsUserId;
+  if (!isBrowser()) return '';
+
+  try {
+    const stored = normalizeUserId(sessionStorage.getItem(USER_ID_STORAGE_KEY));
+    if (stored) {
+      currentAnalyticsUserId = stored;
+      return stored;
+    }
+  } catch {
+    // Storage can be unavailable in restricted browsers; fall through.
+  }
+
+  try {
+    const cachedUser = normalizeUserId(JSON.parse(localStorage.getItem('user') || 'null'));
+    if (cachedUser) currentAnalyticsUserId = cachedUser;
+    return currentAnalyticsUserId;
+  } catch {
+    return '';
+  }
+}
+
+/** Registers the authenticated account for all subsequent analytics payloads. */
+export function setAnalyticsUser(user) {
+  const id = normalizeUserId(user);
+  currentAnalyticsUserId = id;
+  if (!isBrowser()) return id;
+
+  try {
+    if (id) sessionStorage.setItem(USER_ID_STORAGE_KEY, id);
+    else sessionStorage.removeItem(USER_ID_STORAGE_KEY);
+  } catch {
+    // Analytics identity is best effort and must never break auth flows.
+  }
+  return id;
+}
+
+/** Clears the measurement identity on logout or account deletion. */
+export function clearAnalyticsUser() {
+  return setAnalyticsUser('');
 }
 
 function getSessionId() {
@@ -358,9 +422,11 @@ export function trackEvent(eventName, params = {}) {
 
   if (vendorActivationAllowed) initAnalyticsVendors();
   const name = normalizeEventName(eventName);
+  const userId = getAnalyticsUserId();
   const payload = sanitizeParams({
     ...getPageContext(),
     ...params,
+    ...(userId ? { user_id: userId } : {}),
     platform: 'web',
     analytics_contract_version: FUNNEL_ANALYTICS_VERSION,
     session_id: getSessionId(),
