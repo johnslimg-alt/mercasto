@@ -157,3 +157,15 @@
   .v2-ad-rail,.v2-promo-rail{margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}
   .v2-section-link{font-size:10px}
 }
+
+/* FAQ — visible block carrying the FAQPage structured data, in the V2 skin */
+.v2-faq{margin-top:26px;padding:20px;border:1px solid var(--v2-line);border-radius:16px;background:var(--v2-card)}
+.v2-faq h2{margin:0 0 14px;font-size:19px;font-weight:800;letter-spacing:-.01em}
+.v2-faq-list{display:grid;gap:8px}
+.v2-faq-item{border:1px solid var(--v2-line);border-radius:12px;background:var(--v2-soft)}
+.v2-faq-item summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;font-size:13px;font-weight:700;cursor:pointer;list-style:none}
+.v2-faq-item summary::-webkit-details-marker{display:none}
+.v2-faq-item summary span{flex:none;color:var(--v2-lime-dark);font-weight:800;transition:transform .18s ease}
+.v2-faq-item[open] summary span{transform:rotate(45deg)}
+.dark .v2-faq-item summary span{color:#a3e635}
+.v2-faq-item p{margin:0;padding:0 14px 13px;color:var(--v2-muted);font-size:13px;line-height:1.55}

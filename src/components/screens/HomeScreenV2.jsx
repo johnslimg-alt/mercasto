@@ -6,6 +6,8 @@ import {
   CheckCircle2, ShieldCheck, MessageCircle, Sparkles,
 } from 'lucide-react';
 import { events } from '../../utils/analytics';
+import FAQSchema from '../seo/FAQSchema';
+import ItemListSchema from '../seo/ItemListSchema';
 import './HomeScreenV2.css';
 
 const CATEGORY_META = [
@@ -132,6 +134,13 @@ export default function HomeScreenV2({
 
   return (
     <div className="mercasto-v2" data-testid="home-v2">
+      {safeAds.length > 0 && (
+        <ItemListSchema
+          items={safeAds}
+          listName={`${t.featured || 'Mercasto'} · Mercasto`}
+          lang={lang}
+        />
+      )}
       <section className="v2-search-zone">
         <div className="v2-wrap">
           <div className="v2-hero-copy">
@@ -284,6 +293,8 @@ export default function HomeScreenV2({
               <article><span><CheckCircle2 size={18}/></span><strong>{t.safe_payments}</strong><p>{t.safe_payments_desc}</p></article>
             </div>
           </section>
+
+          <FAQSchema pageType="home" lang={lang} variant="v2" />
         </div>
       </main>
     </div>

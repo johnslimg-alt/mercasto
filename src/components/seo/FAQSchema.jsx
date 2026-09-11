@@ -4,7 +4,7 @@ import { useUI } from '../../contexts/UIContext';
 import { getTranslations } from '../../utils/translations';
 import { getHomeFaqCopy } from '../../utils/homeFaqCopy';
 
-export default function FAQSchema({ faqs, pageType = 'general', lang = 'es' }) {
+export default function FAQSchema({ faqs, pageType = 'general', lang = 'es', variant = 'default' }) {
   useUI();
   const currentLang = lang || 'es';
   const t = getTranslations(currentLang);
@@ -31,6 +31,27 @@ export default function FAQSchema({ faqs, pageType = 'general', lang = 'es' }) {
 
     return () => document.getElementById('faq-schema')?.remove();
   }, [activeFaqs]);
+
+  // The V2 homepage runs on its own class-based design system, so it must not
+  // host the Tailwind card below: same copy, same JSON-LD, different skin.
+  if (variant === 'v2') {
+    return (
+      <div className="v2-faq" data-testid="v2-faq">
+        <h2>{t.faq_title || 'FAQ'}</h2>
+        <div className="v2-faq-list">
+          {activeFaqs.map((faq) => (
+            <details key={faq.question} className="v2-faq-item">
+              <summary>
+                {faq.question}
+                <span aria-hidden="true">+</span>
+              </summary>
+              <p>{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-8 rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">

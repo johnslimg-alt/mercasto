@@ -1,17 +1,17 @@
 # Home V2 parity audit — Legacy vs V2
 
-Generated: 2026-09-11T00:46:36.419Z
+Generated: 2026-09-11T00:48:15.020Z
 
 - Legacy: `src/components/screens/HomeScreen.jsx` (1202 lines)
-- V2:     `src/components/screens/HomeScreenV2.jsx` (292 lines)
+- V2:     `src/components/screens/HomeScreenV2.jsx` (303 lines)
 
 ## Verdict
 
 - Features audited: **41**
-- V2 implemented: **21**
+- V2 implemented: **23**
 - V2 only: **1**
 - Intentionally removed: **0**
-- **MUST MIGRATE: 12**
+- **MUST MIGRATE: 10**
 - Legacy props not accepted by V2: **8**
 - App.jsx props not forwarded to V2: **10**
 - Home testids asserted by tests but absent in V2: **10**
@@ -55,8 +55,8 @@ Generated: 2026-09-11T00:46:36.419Z
 | Popular searches / cities / newsletter | Content | `<PopularSearchesSection` | — | MUST MIGRATE |
 | Home toast feedback | Content | `home-toast` | — | MUST MIGRATE |
 | SEO component | SEO | — | — | n/a |
-| FAQ structured data | SEO | `<FAQSchema` | — | MUST MIGRATE |
-| ItemList structured data | SEO | `<ItemListSchema` | — | MUST MIGRATE |
+| FAQ structured data | SEO | `<FAQSchema` | `<FAQSchema` | V2 implemented |
+| ItemList structured data | SEO | `<ItemListSchema` | `<ItemListSchema` | V2 implemented |
 | Home H1 | SEO | `<h1` | `<h1` | V2 implemented |
 | Analytics events | Platform | `events.` | `events.` | V2 implemented |
 | Cookie/consent interaction | Platform | — | — | n/a |
@@ -125,18 +125,6 @@ Generated: 2026-09-11T00:46:36.419Z
 - Legacy evidence: `home-toast`
 - V2 evidence: none
 
-### FAQ structured data  `faq_schema`
-
-- Group: SEO
-- Legacy evidence: `<FAQSchema`
-- V2 evidence: none
-
-### ItemList structured data  `itemlist_schema`
-
-- Group: SEO
-- Legacy evidence: `<ItemListSchema`
-- V2 evidence: none
-
 
 ## Legacy props not accepted by V2
 
@@ -190,8 +178,6 @@ Generated: 2026-09-11T00:46:36.419Z
 - `../common/AdSenseBanner`
 - `../common/SkeletonCard`
 - `../home/HomeDiscoverySections`
-- `../seo/FAQSchema`
-- `../seo/ItemListSchema`
 
 ## Analytics events
 
@@ -200,7 +186,7 @@ Generated: 2026-09-11T00:46:36.419Z
 
 ## i18n gate — V2 keys across the 11 runtime language modules
 
-V2 uses **38** distinct `t.*` keys.
+V2 uses **39** distinct `t.*` keys.
 
 _All V2 keys exist in every runtime language module._
 
