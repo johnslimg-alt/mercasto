@@ -9,6 +9,7 @@ import { getAdminSurfaceCopy } from '../../utils/adminSurfaceCopy';
 import AdminBusinessVerifications from './AdminBusinessVerifications';
 import AdminKycVerifications from './AdminKycVerifications';
 import AdminSeoMeasurement from '../admin/AdminSeoMeasurement';
+import AdminPaymentReconciliation from '../admin/AdminPaymentReconciliation';
 import AdminReportLifecycleActions from '../admin/AdminReportLifecycleActions';
 
 const AdminDataLoadError = ({ testId, onRetry, t }) => (
@@ -555,6 +556,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                         </div>
                       </div>
                     )}
+                    <AdminPaymentReconciliation token={token} lang={lang} />
                   </div>
                 )}
               </div>
