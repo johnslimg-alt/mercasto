@@ -1,4 +1,4 @@
-name: DSH GLM Free Direct Smoke
+name: DSH Adapter Profile Probe
 
 on:
   pull_request:
@@ -10,10 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
+  probe:
     if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     steps:
       - name: Prepare SSH
         shell: bash
@@ -23,98 +23,29 @@ jobs:
         run: |
           set -euo pipefail
           install -d -m 0700 ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/dsh_glm_smoke_key
-          chmod 600 ~/.ssh/dsh_glm_smoke_key
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/dsh_profile_probe_key
+          chmod 600 ~/.ssh/dsh_profile_probe_key
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      - name: Direct smoke GLM Free and restore DeepSeek
+      - name: Compare web and headless LLM adapters
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/dsh_glm_smoke_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          ssh -i ~/.ssh/dsh_profile_probe_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
-          S=/root/.dsh/settings.yaml
-          B=/root/.dsh/backups/model-rotation
-          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-          install -d -m 0700 "$B"
-          cp -a "$S" "$B/settings.yaml.pre-glm-direct-smoke.$STAMP"
-          chmod 0600 "$B/settings.yaml.pre-glm-direct-smoke.$STAMP"
-
-          python3 - <<'PY'
-          import yaml
-          c=yaml.safe_load(open("/root/.dsh/.credentials.yaml")) or {}
-          refs=c.get("refs") or {}
-          print("openrouter_credential_present=" + ("yes" if "OPENROUTER_API_KEY" in refs else "no"))
-          s=yaml.safe_load(open("/root/.dsh/settings.yaml")) or {}
-          p=((s.get("llm-pi-ai") or {}).get("providers") or {}).get("openrouter") or {}
-          print("openrouter_provider_present=" + ("yes" if p else "no"))
-          print("openrouter_model_configured=" + ("yes" if any((m or {}).get("id")=="z-ai/glm-5.3-flash:free" for m in p.get("models",[])) else "no"))
-          PY
-
-          set_default() {
-            provider="$1"; model="$2"
-            python3 - "$S" "$provider" "$model" <<'PY'
-          import os,re,sys,tempfile
-          from pathlib import Path
-          p=Path(sys.argv[1]); provider=sys.argv[2]; model=sys.argv[3]
-          text=p.read_text()
-          block=f"agent-default-model:\n  provider: {provider}\n  model: {model}\n"
-          lines=text.splitlines(keepends=True); start=None
-          for i,line in enumerate(lines):
-              if re.match(r"^agent-default-model:\s*(?:#.*)?$",line.rstrip("\n")):
-                  start=i; break
-          if start is None:
-              new=text.rstrip()+"\n\n"+block
-          else:
-              end=len(lines)
-              for i in range(start+1,len(lines)):
-                  if re.match(r"^[A-Za-z0-9_.-]+:\s*",lines[i]):
-                      end=i; break
-              new="".join(lines[:start])+block+"".join(lines[end:])
-          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".settings.smoke.",text=True)
-          try:
-              with os.fdopen(fd,"w") as h:
-                  h.write(new); h.flush(); os.fsync(h.fileno())
-              os.chmod(tmp,p.stat().st_mode & 0o777); os.replace(tmp,p)
-          finally:
-              if os.path.exists(tmp): os.unlink(tmp)
-          PY
-          }
-
-          restore_deepseek() {
-            set_default deepseek-official deepseek-flash
-          }
-          trap restore_deepseek EXIT
-
-          echo "=== GLM FREE ==="
-          set_default openrouter 'z-ai/glm-5.3-flash:free'
-          set +e
-          timeout 120s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless 'Reply with exactly: GLM_FREE_DIRECT_OK' >/tmp/glm-direct.out 2>&1
-          rc=$?
-          set -e
-          sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' /tmp/glm-direct.out | tail -80
-          test "$rc" -eq 0
-          grep -q 'GLM_FREE_DIRECT_OK' /tmp/glm-direct.out
-          echo GLM_FREE_DIRECT_SMOKE_OK
-
-          echo "=== DEEPSEEK RESTORE SMOKE ==="
-          restore_deepseek
-          set +e
-          timeout 120s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless 'Reply with exactly: DEEPSEEK_DIRECT_OK' >/tmp/ds-direct.out 2>&1
-          rc=$?
-          set -e
-          sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' /tmp/ds-direct.out | tail -80
-          test "$rc" -eq 0
-          grep -q 'DEEPSEEK_DIRECT_OK' /tmp/ds-direct.out
-          echo DEEPSEEK_DIRECT_SMOKE_OK
-
-          rm -f /tmp/glm-direct.out /tmp/ds-direct.out
-          trap - EXIT
-          echo DSH_DUAL_MODEL_DIRECT_SMOKE_OK
+          for profile in web headless; do
+            echo "=== PROFILE $profile ==="
+            npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile "$profile" --dump-config >"/tmp/dsh-$profile-config.txt"
+            grep -nE 'id: (llm|llm-pi-ai|llm-deepseek)|dsh-llm-pi-ai|dsh-llm-deepseek|agent-default-model|openrouter|glm-5.3-flash' "/tmp/dsh-$profile-config.txt" | head -100 || true
+          done
+          echo "=== HARNESS HEALTH ==="
+          systemctl is-active deepseek-harness.service
+          systemctl is-active deepseek-harness-proxy.service
+          curl -skSI --max-time 15 https://harness.flyaicrm.com/ | head -8
           REMOTE
 
       - name: Cleanup
         if: always()
-        run: rm -f ~/.ssh/dsh_glm_smoke_key
+        run: rm -f ~/.ssh/dsh_profile_probe_key
