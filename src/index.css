@@ -2202,3 +2202,31 @@ body *::-webkit-scrollbar {
     border-color: #2C3A55;
   }
 }
+
+/* ── Header controls: rounded rectangles, not circles ────────────────────────
+   Owner feedback on the V2 mobile review: the circular header buttons did not
+   match the rounded-rectangle language used by the rest of the page. Unlayered
+   on purpose so these win over the Tailwind `rounded-full` utilities on the
+   search shell and submit button. Radii come from the locked token contract. */
+.mobile-theme-icon,
+.mobile-language-select,
+.mobile-location-select-top,
+.header-user-button {
+  border-radius: var(--mc-radius-md);
+}
+
+/* These live inside the components layer on purpose: the rule they override
+   (`.mobile-search-submit`, ~line 979) declares 999px with !important, and the
+   cascade reverses layer order for important declarations - an unlayered
+   !important rule would LOSE to a layered one. Same layer, later in the file,
+   same weight: this wins. */
+@layer components {
+  .mobile-search-box,
+  .mobile-search-combo {
+    border-radius: var(--mc-radius-lg) !important;
+  }
+
+  .mobile-search-submit {
+    border-radius: var(--mc-radius-md) !important;
+  }
+}
