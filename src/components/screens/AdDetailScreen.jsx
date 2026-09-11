@@ -7,6 +7,7 @@ import { filterOptionLabel } from '../../utils/filterOptionTranslations';
 import { canonicalAdCondition, formatAdDetailCopy, getAdDetailCopy } from '../../utils/adDetailCopy';
 import { publicListingAttributeEntries } from '../../utils/publicListingAttributes';
 import { listingUrl } from '../../utils/seoIndexability';
+import { isCatalogReference } from '../../utils/catalogInventory';
 import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
 
@@ -415,7 +416,10 @@ export default function AdDetailScreen({
 
   const isOwner = currentUser && currentUser.id === ad.user_id;
 
-  const isCatalogFiller = Boolean(ad.is_catalog_filler);
+  // Strict marker (see utils/catalogInventory and AdCard): only an explicit
+  // placeholder value marks a catalogue reference, so a 'false' string can never
+  // label a real listing.
+  const isCatalogFiller = isCatalogReference(ad);
 
   const isFav = favoriteIds.includes(ad.id);
   const images = getImageUrls(ad.image_url, ad.image).map(url => ({ type: 'image', url }));
@@ -643,7 +647,7 @@ export default function AdDetailScreen({
                     <MapPin size={20} />
                   </div>
                   <div>
-                    <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">{t.location || 'Location'}</h3>
+                    <h2 className="text-[16px] font-bold text-slate-900 dark:text-white">{t.location || 'Location'}</h2>
                     <p className="mt-1 text-[14px] font-medium text-slate-600 dark:text-slate-300">{locationLabel}</p>
                     <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">{detailCopy.approximateLocation}</p>
                   </div>
@@ -669,7 +673,7 @@ export default function AdDetailScreen({
             {/* DYNAMIC EAV ATTRIBUTES (Отображение фильтров) */}
             {publicAttributeEntries.length > 0 && (
               <div className="mb-10">
-                <h3 className="text-[18px] font-bold text-slate-900 mb-5">{t.main_features || 'Main features'}</h3>
+                <h2 className="text-[18px] font-bold text-slate-900 mb-5">{t.main_features || 'Main features'}</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {publicAttributeEntries.map(([key, val]) => {
                     const fieldDef = catConfig.find(f => f.id === key);
@@ -688,7 +692,7 @@ export default function AdDetailScreen({
               </div>
             )}
 
-            <h3 className="text-[18px] font-bold text-slate-900 mb-4">{t.description || 'Description'}</h3>
+            <h2 className="text-[18px] font-bold text-slate-900 mb-4">{t.description || 'Description'}</h2>
             <div className="text-slate-700 leading-relaxed whitespace-pre-line text-[15px]">
               {localizedText(ad.description, lang)}
             </div>
@@ -704,7 +708,7 @@ export default function AdDetailScreen({
           <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[calc(var(--mc-site-header-offset)+0.75rem)]">
 {isCatalogFiller ? (
   <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
-    <h3 className="text-[16px] font-black text-slate-900 dark:text-white">{detailCopy.sellTitle}</h3>
+    <h2 className="text-[16px] font-black text-slate-900 dark:text-white">{detailCopy.sellTitle}</h2>
     <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
       {detailCopy.sellBody}
     </p>
@@ -725,10 +729,10 @@ export default function AdDetailScreen({
         <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-200 group-hover:border-[#84CC16] transition-colors"><User size={24} className="text-slate-400" /></div>
       )}
       <div>
-        <h3 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
+        <h2 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
           {ad.user?.name || detailCopy.user}
           {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title={detailCopy.verifiedSeller} />}
-        </h3>
+        </h2>
         <p className="text-[13px] text-slate-500 mt-0.5">{formatAdDetailCopy(detailCopy.memberSince, { year: new Date(ad.user?.created_at || ad.created_at).getFullYear() })}</p>
       </div>
     </button>

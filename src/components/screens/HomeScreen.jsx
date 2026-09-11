@@ -233,7 +233,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
             Keep the home canvas focused on discovery instead of repeating a second toolbar. */}
 
         <section className="mx-auto max-w-[1480px] px-3 py-5 sm:px-4 lg:px-6 lg:py-6">
-          <h1 className="sr-only">Mercasto: compra, vende y renta en todo México</h1>
+          <h1 className="mb-3 text-[20px] font-bold tracking-tight text-slate-900 dark:text-white sm:text-[22px]">Mercasto: compra, vende y renta en todo México</h1>
 
           <div className="grid grid-cols-12 gap-5 lg:gap-6">
 
@@ -265,9 +265,9 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                       </div>
 
-                      <h3 className="font-bold text-[11px] text-center text-slate-900 group-hover:text-[#365314] line-clamp-2 leading-tight">
+                      <h2 className="font-bold text-[11px] text-center text-slate-900 group-hover:text-[#365314] line-clamp-2 leading-tight">
                         {cat.name?.[lang] || cat.name?.['es'] || cat.name}
-                      </h3>
+                      </h2>
 
                     </button>
 

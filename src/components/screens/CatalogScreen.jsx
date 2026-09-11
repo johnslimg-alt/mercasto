@@ -1,9 +1,11 @@
 import React from 'react';
-import { Bell, Loader2, Settings2 } from 'lucide-react';
+import { Bell, Info, Loader2, Settings2 } from 'lucide-react';
 import SidebarFilters from '../common/SidebarFilters';
 import SplitViewContainer from '../common/SplitViewContainer';
 import BottomSheet from '../ui/BottomSheet';
 import { normalizeSavedSearchSelection } from '../../utils/savedSearchSelection';
+import { getAdDetailCopy } from '../../utils/adDetailCopy';
+import { isCatalogReference } from '../../utils/catalogInventory';
 
 const SavedSearchesPanel = React.lazy(() => import('../common/SavedSearchesPanel'));
 
@@ -60,6 +62,14 @@ export default function CatalogScreen({
     () => (Array.isArray(serverAds) ? serverAds : []),
     [serverAds],
   );
+  // Same strict marker the cards use (see utils/catalogInventory): only an explicit
+  // placeholder value marks a catalogue reference, so the notice can never be driven
+  // by a 'false' string.
+  const hasCatalogReferences = React.useMemo(
+    () => safeServerAds.some(ad => isCatalogReference(ad)),
+    [safeServerAds],
+  );
+  const detailCopy = React.useMemo(() => getAdDetailCopy(lang), [lang]);
 
   React.useEffect(() => {
     const updateFilterViewport = () => {
@@ -214,8 +224,11 @@ export default function CatalogScreen({
       )}
 
       <div className="mx-auto flex min-h-[calc(100vh-11rem)] max-w-[1440px] flex-col gap-5 px-4 py-6 pb-28 md:pb-8 lg:px-6 lg:py-8 xl:flex-row xl:gap-6">
-        <div className="mb-2 flex min-h-12 items-center justify-between gap-3 xl:hidden">
-          <h1 className="min-w-0 pr-2 text-[16px] font-bold leading-tight text-slate-900 dark:text-white sm:text-[18px]">
+        <div className="mb-2 flex min-h-12 items-center justify-between gap-3 sm:justify-end xl:hidden">
+          {/* Phone h1. The results toolbar hides its own title below sm (48px toggle
+              contract), so the sub-sm viewport takes its single visible h1 from here;
+              from sm up this row hides the heading and the toolbar supplies it. */}
+          <h1 className="min-w-0 pr-2 text-[16px] font-bold leading-tight text-slate-900 dark:text-white sm:hidden sm:text-[18px]">
             {t.search_results}
             <span className="ml-1 whitespace-nowrap text-[12px] font-normal text-slate-400 sm:text-[14px]">({safeServerAds.length})</span>
           </h1>
@@ -321,6 +334,22 @@ export default function CatalogScreen({
               {t.save_search}
             </button>
           </div>
+
+          {hasCatalogReferences && (
+            <div
+              data-testid="catalog-reference-notice"
+              role="note"
+              aria-label={detailCopy.catalogTitle}
+              className="mc-card mb-4 flex items-start gap-2.5 px-3.5 py-3 text-[13px] text-slate-700 dark:text-slate-200"
+              style={{ background: 'var(--mc-raised-surface)', borderColor: 'var(--mc-line)' }}
+            >
+              <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-[#65A30D] dark:text-[#BEF264]" />
+              <div className="min-w-0">
+                <p className="font-bold text-slate-900 dark:text-white">{detailCopy.catalogTitle}</p>
+                <p className="mt-0.5 leading-relaxed text-slate-600 dark:text-slate-300">{detailCopy.catalogBody}</p>
+              </div>
+            </div>
+          )}
 
           <SplitViewContainer
             ads={safeServerAds}

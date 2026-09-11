@@ -145,7 +145,7 @@ export default function SidebarFilters({
         <div className="flex min-w-0 items-center gap-2">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#84CC16]/15 text-[#65A30D] dark:text-[#BEF264]"><Filter size={15} /></span>
           <div className="min-w-0">
-            <h3 className="text-[13px] font-black text-slate-950 dark:text-white">{tr('filter')}</h3>
+            <h2 className="text-[13px] font-black text-slate-950 dark:text-white">{tr('filter')}</h2>
             {activeCount > 0 && <p className="text-[10px] font-bold text-slate-400">{activeCount} {tr('filters') || tr('filter')}</p>}
           </div>
         </div>

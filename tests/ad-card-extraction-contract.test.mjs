@@ -15,6 +15,9 @@ test('AdCard preserves current listing-card behaviors', () => {
   const card = read('src/components/common/AdCard.jsx');
   assert.match(card, /import \{ isCatalogReference \} from '\.\.\/\.\.\/utils\/catalogInventory'/);
   assert.match(card, /const isCatalogFiller = isCatalogReference\(ad\)/);
+  // The loose Boolean(ad.is_catalog_filler) form treated the string 'false' as
+  // filler and would mislabel a real seller listing as a catalogue reference.
+  assert.doesNotMatch(card, /Boolean\(ad\.is_catalog_filler\)/);
   assert.match(card, /options\.priority \? 'eager' : 'lazy'/);
   assert.match(card, /localizedText\(ad\.title, lang\)/);
   assert.match(card, /handleToggleFavorite\(e, ad\.id\)/);
