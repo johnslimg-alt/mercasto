@@ -39,27 +39,49 @@ Reproduced with no programmatic scrolling, so scroll-induced entries cannot poll
       SECTION.v2-promo-rail.v2-scroll  569,390x171  ->  0,0x0
 ```
 
-`-> 0,0x0` means those sections were **removed from the DOM after first paint**. The shift
-is therefore caused by sections mounting/unmounting as the listing data settles, not by a
-static layout mistake.
+`-> 0,0x0` means those nodes were replaced between two renders. The visible section
+positions confirm the mechanism: in the pre-data render the promo rail sits at **y=546**
+and the next section at **y=739**; once the listings arrive the promo rail is pushed to
+**y=2342**. Everything below the ad rails therefore jumps by up to ~1800 px.
+
+### Mechanism (sampled every 100 ms, no scrolling)
+
+```
+t= 368ms  doc=1351px  cards= 0   sections not yet in the DOM
+t= 526ms  <- the +0.4472 layout-shift event fires here
+t= 595ms  doc=5668px  cards=16   full content present, promo rail now at y=2342
+t= 861ms  doc=5478px             secondary -190 px change
+```
+
+So HomeScreenV2 first paints with **empty listing data** (a compact layout in which the
+featured and trending rails contribute almost no height), and the page then grows by
+~4300 px when the ads resolve after first paint. That single transition produces the whole
+desktop CLS.
 
 ### Causal proof — the shift is data-driven
 
-Same route, same build, ads endpoints stubbed with a fixed payload of 12 listings:
+Same route, same build, ads endpoints stubbed with a fixed payload of 12 listings. With an
+instant stub the data is already present at first paint, so the transition never happens:
 
 | Data source | 1440 px | 390 px |
 | --- | --- | --- |
 | live API | **CLS 0.4444** | 0.0001 |
 | fixed mocked payload | **CLS 0.0021** | 0.0001 |
 
-With stable data the desktop CLS collapses to ~0.002, well inside target. So the fix is to
-make the section layout independent of the transient data state, for example:
+### Fix direction
 
-- render a stable placeholder that reserves the rail's height until the data settles,
-  instead of returning `null` from `AdRail` when `items` is briefly empty;
-- derive section visibility from a settled signal (e.g. "request finished") rather than
-  from the array length on each render;
-- keep the trending grid's row height fixed while `showAllTrending`/item counts change.
+Reserve the rail geometry so the page height does not depend on whether the listings have
+arrived yet:
+
+- render each ad rail as a fixed-height skeleton (same card height / row height as the
+  loaded rail) instead of letting `AdRail` contribute ~0 height before data lands;
+- keep the number of skeleton cards equal to the number the section will render;
+- avoid changing the number of rendered cards between the pre-data and post-data renders
+  (that is what moves the promo rail by ~1800 px);
+- do **not** fix this by delaying first paint of the whole screen until the fetch resolves —
+  that would trade CLS for a worse LCP.
+
+A stable-payload CLS near 0.002 is the expected shape after the fix.
 
 ### Mobile CLS is intermittent
 
