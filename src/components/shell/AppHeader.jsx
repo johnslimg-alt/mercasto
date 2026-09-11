@@ -200,16 +200,16 @@ export default function AppHeader({
                   {showMobileLocationPicker && (
                     <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state}</label>
-                      <select data-testid="mobile-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
+                      <select data-testid="mobile-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="h-12 w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                         <option value="">{t.all_mexico}</option>
                         {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                       </select>
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city}</label>
-                      <select data-testid="mobile-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
+                      <select data-testid="mobile-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="h-12 w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
                         <option value="">{locState ? t.all_cities : t.select_state_first}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
-                      <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-slate-950 py-3">{t.apply}</button>
+                      <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm min-h-12 w-full bg-[#84CC16] text-slate-950 py-3">{t.apply}</button>
                     </div>
                   )}
                 </div>
@@ -245,21 +245,21 @@ export default function AppHeader({
                   <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50 bg-white dark:bg-slate-950">
                     <div className="mb-3">
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state}</label>
-                      <select data-testid="desktop-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
+                      <select data-testid="desktop-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="h-12 w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none xl:h-auto bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                         <option value="">{t.all_mexico}</option>
                         {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                       </select>
                     </div>
                     <div className="mb-4">
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city}</label>
-                      <select data-testid="desktop-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
+                      <select data-testid="desktop-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="h-12 w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none xl:h-auto bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
                         <option value="">{locState ? t.all_cities : t.select_state_first}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
                     </div>
                     <div className="flex gap-2">
-                      <button type="button" data-testid="desktop-location-cancel" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">{t.cancel}</button>
-                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">{t.apply}</button>
+                      <button type="button" data-testid="desktop-location-cancel" onClick={() => setShowLocationPicker(false)} className="btn-sm min-h-12 flex-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 xl:min-h-10 dark:hover:bg-slate-800">{t.cancel}</button>
+                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm min-h-12 flex-1 bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] xl:min-h-10">{t.apply}</button>
                     </div>
                   </div>
                 )}
