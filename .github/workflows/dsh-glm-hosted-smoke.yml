@@ -53,11 +53,11 @@ jobs:
                   api: openai-completions
                   baseURL: https://openrouter.ai/api/v1
                   models:
-                    - id: z-ai/glm-5.3-flash:free
-                      name: GLM 5.3 Flash Free
+                    - id: z-ai/glm-5.2:free
+                      name: GLM 5.2 Free
                       contextWindow: 1048576
                       maxTokens: 131072
-                      input: [text, image]
+                      input: [text]
           YAML
 
           restore() {
@@ -70,7 +70,7 @@ jobs:
           import os,re,sys,tempfile
           from pathlib import Path
           p=Path(sys.argv[1]); text=p.read_text()
-          block="agent-default-model:\n  provider: openrouter\n  model: z-ai/glm-5.3-flash:free\n"
+          block="agent-default-model:\n  provider: openrouter\n  model: z-ai/glm-5.2:free\n"
           lines=text.splitlines(True); start=None
           for i,line in enumerate(lines):
               if re.match(r"^agent-default-model:\s*(?:#.*)?$",line.rstrip("\n")):
