@@ -346,3 +346,46 @@ test('measurement consent is resolved per request, not frozen when the intercept
   assert.equal(bodies[0].openai_measurement_consent, false, 'consent granted later must not be retroactive');
   assert.equal(bodies[1].openai_measurement_consent, true, 'consent must be re-read on each registration request');
 });
+
+test('the id attached to the registration request is the same id emitted as the conversion', async () => {
+  const { handler, emitted, calls } = harness({
+    responses: [jsonResponse({ user: { id: 31 } }, { status: 201 })],
+    attribution: ATTRIBUTION,
+  });
+
+  await handler(...Object.values(registerRequest({ email: 'same-id@example.com' })));
+
+  const sentBody = JSON.parse(calls[0].init.body);
+  assert.match(sentBody.meta_event_id, /^register_user_[A-Za-z0-9._:-]+$/);
+  assert.ok(sentBody.meta_event_id.length <= 120, 'backend observer allowlist caps the id at 120 chars');
+  assert.equal(emitted.length, 1);
+  assert.equal(emitted[0].event_id, sentBody.meta_event_id, 'browser and server copies must share one id');
+  assert.equal(emitted[0].meta_event_id, sentBody.meta_event_id);
+});
+
+test('the conversion is emitted only after a successful response, never before it settles', async () => {
+  const order = [];
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+
+  const handler = createRegistrationFetchHandler({
+    fetchImpl: async () => {
+      order.push('request');
+      await gate;
+      order.push('response');
+      return jsonResponse({ user: { id: 5 } }, { status: 201 });
+    },
+    emit: () => order.push('emit'),
+    getAttribution: () => ({}),
+    origin: ORIGIN,
+    apiBaseUrl: API_BASE,
+  });
+
+  const pending = handler(...Object.values(registerRequest({ email: 'ordered@example.com' })));
+  await Promise.resolve();
+  assert.deepEqual(order, ['request'], 'nothing may be emitted while the registration is still in flight');
+
+  release();
+  await pending;
+  assert.deepEqual(order, ['request', 'response', 'emit']);
+});

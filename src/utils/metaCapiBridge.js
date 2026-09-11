@@ -1,6 +1,6 @@
 import { getAnalyticsUserId, trackEvent } from './analytics';
 import { getCampaignAttribution } from './campaignAttribution.js';
-import { createAnalyticsEventId, FUNNEL_EVENTS } from './funnelAnalytics.js';
+import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
 import {
   REGISTRATION_EVENT_SOURCE,
   REGISTRATION_METHOD_EMAIL,
@@ -192,6 +192,9 @@ function patchRegistrationFetch() {
     method: REGISTRATION_METHOD_EMAIL,
     provider: REGISTRATION_PROVIDER_PASSWORD,
     source: REGISTRATION_EVENT_SOURCE,
+    // Registration ids come from the shared funnel generator so the browser
+    // Pixel copy and the server-side observer copy deduplicate.
+    eventIdFactory: () => registrationEventId(),
     consent: isOpenAIAdsMeasurementAllowed,
     onError: () => {},
   });
