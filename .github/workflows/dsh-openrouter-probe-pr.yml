@@ -42,8 +42,14 @@ jobs:
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -euo pipefail
+          if [ -n "${OPENROUTER_API_KEY:-}" ]; then
+            echo "github_openrouter_secret=yes"
+          else
+            echo "github_openrouter_secret=no"
+          fi
           ssh -i ~/.ssh/dsh_probe_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           C=/root/.dsh/.credentials.yaml
