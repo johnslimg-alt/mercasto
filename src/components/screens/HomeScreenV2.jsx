@@ -6,6 +6,8 @@ import {
   CheckCircle2, ShieldCheck, MessageCircle, Sparkles,
 } from 'lucide-react';
 import { events } from '../../utils/analytics';
+import { formatNumber } from '../../utils/localeFormat';
+import { AUTOMOTIVE_PRICE_OPTIONS, AUTOMOTIVE_QUICK_BRANDS, getAutomotiveQuickYears } from '../../utils/automotiveQuickFilters';
 import { PopularSearchesSection, CitiesSection, NewsletterSection } from '../home/HomeDiscoverySections';
 import FAQSchema from '../seo/FAQSchema';
 import ItemListSchema from '../seo/ItemListSchema';
@@ -133,6 +135,23 @@ export default function HomeScreenV2({
     events.publishStep('home_cta', null, { source: 'design_v2_publish' });
     setCurrentTab?.('post');
   }, [setCurrentTab]);
+
+  const automotiveQuickYears = React.useMemo(() => getAutomotiveQuickYears(), []);
+
+  // Automotive quick filters mirror the legacy row one-for-one: a year window
+  // and a max-price bucket, both expressed as a search the user can share.
+  const applyAutoYear = React.useCallback((year) => {
+    if (!year) return;
+    executeSearch?.('', null, 'motor', {
+      dynamicFilters: { year: { min: year, max: year } },
+      source: 'home_auto_year',
+    });
+  }, [executeSearch]);
+
+  const applyAutoMaxPrice = React.useCallback((maxPrice) => {
+    if (!maxPrice) return;
+    executeSearch?.('', null, 'motor', { maxPrice, source: 'home_auto_price' });
+  }, [executeSearch]);
 
   const featuredRows = featured.length ? featured : safeAds.slice(0, 4);
   const sectionCopy = {
@@ -296,6 +315,14 @@ export default function HomeScreenV2({
           <section className="v2-section">
             <SectionHeader title={t.re_spotlight}
               action={t.see_all} onAction={() => navigate('/inmuebles')} />
+            <div className="v2-quick-row v2-scroll">
+              <button data-testid="home-real-estate-rent" type="button" className="v2-quick"
+                onClick={() => runSearch('renta', 'inmobiliaria')}>{t.rent || 'Rentar'}</button>
+              <button type="button" className="v2-quick"
+                onClick={() => runSearch('venta', 'inmobiliaria')}>{t.buy || 'Comprar'}</button>
+              <button type="button" className="v2-quick"
+                onClick={() => runSearch('comercial', 'inmobiliaria')}>{t.commercial || 'Comercial'}</button>
+            </div>
             <AdRail items={(realEstateAds || []).slice(0,4)} renderAdCard={renderAdCard} />
           </section>
 
@@ -330,6 +357,36 @@ export default function HomeScreenV2({
           <section className="v2-section">
             <SectionHeader title={t.automotive}
               action={t.see_all} onAction={() => navigate('/motor')} />
+            <div className="v2-quick-row v2-scroll" data-testid="home-auto-filter-row">
+              <button type="button" className="v2-quick is-active"
+                onClick={() => runSearch('', 'motor')}>{t.all || 'Todos'}</button>
+              {AUTOMOTIVE_QUICK_BRANDS.map(brand => (
+                <button key={brand} type="button" className="v2-quick"
+                  onClick={() => runSearch(brand, 'motor')}>{brand}</button>
+              ))}
+              <select
+                data-testid="home-auto-year-filter"
+                className="v2-quick-select"
+                aria-label={t.year || 'Año'}
+                defaultValue=""
+                onChange={(event) => applyAutoYear(event.target.value)}
+              >
+                <option value="">{t.year || 'Año'}</option>
+                {automotiveQuickYears.map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+              <select
+                data-testid="home-auto-price-filter"
+                className="v2-quick-select"
+                aria-label={t.price || 'Precio'}
+                defaultValue=""
+                onChange={(event) => applyAutoMaxPrice(event.target.value)}
+              >
+                <option value="">{t.price || 'Precio'}</option>
+                {AUTOMOTIVE_PRICE_OPTIONS.map(value => (
+                  <option key={value} value={value}>≤ ${formatNumber(value, lang)} MXN</option>
+                ))}
+              </select>
+            </div>
             <AdRail items={(automotiveAds || []).slice(0,4)} renderAdCard={renderAdCard} />
           </section>
 

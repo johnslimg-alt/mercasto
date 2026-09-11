@@ -1,20 +1,20 @@
 # Home V2 parity audit — Legacy vs V2
 
-Generated: 2026-09-11T00:51:09.884Z
+Generated: 2026-09-11T00:53:18.763Z
 
-- Legacy: `src/components/screens/HomeScreen.jsx` (1202 lines)
-- V2:     `src/components/screens/HomeScreenV2.jsx` (383 lines)
+- Legacy: `src/components/screens/HomeScreen.jsx` (1201 lines)
+- V2:     `src/components/screens/HomeScreenV2.jsx` (440 lines)
 
 ## Verdict
 
 - Features audited: **41**
-- V2 implemented: **27**
+- V2 implemented: **29**
 - V2 only: **1**
 - Intentionally removed: **0**
-- **MUST MIGRATE: 6**
+- **MUST MIGRATE: 4**
 - Legacy props not accepted by V2: **5**
 - App.jsx props not forwarded to V2: **7**
-- Home testids asserted by tests but absent in V2: **8**
+- Home testids asserted by tests but absent in V2: **4**
 - V2 i18n keys missing from one or more of the 11 runtime modules: **0**
 
 ## Feature matrix
@@ -27,7 +27,7 @@ Generated: 2026-09-11T00:51:09.884Z
 | Location input | Discovery | `setSearchLocationInput` | `setSearchLocationInput` | V2 implemented |
 | State/city selection | Filters | `setSelectedState` | `setSelectedState` | V2 implemented |
 | Min/max price filters | Filters | — | `setMinPrice` | V2 only |
-| Dynamic attribute filters | Filters | `dynamicFilters` | — | MUST MIGRATE |
+| Dynamic attribute filters | Filters | `dynamicFilters` | `dynamicFilters` | V2 implemented |
 | Condition filter | Filters | — | — | n/a |
 | Sort control | Filters | — | — | n/a |
 | Filters UI on home | Filters | `home-open-filters` | `v2-filter-panel` | V2 implemented |
@@ -43,7 +43,7 @@ Generated: 2026-09-11T00:51:09.884Z
 | Jobs block | Verticals | `jobAds` | `jobAds` | V2 implemented |
 | Services block | Verticals | `serviceAds` | `serviceAds` | V2 implemented |
 | Automotive block | Verticals | `automotiveAds` | `automotiveAds` | V2 implemented |
-| Real-estate quick filters (rent/buy/commercial) | Verticals | `home-real-estate-rent` | — | MUST MIGRATE |
+| Real-estate quick filters (rent/buy/commercial) | Verticals | `home-real-estate-rent` | `home-real-estate-rent` | V2 implemented |
 | Map usage on home | Verticals | `<MapV3` | — | MUST MIGRATE |
 | AI recommendations widget | Listings | `<RecommendationsWidget` | — | MUST MIGRATE |
 | Accurate total counter (adsTotal) | Listings | `adsTotal` | `adsTotal` | V2 implemented |
@@ -65,12 +65,6 @@ Generated: 2026-09-11T00:51:09.884Z
 
 ## MUST MIGRATE detail
 
-### Dynamic attribute filters  `dynamic_filters`
-
-- Group: Filters
-- Legacy evidence: `dynamicFilters`
-- V2 evidence: none
-
 ### Auth-aware rendering (user prop)  `auth_user`
 
 - Group: Account
@@ -81,12 +75,6 @@ Generated: 2026-09-11T00:51:09.884Z
 
 - Group: Account
 - Legacy evidence: `getRecentlyViewed`
-- V2 evidence: none
-
-### Real-estate quick filters (rent/buy/commercial)  `vertical_re_quickfilters`
-
-- Group: Verticals
-- Legacy evidence: `home-real-estate-rent`
 - V2 evidence: none
 
 ### Map usage on home  `map`
@@ -125,14 +113,14 @@ Generated: 2026-09-11T00:51:09.884Z
 | testid | in legacy | in V2 |
 | --- | --- | --- |
 | `home-category-rail` | yes | no |
-| `home-auto-year-filter` | yes | no |
-| `home-auto-price-filter` | yes | no |
-| `home-auto-filter-row` | yes | no |
+| `home-auto-year-filter` | yes | yes |
+| `home-auto-price-filter` | yes | yes |
+| `home-auto-filter-row` | yes | yes |
 | `home-category-motor` | yes | no |
 | `home-upload-cv` | yes | yes |
 | `home-create-job-alert` | yes | yes |
 | `home-newsletter-submit` | no | no |
-| `home-real-estate-rent` | yes | no |
+| `home-real-estate-rent` | yes | yes |
 | `home-open-filters` | yes | no |
 | `home-real-estate-map-card` | yes | no |
 | `home-toast` | yes | yes |
@@ -142,7 +130,6 @@ Generated: 2026-09-11T00:51:09.884Z
 - `../../constants/locationsAndCategories`
 - `../../utils/homeMapCopy`
 - `../../utils/imageHelpers`
-- `../../utils/localeFormat`
 - `../../utils/localize`
 - `../../utils/recentlyViewed`
 - `../SEO`
@@ -156,7 +143,7 @@ Generated: 2026-09-11T00:51:09.884Z
 
 ## i18n gate — V2 keys across the 11 runtime language modules
 
-V2 uses **47** distinct `t.*` keys.
+V2 uses **50** distinct `t.*` keys.
 
 _All V2 keys exist in every runtime language module._
 

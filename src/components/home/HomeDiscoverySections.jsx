@@ -121,10 +121,10 @@ export function CitiesSection({ t, applyCityFilter, onViewAllMexico, variant = '
 }
 
 export function NewsletterSection({ t, showHomeToast, variant = 'default' }) {
-  const submit = (event) => {
-    event.preventDefault();
+  const submit = (e) => {
+    e.preventDefault();
     showHomeToast(t.newsletter_subscribed_toast);
-    event.target.reset();
+    e.target.reset();
   };
 
   if (variant === 'v2') {

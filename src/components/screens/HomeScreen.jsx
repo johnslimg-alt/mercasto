@@ -18,6 +18,7 @@ const LOCAL_ICON_MAP = {
 const MapV3 = React.lazy(() => import('../common/MapV3'));
 
 import { sizedImage } from '../../utils/imageHelpers';
+import { getAutomotiveQuickYears } from '../../utils/automotiveQuickFilters';
 import { localizedText } from '../../utils/localize';
 import { formatMXN, formatNumber } from '../../utils/localeFormat';
 import { formatHomePropertiesLabel, getHomeMapCopy } from '../../utils/homeMapCopy';
@@ -75,10 +76,8 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
       observer.observe(node);
       return () => observer.disconnect();
     }, [reMapLoaded]);
-    const automotiveQuickYears = React.useMemo(() => {
-      const currentYear = new Date().getFullYear();
-      return Array.from({ length: 12 }, (_, index) => String(currentYear - index));
-    }, []);
+    // Shared with Home V2 so the year window cannot drift between the screens.
+    const automotiveQuickYears = React.useMemo(() => getAutomotiveQuickYears(), []);
 
     // Fetch Destacados on mount — use the pre-fetched promise from index.html if available
     // so the image is ready before React mounts (eliminates ~1s LCP load delay).

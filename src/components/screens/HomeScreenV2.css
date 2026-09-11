@@ -202,6 +202,15 @@
 .v2-publish-copy h2{margin:8px 0 0;font-size:20px;font-weight:800;letter-spacing:-.01em}
 .v2-publish-copy p{margin:6px 0 0;color:var(--v2-muted);font-size:13px}
 .v2-publish-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border:0;border-radius:12px;background:var(--v2-ink);color:var(--v2-card);font-size:13px;font-weight:800;cursor:pointer}
+
+/* Vertical quick filters (real estate rent/buy/commercial, automotive brand+year+price).
+   Horizontally scrollable on narrow screens, with the scrollbar hidden like every
+   other rail on this screen. */
+.v2-quick-row{display:flex;align-items:center;gap:8px;margin:12px 0 2px;padding-bottom:2px;overflow-x:auto}
+.v2-quick{flex:none;padding:8px 14px;border:1px solid var(--v2-line);border-radius:999px;background:var(--v2-card);color:var(--v2-ink);font-size:12px;font-weight:700;cursor:pointer}
+.v2-quick:hover{border-color:var(--v2-lime)}
+.v2-quick.is-active{background:var(--v2-ink);color:var(--v2-card);border-color:var(--v2-ink)}
+.v2-quick-select{flex:none;height:34px;padding:0 10px;border:1px solid var(--v2-line);border-radius:10px;background:var(--v2-card);color:var(--v2-ink);font-size:12px;font-weight:600;cursor:pointer}
 @media(min-width:768px){
   .v2-city-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
   .v2-newsletter{flex-direction:row;align-items:center;justify-content:space-between}
