@@ -59,12 +59,24 @@ def set_default(provider: str, model: str, reasoning: str = "") -> None:
 def smoke(provider: str, model: str, marker: str, reasoning: str = "") -> None:
     set_default(provider, model, reasoning)
     run(["npx", "--yes", f"@deepseek-ai/dsh@{DSH_VERSION}", "--profile", "web", "--dump-config"], timeout=90, capture=True)
-    proc = run(
-        ["npx", "--yes", f"@deepseek-ai/dsh@{DSH_VERSION}", "--profile", "headless", f"Reply with exactly: {marker}"],
-        timeout=150,
-        capture=True,
-    )
+    try:
+        proc = run(
+            ["npx", "--yes", f"@deepseek-ai/dsh@{DSH_VERSION}", "--profile", "headless", f"Reply with exactly: {marker}"],
+            timeout=150,
+            capture=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        diagnostic = exc.stdout or ""
+        diagnostic = re.sub(r"sk-[A-Za-z0-9_-]+", "<redacted>", diagnostic)
+        print("DSH_SMOKE_DIAGNOSTIC_BEGIN")
+        print("\n".join(diagnostic.splitlines()[-80:]))
+        print("DSH_SMOKE_DIAGNOSTIC_END")
+        raise
     if marker not in (proc.stdout or ""):
+        diagnostic = re.sub(r"sk-[A-Za-z0-9_-]+", "<redacted>", proc.stdout or "")
+        print("DSH_SMOKE_DIAGNOSTIC_BEGIN")
+        print("\n".join(diagnostic.splitlines()[-80:]))
+        print("DSH_SMOKE_DIAGNOSTIC_END")
         raise RuntimeError(f"{provider}/{model} smoke returned unexpected output")
     print(f"{marker}=yes")
 
