@@ -17,12 +17,20 @@ export function isPausedAdBulkActivatable(ad, nowMs = Date.now()) {
     && new Date(ad.expires_at).getTime() > nowMs;
 }
 
+// Mirrors Ad::MODERATION_APPROVED / Ad::MODERATION_REACTIVATION_PENDING on the
+// backend: 'approved' is reserved for publicly visible ads, while an approval
+// that must wait for the seller to confirm availability is stored as
+// 'reactivation_pending'. Both are accepted here because this is only the
+// fallback used when the API does not send the authoritative
+// `seller_confirmation_pending` boolean (see Ad::isSellerConfirmationReactivationEligible()).
+const SELLER_CONFIRMATION_STATUSES = new Set(['approved', 'reactivation_pending']);
+
 export function isSellerConfirmationPending(ad) {
   if (typeof ad?.seller_confirmation_pending === 'boolean') return ad.seller_confirmation_pending;
   const moderatedAt = ad?.ai_moderated_at ? new Date(ad.ai_moderated_at).getTime() : null;
   const republishedAt = ad?.republished_at ? new Date(ad.republished_at).getTime() : null;
   return ad?.status === 'archived'
-    && ad?.ai_moderation_status === 'approved'
+    && SELLER_CONFIRMATION_STATUSES.has(ad?.ai_moderation_status)
     && !isCatalogReference(ad)
     && !ad?.expires_at
     && (!republishedAt || (Number.isFinite(moderatedAt) && moderatedAt > republishedAt));

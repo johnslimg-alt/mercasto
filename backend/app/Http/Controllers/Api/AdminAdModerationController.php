@@ -83,9 +83,22 @@ class AdminAdModerationController extends Controller
             $previousCycleQuery->where('created_at', '>=', $ad->moderation_submitted_at);
         }
         $previousCycle = $previousCycleQuery->latest('id')->first();
-        $activateOnHumanApproval = $previousCycle
-            ? (bool) data_get($previousCycle->metadata, 'rollout.activate_on_human_approval', false)
-            : $ad->status === 'pending';
+        // Activation intent is sticky: a re-queue must never downgrade an ad's
+        // fresh-submission intent, otherwise a fresh seller ad that was parked as
+        // `archived` for review can end up approved yet permanently hidden.
+        $activateOnHumanApproval = ($previousCycle
+            && data_get($previousCycle->metadata, 'rollout.activate_on_human_approval') === true)
+            || $ad->status === 'pending'
+            || $ad->moderationDecisions()
+                ->where('source', 'system')
+                ->where('decision', 'queued')
+                ->get()
+                ->contains(
+                    fn (AdModerationDecision $decision): bool => data_get(
+                        $decision->metadata,
+                        'rollout.activate_on_human_approval'
+                    ) === true
+                );
 
         $ad->forceFill([
             'status' => 'archived',
@@ -165,14 +178,20 @@ class AdminAdModerationController extends Controller
             && ($hasCurrentActivationIntent
                 ? $activateOnHumanApproval
                 : $previousStatus === 'pending');
-        $newStatus = match ($decision) {
-            'approved' => $publishImmediately ? 'active' : 'archived',
+
+        // Approval outcomes come from the model so that ai_moderation_status
+        // 'approved' always implies a publicly visible ad. A granted approval
+        // that must wait for the seller is stored as `reactivation_pending`.
+        $approvalOutcome = $decision === 'approved'
+            ? Ad::approvalOutcome($publishImmediately)
+            : null;
+
+        $newStatus = $approvalOutcome['status'] ?? match ($decision) {
             'rejected' => 'rejected',
             default => 'archived',
         };
 
-        $moderationStatus = match ($decision) {
-            'approved' => 'approved',
+        $moderationStatus = $approvalOutcome['ai_moderation_status'] ?? match ($decision) {
             'changes_requested' => 'admin_changes_requested',
             default => 'admin_'.$decision,
         };

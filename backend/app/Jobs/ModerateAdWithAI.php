@@ -242,11 +242,18 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 $reason = 'La IA propone '.$proposedDecision.', pero el modo assist-only exige decisión humana. '.$reason;
             }
 
-            $newStatus = match ($decision) {
-                'approved' => $this->activateOnApproval ? 'active' : 'archived',
+            // Approval outcomes are resolved by the model so that "approved" can
+            // never be persisted together with a hidden status. An approval that
+            // must not publish yet becomes `reactivation_pending` instead.
+            $approvalOutcome = $decision === 'approved'
+                ? Ad::approvalOutcome($this->activateOnApproval)
+                : null;
+
+            $newStatus = $approvalOutcome['status'] ?? match ($decision) {
                 'rejected' => 'rejected',
                 default => 'archived',
             };
+            $newModerationStatus = $approvalOutcome['ai_moderation_status'] ?? $decision;
 
             $ad->refresh();
             if (! $this->isCurrentModerationCycle() || $ad->ai_moderation_status !== 'processing') {
@@ -258,7 +265,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 'status' => $newStatus,
                 'expires_at' => $newStatus === 'active' ? Ad::freshExpiry() : null,
                 'reminder_sent_at' => null,
-                'ai_moderation_status' => $decision,
+                'ai_moderation_status' => $newModerationStatus,
                 'ai_moderation_reason' => $reason,
                 'ai_moderation_confidence' => $confidence,
                 'ai_moderated_at' => now(),

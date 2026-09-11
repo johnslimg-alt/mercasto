@@ -12,6 +12,8 @@ CONFIG="backend/config/services.php"
 COMPOSE="docker-compose.yml"
 MIDDLEWARE="backend/app/Http/Middleware/EnforcePaidAdRenewal.php"
 MODEL="backend/app/Models/Ad.php"
+ADMIN_CONTROLLER="backend/app/Http/Controllers/Api/AdminAdModerationController.php"
+RECONCILE="backend/app/Console/Commands/ReconcileModerationVisibility.php"
 UI="src/components/screens/MyAdsScreen.jsx"
 
 if grep -qF 'dispatch(function () use ($ad)' "$CONTROLLER"; then
@@ -75,7 +77,32 @@ fi
 grep -qF '{--execute : Requeue the selected ads}' "$COMMAND"
 grep -qF "'confirm_available' => 'required|accepted'" "$CONTROLLER"
 grep -qF 'isSellerConfirmationReactivationEligible()' "$CONTROLLER"
-grep -qF "\$this->ai_moderation_status !== 'approved'" "$MODEL"
+# Moderation lifecycle invariant: ai_moderation_status = 'approved' means the ad
+# IS publicly visible; a granted approval that must not publish yet is stored as
+# 'reactivation_pending'. The (status, ai_moderation_status) pair for approvals is
+# single-sourced in Ad::approvalOutcome() so it cannot drift back to
+# "approved + archived", which is what stranded approved ads invisible forever.
+grep -qF "public const MODERATION_APPROVED = 'approved';" "$MODEL"
+grep -qF "public const MODERATION_REACTIVATION_PENDING = 'reactivation_pending';" "$MODEL"
+grep -qF 'public static function approvalOutcome(bool $publishNow): array' "$MODEL"
+grep -qF 'public function scopeApprovedButHidden(Builder $query): Builder' "$MODEL"
+grep -qF "'seller_confirmation_required'" "$MODEL"
+grep -qF "? ['status' => 'active', 'ai_moderation_status' => self::MODERATION_APPROVED]" "$MODEL"
+grep -qF ": ['status' => 'archived', 'ai_moderation_status' => self::MODERATION_REACTIVATION_PENDING];" "$MODEL"
+grep -qF '[self::MODERATION_REACTIVATION_PENDING, self::MODERATION_APPROVED],' "$MODEL"
+# Both approval writers must resolve the outcome through the model mapper.
+grep -qF 'Ad::approvalOutcome(' "$JOB"
+grep -qF 'Ad::approvalOutcome(' "$ADMIN_CONTROLLER"
+if grep -qF -- "'ai_moderation_status' => 'approved'" "$JOB" "$ADMIN_CONTROLLER"; then
+  echo "Approval status must be resolved by Ad::approvalOutcome()" >&2
+  exit 1
+fi
+# Reconciliation command must exist and target the visible-approval status.
+if [[ ! -f "$RECONCILE" ]]; then
+  echo "Moderation visibility reconciliation command is missing" >&2
+  exit 1
+fi
+grep -qF -- "->where('ai_moderation_status', Ad::MODERATION_APPROVED)" "$RECONCILE"
 grep -qF "data_get(\$decision->metadata, 'activation_mode') !== 'seller_confirmation_required'" "$MODEL"
 grep -qF "(\$ad->ai_moderation_status ?? null) === 'approved'" "$MIDDLEWARE"
 grep -qF "confirm-reactivation-ad-" "$UI"
