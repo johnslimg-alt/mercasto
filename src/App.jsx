@@ -10,6 +10,7 @@ import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './
 import { isOpenAIAdsMeasurementAllowed } from './utils/trackingConsent';
 import { clearPublishDraft } from './utils/publishDraft';
 import { isAdCreditPromotionEligible } from './utils/adBulkEligibility';
+import { isCatalogReference } from './utils/catalogInventory';
 import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
 import { getVerticalCanonicalAlias, getVerticalSeo } from './constants/verticalSeo';
@@ -1632,7 +1633,7 @@ function App() {
     let ogImage = "https://mercasto.com/icon-512x512.png";
     let ogType = "website";
 
-    const isViewedCatalogFiller = Boolean(viewedAd?.is_catalog_filler);
+    const isViewedCatalogFiller = isCatalogReference(viewedAd);
     const viewedExpiry = viewedAd?.expires_at ? new Date(viewedAd.expires_at) : null;
     const isViewedListingIndexable = Boolean(
       viewedAd
@@ -3821,7 +3822,8 @@ function App() {
     window.history.pushState({ popup: 'ad' }, '', `#ad-${ad.id}`);
     setViewedAd(ad);
     window.scrollTo(0, 0); // Исправляет проблему "белого экрана" из-за скролла
-    if (ad.is_catalog_filler) return;
+    // Only explicit catalog references skip view counting (see src/utils/catalogInventory.js).
+    if (isCatalogReference(ad)) return;
 
     fetch(`${API_URL}/ads/${ad.id}/view`, { method: 'POST' })
       .then(res => res.ok ? res.json() : null)

@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { MapPin, List, LayoutGrid, ChevronDown, Search } from 'lucide-react';
 import { getExactMapCoordinates } from '../../utils/mapCoordinates';
 import { localeFor } from '../../utils/localeFormat';
+import { isCatalogReference } from '../../utils/catalogInventory';
 
 const MapV3 = React.lazy(() => import('./MapV3'));
 
@@ -60,7 +61,7 @@ export default function SplitViewContainer({
   const adRefs = useRef({});
   const revealSentinelRef = useRef(null);
   const [visibleCount, setVisibleCount] = useState(() => isMobileCatalog ? 8 : ads.length);
-  const genuineAds = useMemo(() => ads.filter(ad => !ad?.is_catalog_filler), [ads]);
+  const genuineAds = useMemo(() => ads.filter(ad => !isCatalogReference(ad)), [ads]);
   const mappableAds = useMemo(
     () => genuineAds.filter(ad => getExactMapCoordinates(ad)),
     [genuineAds],

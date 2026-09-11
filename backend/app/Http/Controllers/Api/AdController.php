@@ -26,6 +26,7 @@ use App\Mail\NewAdInCategory;
 use App\Models\User;
 use App\Services\AdModerationGuidanceService;
 use App\Services\ListingQualityPreflightService;
+use App\Support\CatalogInventoryRanking;
 use App\Support\PrivacyFingerprint;
 use App\Support\TrustedE2eAccount;
 use Illuminate\Support\Facades\Mail;
@@ -404,8 +405,9 @@ class AdController extends Controller
 
         // Настоящие пользовательские объявления всегда выше витринных ссылок каталога.
         // Для витрины конкретного продавца сохраняем его собственную сортировку без вмешательства.
+        // Политика ранжирования общая с публичным каталогом: App\Support\CatalogInventoryRanking.
         if (! $request->filled('user_id')) {
-            $query->orderBy('ads.is_catalog_filler', 'asc');
+            CatalogInventoryRanking::realInventoryFirst($query);
         }
 
         // Сортировка (Спецификация: по дате, цене, популярности)
