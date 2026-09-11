@@ -123,6 +123,7 @@ export default function HomeScreenV2({
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [showAllTrending, setShowAllTrending] = React.useState(false);
   const [featured, setFeatured] = React.useState([]);
+  const [featuredState, setFeaturedState] = React.useState('pending');
   const [homeToast, setHomeToast] = React.useState(null);
   const homeToastTimerRef = React.useRef(null);
   const labels = CATEGORY_LABELS[lang] || CATEGORY_LABELS.es;
@@ -139,14 +140,40 @@ export default function HomeScreenV2({
 
   React.useEffect(() => {
     let active = true;
-    fetch('/api/ads/featured', { headers:{ Accept:'application/json' } })
+    // Deliberately the same relative base the document shell prefetches with, so
+    // the two requests are interchangeable and no absolute origin is baked in.
+    const API_URL = (typeof window !== 'undefined' && window.__API_URL__) || '/api';
+    const extract = (data) => Array.isArray(data?.data) ? data.data
+      : Array.isArray(data) ? data : [];
+    const ownFetch = () => fetch(`${API_URL}/ads/featured`, { headers: { Accept: 'application/json' } })
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
+      .catch(() => null);
+
+    // index.html starts this request before any bundle loads and states that the
+    // screen is expected to consume it. That shell prefetch only runs on '/', so
+    // an empty promise is normal on any other path — reuse it when it carries
+    // data and fetch otherwise, which avoids a duplicate request where it matters
+    // and keeps the rail working everywhere else.
+    const prefetched = typeof window !== 'undefined' ? window.__FEATURED_ADS_PROMISE__ : null;
+    const fromShell = prefetched
+      ? Promise.resolve(prefetched).then(extract).catch(() => [])
+      : Promise.resolve([]);
+
+    fromShell
+      .then(rows => (rows.length ? rows : ownFetch().then(extract)))
+      .then(rows => {
         if (!active) return;
-        const rows = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
         setFeatured(rows.slice(0, 4));
+        setFeaturedState('ready');
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!active) return;
+        // A promoted slot must never be filled with an unpromoted listing, so on
+        // failure the rail stays honestly empty rather than substituting.
+        setFeatured([]);
+        setFeaturedState('ready');
+      });
+
     return () => { active = false; };
   }, []);
 
@@ -220,7 +247,9 @@ export default function HomeScreenV2({
     executeSearch?.('', null, 'motor', { maxPrice, source: 'home_auto_price' });
   }, [executeSearch]);
 
-  const featuredRows = featured.length ? featured : safeAds.slice(0, 4);
+  // Only genuinely promoted rows: substituting the first ordinary listings would
+  // present unpromoted ads in a paid placement (see docs/home-v2-real-data-audit.md).
+  const featuredRows = featured;
   const sectionCopy = {
     all: t.all,
     location: t.location,
@@ -349,7 +378,7 @@ export default function HomeScreenV2({
             <SectionHeader title={t.featured_ads}
               action={t.promote_ad}
               onAction={() => openPricing('design_v2_featured')} />
-            <AdRail items={featuredRows} renderAdCard={renderAdCard} className="v2-featured-rail" pending={feedPending} skeletonCount={4} />
+            <AdRail items={featuredRows} renderAdCard={renderAdCard} className="v2-featured-rail" pending={featuredState === 'pending'} skeletonCount={4} />
           </section>
 
           <section className="v2-section v2-trending-section">
