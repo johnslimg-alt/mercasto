@@ -1,0 +1,105 @@
+name: Runner stability
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_cleanup:
+        description: 'Terminate orphaned test processes (Vite/Playwright)'
+        required: false
+        type: boolean
+        default: true
+      max_age_seconds:
+        description: 'Only process older than this many seconds are orphans'
+        required: false
+        type: string
+        default: '14400'
+  schedule:
+    # Twenty-minute cadence keeps leaked Vite servers from accumulating between
+    # deploys; on 2026-09-10 the same leak OOM-killed the runner.
+    - cron: '*/20 * * * *'
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: runner-stability
+  cancel-in-progress: false
+
+jobs:
+  runner-stability:
+    name: Reap orphans and audit runner memory
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 15
+    steps:
+      - name: Verify production checkout exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /var/www/mercasto/.git
+          test -f /var/www/mercasto/scripts/runner-orphan-cleanup.sh
+          test -f /var/www/mercasto/scripts/runner-memory-preflight.sh
+          test -f /var/www/mercasto/scripts/deploy-freeze-window.sh
+
+      - name: Report memory before cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          free -m | sed -n '1,3p'
+          echo "available_mb=$(awk '/^MemAvailable:/ {print int($2/1024)}' /proc/meminfo)"
+          echo "swap_free_mb=$(awk '/^SwapFree:/ {print int($2/1024)}' /proc/meminfo)"
+
+      - name: Report deploy freeze window
+        shell: bash
+        # Informational: the freeze pauses production deploys, not CI cleanup.
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/deploy-freeze-window.sh --json || true
+
+      - name: Audit orphaned test processes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/runner-orphan-cleanup.sh \
+            --max-age "${MERC_RUNNER_ORPHAN_MAX_AGE_SECONDS:-14400}" \
+            --json \
+            --log /tmp/mercasto-runner-orphan-audit.log
+
+      - name: Reap orphaned test processes
+        if: ${{ github.event_name == 'schedule' || inputs.apply_cleanup }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/runner-orphan-cleanup.sh \
+            --apply \
+            --max-age "${{ inputs.max_age_seconds || '14400' }}" \
+            --log /var/log/mercasto-runner-orphan-cleanup.log || {
+              echo "cleanup needs root on the host; falling back to the systemd timer path" >&2
+              bash scripts/runner-orphan-cleanup.sh --apply \
+                --max-age "${{ inputs.max_age_seconds || '14400' }}" \
+                --log /tmp/mercasto-runner-orphan-audit.log
+            }
+
+      - name: Enforce the critical memory floor
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          free -m | sed -n '1,3p'
+          bash scripts/runner-memory-preflight.sh \
+            --min-available-mb "${MERC_CI_MIN_CRITICAL_MB:-2048}" \
+            --label runner-stability
+
+      - name: Runner health snapshot
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/server-operator.sh runner_health

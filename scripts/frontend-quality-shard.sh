@@ -6,6 +6,12 @@ port="${2:?preview port is required}"
 base_url="http://127.0.0.1:${port}"
 log_file="/tmp/mercasto-${shard}-preview.log"
 
+# Browser shards are the heaviest thing this host runs. Fail fast (with a clear
+# message) instead of racing the OOM killer when leaked servers ate the RAM.
+if [ -x scripts/runner-memory-preflight.sh ]; then
+  bash scripts/runner-memory-preflight.sh --cleanup --label "shard-${shard}"
+fi
+
 ./node_modules/.bin/vite preview --host 127.0.0.1 --port "${port}" --strictPort >"${log_file}" 2>&1 &
 preview_pid=$!
 trap 'kill "${preview_pid}" >/dev/null 2>&1 || true' EXIT

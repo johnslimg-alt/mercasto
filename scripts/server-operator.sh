@@ -173,8 +173,15 @@ seo_aeo_probe() {
   echo "SEO/AEO smoke OK"
 }
 
+preflight_runner_memory() {
+  [ -x scripts/runner-memory-preflight.sh ] || return 0
+  print_header "Runner memory preflight"
+  bash scripts/runner-memory-preflight.sh --label "mercasto-verify-quick"
+}
+
 run_verify_quick() {
   print_header "verify:quick"
+  preflight_runner_memory
   if command -v npm >/dev/null 2>&1; then
     npm run verify:quick
     bash scripts/offsite-backup-smoke.sh
