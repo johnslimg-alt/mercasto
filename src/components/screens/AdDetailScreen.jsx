@@ -950,7 +950,7 @@ export default function AdDetailScreen({
               ref={qrInitialFocusRef}
               type="button"
               onClick={closeQr}
-              className="self-end -mt-4 -mr-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+              className="self-end -mt-7 -mr-7 flex h-12 w-12 items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
               aria-label={t.close_btn || t.close || 'Close'}
             >
               <X size={22} />
