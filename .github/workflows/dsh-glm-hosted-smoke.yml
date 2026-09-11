@@ -53,25 +53,20 @@ jobs:
                   api: openai-completions
                   baseURL: https://openrouter.ai/api/v1
                   models:
-                    - id: z-ai/glm-5.1:free
-                      name: GLM 5.1 Free
-                      contextWindow: 202752
+                    - id: nex-agi/nex-n2.5-pro:free
+                      name: Nex N2.5 Pro Free
+                      contextWindow: 262144
                       maxTokens: 65536
                       input: [text]
-                    - id: deepseek/deepseek-v4-flash:free
-                      name: DeepSeek V4 Flash Free
-                      contextWindow: 1048576
-                      maxTokens: 65536
+                    - id: cohere/north-mini-code:free
+                      name: North Mini Code Free
+                      contextWindow: 256000
+                      maxTokens: 64000
                       input: [text]
-                    - id: minimax/minimax-m3:free
-                      name: MiniMax M3 Free
-                      contextWindow: 1048576
-                      maxTokens: 65536
-                      input: [text]
-                    - id: nvidia/nemotron-3-ultra-550b-a55b:free
-                      name: Nemotron 3 Ultra Free
-                      contextWindow: 1000000
-                      maxTokens: 65536
+                    - id: openrouter/free
+                      name: OpenRouter Free Router
+                      contextWindow: 200000
+                      maxTokens: 32768
                       input: [text]
           YAML
 
@@ -108,10 +103,9 @@ jobs:
           }
 
           models=(
-            'z-ai/glm-5.1:free'
-            'deepseek/deepseek-v4-flash:free'
-            'minimax/minimax-m3:free'
-            'nvidia/nemotron-3-ultra-550b-a55b:free'
+            'nex-agi/nex-n2.5-pro:free'
+            'cohere/north-mini-code:free'
+            'openrouter/free'
           )
           successes=0
           for model in "${models[@]}"; do
