@@ -18,8 +18,12 @@ fi
 echo "== Billing readiness smoke =="
 
 "${COMPOSE[@]}" exec -T mercasto-backend php -l app/Http/Controllers/Api/PaymentController.php
-"${COMPOSE[@]}" exec -T mercasto-backend php artisan route:list --path=webhooks/clip | grep -q "webhooks/clip"
-"${COMPOSE[@]}" exec -T mercasto-backend php artisan route:list --path=payment | grep -q "payment/clip"
+
+webhook_routes="$("${COMPOSE[@]}" exec -T mercasto-backend php artisan route:list --path=webhooks/clip)"
+grep -q "webhooks/clip" <<<"$webhook_routes"
+
+payment_routes="$("${COMPOSE[@]}" exec -T mercasto-backend php artisan route:list --path=payment)"
+grep -q "payment/clip" <<<"$payment_routes"
 
 "${COMPOSE[@]}" exec -T mercasto-backend php -r '
 $payload = "{\"reference\":\"clip_test_reference\",\"status\":\"paid\"}";
@@ -34,21 +38,56 @@ if (! hash_equals($expected, $received)) {
 echo "HMAC sanity OK\n";
 '
 
-# Live endpoint must not accept unsigned callbacks. HTTP 401 is expected when the app is configured.
-# HTTP 503 is also acceptable because it means the endpoint fails closed while launch env is incomplete.
-TMP_FILE="${TMPDIR:-/tmp}/mercasto-billing-readiness-smoke.json"
+# Clip Checkout webhooks may be unsigned. Unknown references must be acknowledged
+# without mutating payment state, while a forged optional signature must fail closed.
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 url="${BASE_URL%/}/api/webhooks/clip"
-code="$(curl -k -sS --max-time 20 -o "$TMP_FILE" -w '%{http_code}' -X POST "$url" -H 'Content-Type: application/json' --data '{"reference":"clip_smoke","status":"paid"}' || true)"
-echo "$url unsigned -> $code"
+TMP_UNSIGNED="$(mktemp "${TMPDIR:-/tmp}/mercasto-billing-unsigned.XXXXXX.json")"
+TMP_FORGED="$(mktemp "${TMPDIR:-/tmp}/mercasto-billing-forged.XXXXXX.json")"
+trap 'rm -f "$TMP_UNSIGNED" "$TMP_FORGED"' EXIT
 
-case "$code" in
-  401|503)
-    python3 -m json.tool "$TMP_FILE" >/dev/null
+payload='{"reference":"clip_smoke_readiness_unknown","status":"paid"}'
+
+unsigned_code="$(curl -k -sS --max-time 20 -o "$TMP_UNSIGNED" -w '%{http_code}' -X POST "$url" -H 'Content-Type: application/json' --data "$payload" || true)"
+echo "$url unsigned unknown reference -> $unsigned_code"
+
+if [[ "$unsigned_code" != "200" ]]; then
+  echo "FAIL: unsigned unknown Clip callback returned unexpected HTTP $unsigned_code" >&2
+  head -c 1200 "$TMP_UNSIGNED" >&2 || true
+  echo >&2
+  exit 1
+fi
+
+python3 - "$TMP_UNSIGNED" <<'PY'
+import json
+import sys
+with open(sys.argv[1], encoding='utf-8') as fh:
+    payload = json.load(fh)
+if payload.get('status') != 'received':
+    raise SystemExit(f"unexpected unsigned webhook status: {payload!r}")
+PY
+
+forged_code="$(curl -k -sS --max-time 20 -o "$TMP_FORGED" -w '%{http_code}' -X POST "$url" -H 'Content-Type: application/json' -H 'X-Clip-Signature: sha256=invalid_billing_readiness_signature' --data "$payload" || true)"
+echo "$url forged optional signature -> $forged_code"
+
+case "$forged_code" in
+  401)
+    python3 - "$TMP_FORGED" <<'PY'
+import json
+import sys
+with open(sys.argv[1], encoding='utf-8') as fh:
+    payload = json.load(fh)
+if payload.get('status') != 'invalid_signature':
+    raise SystemExit(f"unexpected forged-signature webhook status: {payload!r}")
+PY
+    ;;
+  503)
+    # Missing webhook-secret configuration still fails closed.
+    python3 -m json.tool "$TMP_FORGED" >/dev/null
     ;;
   *)
-    echo "FAIL: unsigned billing callback returned unexpected HTTP $code" >&2
-    head -c 1200 "$TMP_FILE" >&2 || true
+    echo "FAIL: forged Clip signature returned unexpected HTTP $forged_code" >&2
+    head -c 1200 "$TMP_FORGED" >&2 || true
     echo >&2
     exit 1
     ;;
