@@ -41,8 +41,10 @@ jobs:
           else
             echo "part_absent"
           fi
-          echo "=== DOWNLOAD PROCESS ==="
-          ps -eo pid,etimes,%cpu,%mem,args | grep -E '[c]url .*Ornith-1.5-35B|[l]ms import' || true
+          echo "=== LM/LOAD PROCESSES ==="
+          ps -eo pid,ppid,etimes,%cpu,%mem,rss,args | grep -E '[l]ms |[l]lmster|[l]lama-server|Ornith-1.5-35B' || true
+          echo "=== MEMORY ==="
+          free -h
           echo "=== LM MODELS ==="
           /root/.lmstudio/bin/lms ls --llm || true
           echo "=== DISK ==="
