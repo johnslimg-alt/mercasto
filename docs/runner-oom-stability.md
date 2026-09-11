@@ -98,3 +98,37 @@ day-old leaks are still removed automatically.
   enforce the critical 2 GiB floor, and snapshot runner health.
 * `scripts/static-safety-scans.sh` — runs the regression tests for all of the
   above as part of `verify:quick`.
+
+## Restarting a runner kills the job it is running
+
+Restarting a runner unit does not wait for the current job: the listener gets a
+shutdown signal and the job ends with
+
+```
+##[error]The runner has received a shutdown signal. This can happen when the
+runner service is stopped, or a manually started runner is canceled.
+```
+
+That happened twice on 2026-09-11 (06:32 and 14:29 UTC) from an external SSH
+session restarting `actions.runner.*` units. It killed unrelated CI jobs — a
+merge gate and a 20-minute Android release build — which then had to be re-run.
+
+Use the guarded restart instead of `systemctl restart`:
+
+```bash
+# Report only (default): waits until the watched repositories have no queued or
+# running runs, then prints the restart it would perform.
+bash scripts/runner-safe-restart.sh \
+  --unit actions.runner.johnslimg-alt-mercasto.srv1526037.service
+
+# Actually restart, after the same wait; refuses after --wait seconds of busy.
+sudo bash scripts/runner-safe-restart.sh \
+  --unit actions.runner.johnslimg-alt-mercasto.srv1526037.service --apply
+
+# Bypass the wait (a maintenance window you own), and watch other repositories.
+sudo bash scripts/runner-safe-restart.sh --unit <unit> --force --apply \
+  --repos "johnslimg-alt/mercasto johnslimg-alt/mercasto-mobile"
+```
+
+`ops/runner/runner-provision.sh` follows the same rule: it installs drop-ins
+without restarting the runner unless `--restart-runners` is passed explicitly.

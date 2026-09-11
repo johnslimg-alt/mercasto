@@ -145,6 +145,7 @@ bash scripts/compose-orphan-preflight.test.sh
 bash scripts/runner-memory-preflight.test.sh
 bash scripts/runner-orphan-cleanup.test.sh
 bash scripts/runner-provision.test.sh
+bash scripts/runner-safe-restart.test.sh
 
 bash scripts/legacy-secret-fallback-gate.sh
 bash scripts/internal-service-exposure-watch.test.sh
