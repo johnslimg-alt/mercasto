@@ -1,4 +1,4 @@
-name: Locate Duplicate llm-pi-ai
+name: Emergency Harness Final Dedupe Repair
 
 on:
   pull_request:
@@ -10,10 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  locate:
+  repair:
     if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Prepare SSH
         shell: bash
@@ -23,44 +23,96 @@ jobs:
         run: |
           set -euo pipefail
           install -d -m 0700 ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/harness_locate_key
-          chmod 600 ~/.ssh/harness_locate_key
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/harness_final_key
+          chmod 600 ~/.ssh/harness_final_key
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      - name: Locate duplicate
+      - name: Remove duplicate profile plugin and restore Harness
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/harness_locate_key "root@$SERVER_HOST" 'python3 - <<'"'"'PY'"'"'
+          ssh -i ~/.ssh/harness_final_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          P=/root/.dsh/profiles/web/cordis.patch.yml
+          B=/root/.dsh/backups/emergency-502
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          install -d -m 0700 "$B"
+          cp -a "$P" "$B/cordis.patch.yml.before-dedupe.$STAMP"
+          chmod 0600 "$B/cordis.patch.yml.before-dedupe.$STAMP"
+
+          python3 - "$P" <<'PY'
+          import re,sys
           from pathlib import Path
-          roots=[Path("/root/.dsh/profiles/web"),Path("/root/.dsh")]
-          seen=set()
-          for root in roots:
-              for p in root.rglob("*"):
-                  if not p.is_file() or p in seen: continue
-                  seen.add(p)
-                  try:
-                      text=p.read_text(errors="ignore")
-                  except Exception:
+          p=Path(sys.argv[1])
+          lines=p.read_text().splitlines(True)
+          out=[]
+          i=0
+          removed=0
+          while i < len(lines):
+              m=re.match(r'^(\s*)-\s+id:\s*llm-pi-ai\s*$', lines[i].rstrip('\n'))
+              if not m:
+                  out.append(lines[i]); i+=1; continue
+              indent=len(m.group(1))
+              removed+=1
+              i+=1
+              while i < len(lines):
+                  raw=lines[i].rstrip('\n')
+                  if not raw.strip():
+                      i+=1
                       continue
-                  if "llm-pi-ai" not in text:
-                      continue
-                  print(f"FILE {p}")
-                  lines=text.splitlines()
-                  for i,line in enumerate(lines,1):
-                      if "llm-pi-ai" in line:
-                          lo=max(1,i-3); hi=min(len(lines),i+4)
-                          for n in range(lo,hi+1):
-                              s=lines[n-1]
-                              low=s.lower()
-                              if any(x in low for x in ("api_key:","apikey:","token:","secret:","password:")):
-                                  s=s.split(":",1)[0]+": <redacted>"
-                              print(f"{n:04d}: {s}")
-                          print("---")
-          PY'
+                  lead=len(raw)-len(raw.lstrip())
+                  if lead <= indent:
+                      break
+                  i+=1
+          if removed != 1:
+              raise SystemExit(f"expected one custom llm-pi-ai block, removed={removed}")
+          p.write_text(''.join(out))
+          print("removed_profile_llm_pi_ai=1")
+          PY
+
+          echo "=== PATCH REFERENCES ==="
+          grep -nE 'id:|name:' "$P" | head -60
+          if grep -qE '^\s*-\s+id:\s*llm-pi-ai\s*$' "$P"; then
+            echo "duplicate remains" >&2
+            exit 31
+          fi
+          grep -q 'id: mcp-graphify' "$P"
+
+          echo "=== RESTART ==="
+          systemctl daemon-reload
+          systemctl reset-failed deepseek-harness.service || true
+          systemctl restart deepseek-harness.service
+          systemctl restart deepseek-harness-proxy.service
+
+          ok=0
+          for i in $(seq 1 35); do
+            if systemctl is-active --quiet deepseek-harness.service && ss -lnt | grep -q '127.0.0.1:3080'; then
+              ok=1; break
+            fi
+            sleep 2
+          done
+
+          echo "=== VERIFY ==="
+          systemctl show deepseek-harness.service --no-pager -p ActiveState -p SubState -p Result -p NRestarts -p ExecMainStatus
+          systemctl show deepseek-harness-proxy.service --no-pager -p ActiveState -p SubState -p Result
+          ss -lntp | grep -E ':(3080|3081)\b' || true
+          echo "=== LOCAL ==="
+          curl -sSI --max-time 15 http://127.0.0.1:3080/ | head -12 || true
+          echo "=== PUBLIC ==="
+          curl -skSI --max-time 20 https://harness.flyaicrm.com/ | head -12 || true
+          echo "=== GRAPHIFY ==="
+          pgrep -af 'graphify\.serve' || true
+
+          if [ "$ok" != 1 ]; then
+            journalctl -u deepseek-harness.service -n 120 --no-pager 2>&1 \
+              | sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' | tail -120
+            exit 42
+          fi
+          echo HARNESS_FINAL_DEDUPE_REPAIR_OK
+          REMOTE
 
       - name: Cleanup
         if: always()
-        run: rm -f ~/.ssh/harness_locate_key
+        run: rm -f ~/.ssh/harness_final_key
