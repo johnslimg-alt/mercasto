@@ -1185,4 +1185,196 @@ class PaymentController extends Controller
             
         return response()->json($payments);
     }
+
+    /**
+     * Payment reconciliation (admin only).
+     *
+     * One row per payment attempt with the Clip request reference, the provider
+     * event that closed it and the listing it paid for, so an operator can match
+     * a gateway settlement to a local record without reading raw provider
+     * payloads. The projection is allowlisted on purpose: no payer details, no
+     * user contact data and no raw webhook/checkout bodies.
+     */
+    public function getAdminPaymentReconciliation(Request $request)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Acceso denegado'], 403);
+        }
+
+        $validated = $request->validate([
+            'status' => 'nullable|string|max:32',
+            'product_code' => 'nullable|string|max:64',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'ad_id' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:200',
+        ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 50);
+
+        $applyFilters = function ($query) use ($validated) {
+            if (! empty($validated['status'])) {
+                $query->where('payments.status', $validated['status']);
+            }
+            if (! empty($validated['product_code'])) {
+                $query->where('payments.product_code', $validated['product_code']);
+            }
+            if (! empty($validated['from'])) {
+                $query->where('payments.created_at', '>=', Carbon::parse($validated['from'])->startOfDay());
+            }
+            if (! empty($validated['to'])) {
+                $query->where('payments.created_at', '<=', Carbon::parse($validated['to'])->endOfDay());
+            }
+            if (! empty($validated['ad_id'])) {
+                $query->where('payments.ad_id', (int) $validated['ad_id']);
+            }
+
+            return $query;
+        };
+
+        $rows = $applyFilters(
+            DB::table('payments')
+                ->leftJoin('ads', 'payments.ad_id', '=', 'ads.id')
+                ->select([
+                    'payments.id',
+                    'payments.status',
+                    'payments.amount',
+                    'payments.product_code',
+                    'payments.description',
+                    'payments.user_id',
+                    'payments.ad_id',
+                    'payments.clip_checkout_id',
+                    'payments.clip_payment_request_id',
+                    'payments.webhook_payload',
+                    'payments.created_at',
+                    'payments.updated_at',
+                    'ads.status as listing_status',
+                    'ads.promoted as listing_promoted',
+                    'ads.boost_type as listing_boost_type',
+                    'ads.boost_expires_at as listing_boost_expires_at',
+                    'ads.expires_at as listing_expires_at',
+                ])
+        )
+            ->orderByDesc('payments.created_at')
+            ->orderByDesc('payments.id')
+            ->paginate($perPage);
+
+        $summaryRows = $applyFilters(DB::table('payments'))
+            ->selectRaw('payments.status as status, count(*) as records, coalesce(sum(payments.amount), 0) as amount')
+            ->groupBy('payments.status')
+            ->get();
+
+        $byStatus = [];
+        $paidAmount = 0.0;
+        foreach ($summaryRows as $summaryRow) {
+            $amount = round((float) $summaryRow->amount, 2);
+            $byStatus[$summaryRow->status] = [
+                'records' => (int) $summaryRow->records,
+                'amount' => $amount,
+            ];
+            if (in_array($summaryRow->status, ['paid', 'paid_review'], true)) {
+                $paidAmount += $amount;
+            }
+        }
+
+        return response()->json([
+            'data' => collect($rows->items())
+                ->map(fn ($row) => $this->reconciliationRow($row))
+                ->all(),
+            'meta' => [
+                'current_page' => $rows->currentPage(),
+                'last_page' => $rows->lastPage(),
+                'per_page' => $rows->perPage(),
+                'total' => $rows->total(),
+            ],
+            'summary' => [
+                'currency' => 'MXN',
+                'records' => $rows->total(),
+                'by_status' => $byStatus,
+                'paid_amount' => round($paidAmount, 2),
+                'unmatched_listing_reference' => (int) $applyFilters(DB::table('payments'))
+                    ->whereNull('payments.ad_id')
+                    ->count(),
+                // Clip refunds are not persisted anywhere yet, so the view states
+                // that explicitly instead of implying "no refunds happened".
+                'refund_tracking' => 'not_configured',
+            ],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function reconciliationRow(object $row): array
+    {
+        $webhook = $this->decodeProviderMetadata($row->webhook_payload ?? null);
+        $status = (string) $row->status;
+        $isPaid = in_array($status, ['paid', 'paid_review'], true);
+
+        $boostExpiresAt = $row->listing_boost_expires_at ? (string) $row->listing_boost_expires_at : null;
+
+        return [
+            'payment_id' => (int) $row->id,
+            'status' => $status,
+            'amount' => round((float) $row->amount, 2),
+            'currency' => 'MXN',
+            'product_code' => $row->product_code,
+            'description' => $row->description,
+            'clip_payment_request_id' => $row->clip_payment_request_id,
+            'clip_checkout_id' => $row->clip_checkout_id,
+            'user_reference' => $row->user_id !== null ? 'user:' . $row->user_id : null,
+            'listing_reference' => $row->ad_id !== null ? 'ad:' . $row->ad_id : null,
+            'created_at' => $row->created_at ? (string) $row->created_at : null,
+            'settled_at' => $isPaid ? ($webhook['recorded_at'] ?? null) : null,
+            'settled_via' => $isPaid ? ($webhook['event'] ?? null) : null,
+            'refund_state' => 'not_tracked',
+            'promotion' => [
+                'delivered' => $isPaid && $row->ad_id !== null,
+                'listing_status' => $row->listing_status,
+                'promoted' => $row->listing_promoted,
+                'boost_type' => $row->listing_boost_type,
+                'boost_expires_at' => $boostExpiresAt,
+                'listing_expires_at' => $row->listing_expires_at ? (string) $row->listing_expires_at : null,
+                'boost_active' => $this->boostIsActive($row->listing_promoted, $boostExpiresAt),
+            ],
+        ];
+    }
+
+    /**
+     * Keep only the operational metadata the reconciliation view needs.
+     *
+     * @return array{event?: string|null, recorded_at?: string|null}
+     */
+    private function decodeProviderMetadata(mixed $payload): array
+    {
+        if (! is_string($payload) || $payload === '') {
+            return [];
+        }
+
+        $decoded = json_decode($payload, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        return [
+            'event' => isset($decoded['event']) && is_string($decoded['event']) ? $decoded['event'] : null,
+            'recorded_at' => isset($decoded['recorded_at']) && is_string($decoded['recorded_at'])
+                ? $decoded['recorded_at']
+                : null,
+        ];
+    }
+
+    private function boostIsActive(mixed $promoted, ?string $boostExpiresAt): bool
+    {
+        $hasPromotion = is_string($promoted) && $promoted !== '' && $promoted !== 'no';
+        if (! $hasPromotion) {
+            return false;
+        }
+
+        if ($boostExpiresAt === null) {
+            return true;
+        }
+
+        return Carbon::parse($boostExpiresAt)->isFuture();
+    }
 }
