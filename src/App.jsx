@@ -4497,7 +4497,15 @@ function App() {
                       <div className="relative flex justify-center text-[12px]"><span className="bg-white dark:bg-slate-900 px-2 text-slate-400 font-medium">{t.auth_or}</span></div>
                     </div>
 
-                    <div className="space-y-2.5">
+                    {/*
+                      The provider buttons depend on /auth/providers, so on a
+                      cold deep link they arrive one frame after the modal
+                      paints. The modal is centred, so that late growth moved
+                      the whole panel and produced a 0.14 CLS on /post. Reserving
+                      the slot (two 48px touch-target buttons plus the 0.625rem
+                      gap) keeps the panel height stable from the first paint.
+                    */}
+                    <div className="space-y-2.5 min-h-[calc(2*3rem+0.625rem)]">
                       {availableProviders?.google && (
                         <button type="button" onClick={() => handleOAuthStart('google')} className="btn-md w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-3">
                             <svg className="w-4 h-4" viewBox="0 0 24 24">
