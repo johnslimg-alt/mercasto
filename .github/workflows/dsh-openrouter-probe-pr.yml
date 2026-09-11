@@ -1,0 +1,81 @@
+name: DSH OpenRouter Probe PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/dsh-openrouter-probe-pr.yml'
+      - '.github/workflows/dsh-model-rotation-recovery.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate SSH recovery secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install temporary SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/dsh_probe_key
+          chmod 600 ~/.ssh/dsh_probe_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Probe DSH OpenRouter state
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/dsh_probe_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          C=/root/.dsh/.credentials.yaml
+          S=/root/.dsh/settings.yaml
+          echo "harness_active=$(systemctl is-active deepseek-harness.service || true)"
+          python3 - "$C" <<'PY'
+          import sys
+          from pathlib import Path
+          p=Path(sys.argv[1])
+          t=p.read_text(encoding="utf-8",errors="ignore") if p.exists() else ""
+          print("openrouter_credential_ref=" + ("yes" if "OPENROUTER_API_KEY" in t else "no"))
+          PY
+          python3 - "$S" <<'PY'
+          import sys
+          from pathlib import Path
+          p=Path(sys.argv[1])
+          t=p.read_text(encoding="utf-8",errors="ignore") if p.exists() else ""
+          print("openrouter_settings_ref=" + ("yes" if "openrouter" in t.lower() else "no"))
+          print("pi_ai_settings_ref=" + ("yes" if "llm-pi-ai:" in t else "no"))
+          PY
+          for f in /root/.dsh/.env /root/.env; do
+            if [ -r "$f" ]; then
+              if grep -q '^OPENROUTER_API_KEY=' "$f"; then
+                echo "openrouter_env_ref=yes"
+                exit 0
+              fi
+            fi
+          done
+          echo "openrouter_env_ref=no"
+          REMOTE
+
+      - name: Cleanup SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/dsh_probe_key
