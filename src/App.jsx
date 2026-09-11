@@ -4093,6 +4093,7 @@ function App() {
     <HomeScreenV2
       activeCat={activeCat}
       adsTotal={adsTotal}
+          loadingAds={loadingAds}
       executeSearch={executeSearch}
       lang={lang}
       renderAdCard={renderAdCard}

@@ -112,7 +112,7 @@ function AdRail({ items, renderAdCard, className = '', pending = false, skeleton
 }
 
 export default function HomeScreenV2({
-  activeCat, adsTotal, executeSearch, handleViewAd, lang, renderAdCard, serverAds,
+  activeCat, adsTotal, executeSearch, handleViewAd, lang, loadingAds, renderAdCard, serverAds,
   selectedState, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery,
   setSelectedState, setShowPricingModal, searchLocationInput, searchQuery, user,
   minPrice, maxPrice, setMinPrice, setMaxPrice,
@@ -129,9 +129,11 @@ export default function HomeScreenV2({
   const labels = CATEGORY_LABELS[lang] || CATEGORY_LABELS.es;
   const safeAds = Array.isArray(serverAds) ? serverAds : [];
   const trending = safeAds.slice(0, 12);
-  // True until the first listing feed arrives. Sections use it to reserve their
-  // geometry with skeletons instead of collapsing and shifting the page.
-  const feedPending = safeAds.length === 0;
+  // True only while the listing feed is genuinely in flight. Sections reserve
+  // their geometry with skeletons then, instead of collapsing and shifting the
+  // page. Keyed to the real loading flag rather than to "the array is empty", so
+  // a failed feed stops the skeletons instead of leaving them on screen forever.
+  const feedPending = safeAds.length === 0 && Boolean(loadingAds);
   // No fake counters: `safeAds.length` is the size of the loaded page, not the
   // number of ads on the marketplace. The real total comes from the API
   // (`adsTotal`, set from `data.total`) and is shown only when it is known.
