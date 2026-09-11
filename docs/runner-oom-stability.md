@@ -29,7 +29,6 @@ reclaimed with `scripts/runner-orphan-cleanup.sh --apply`.
 | Automatic schedule | `mercasto-runner-orphan-cleanup.timer` (every 15 min) | Reaps without a human in the loop |
 | Memory gate | `scripts/runner-memory-preflight.sh` | Refuses to start a heavy suite when RAM is already low |
 | Provisioning | `ops/runner/runner-provision.sh` | Re-creates restart policy, cgroup kill and OOM bias on any runner host |
-| Deploy pause | `scripts/deploy-freeze-window.sh` | Reports the nightly 00:00–04:00 America/Mexico_City freeze |
 
 ### Orphan definition
 
@@ -99,20 +98,3 @@ day-old leaks are still removed automatically.
   enforce the critical 2 GiB floor, and snapshot runner health.
 * `scripts/static-safety-scans.sh` — runs the regression tests for all of the
   above as part of `verify:quick`.
-
-## Nightly deploy freeze
-
-Production deploys pause between **00:00 and 04:00 America/Mexico_City**
-(`06:00`–`10:00` UTC). `scripts/deploy-freeze-window.sh` reports the window and
-exits `10` while it is active:
-
-```bash
-bash scripts/deploy-freeze-window.sh            # 0 = clear, 10 = frozen
-bash scripts/deploy-freeze-window.sh --json
-bash scripts/deploy-freeze-window.sh --at 2026-09-11T02:30:00   # deterministic check
-```
-
-Override the window with `MERC_DEPLOY_FREEZE_TZ`, `MERC_DEPLOY_FREEZE_START` and
-`MERC_DEPLOY_FREEZE_END` (both `HHMM`). The cleanup timer is intentionally not
-paused during the freeze: it only reaps CI leftovers and never touches
-production containers.

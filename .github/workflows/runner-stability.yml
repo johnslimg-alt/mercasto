@@ -41,7 +41,6 @@ jobs:
           test -d /var/www/mercasto/.git
           test -f /var/www/mercasto/scripts/runner-orphan-cleanup.sh
           test -f /var/www/mercasto/scripts/runner-memory-preflight.sh
-          test -f /var/www/mercasto/scripts/deploy-freeze-window.sh
 
       - name: Report memory before cleanup
         shell: bash
@@ -51,14 +50,6 @@ jobs:
           free -m | sed -n '1,3p'
           echo "available_mb=$(awk '/^MemAvailable:/ {print int($2/1024)}' /proc/meminfo)"
           echo "swap_free_mb=$(awk '/^SwapFree:/ {print int($2/1024)}' /proc/meminfo)"
-
-      - name: Report deploy freeze window
-        shell: bash
-        # Informational: the freeze pauses production deploys, not CI cleanup.
-        run: |
-          set -euo pipefail
-          cd /var/www/mercasto
-          bash scripts/deploy-freeze-window.sh --json || true
 
       - name: Audit orphaned test processes
         shell: bash
