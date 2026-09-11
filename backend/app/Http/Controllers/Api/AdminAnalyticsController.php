@@ -132,6 +132,72 @@ class AdminAnalyticsController extends Controller
             ->select('id', 'name', 'email', 'created_at', 'role')
             ->get();
 
+        // Seeded catalog filler ads are placeholders, not seller supply. Every
+        // headline number above counts them, so conversion metrics silently
+        // divide by synthetic inventory unless the split is visible. These
+        // fields are additive: existing keys keep their current meaning.
+        $realAdsConstraint = function ($query) {
+            $query->where('ads.is_catalog_filler', false)
+                ->orWhereNull('ads.is_catalog_filler');
+        };
+        $realAdsColumnConstraint = function ($query) {
+            $query->where('is_catalog_filler', false)->orWhereNull('is_catalog_filler');
+        };
+        $activePromotionConstraint = function ($query) {
+            $query->whereNotNull('promoted')
+                ->where(function ($inner) {
+                    $inner->whereNull('boost_expires_at')
+                        ->orWhere('boost_expires_at', '>', now());
+                });
+        };
+
+        $realActiveAds = DB::table('ads')
+            ->where('status', 'active')
+            ->where($realAdsColumnConstraint)
+            ->count();
+        $catalogActiveAds = DB::table('ads')
+            ->where('status', 'active')
+            ->where('is_catalog_filler', true)
+            ->count();
+
+        $realPromotedAds = DB::table('ads')
+            ->where($activePromotionConstraint)
+            ->where($realAdsColumnConstraint)
+            ->count();
+        $catalogPromotedAds = DB::table('ads')
+            ->where($activePromotionConstraint)
+            ->where('is_catalog_filler', true)
+            ->count();
+
+        $realImpressions = DB::table('ad_impressions')
+            ->join('ads', 'ads.id', '=', 'ad_impressions.ad_id')
+            ->where($realAdsConstraint)
+            ->count();
+        $catalogImpressions = DB::table('ad_impressions')
+            ->join('ads', 'ads.id', '=', 'ad_impressions.ad_id')
+            ->where('ads.is_catalog_filler', true)
+            ->count();
+
+        $realClicks = DB::table('ad_clicks')
+            ->join('ads', 'ads.id', '=', 'ad_clicks.ad_id')
+            ->where($realAdsConstraint)
+            ->count();
+        $catalogClicks = DB::table('ad_clicks')
+            ->join('ads', 'ads.id', '=', 'ad_clicks.ad_id')
+            ->where('ads.is_catalog_filler', true)
+            ->count();
+
+        $realAdsByStatus = DB::table('ads')
+            ->where($realAdsColumnConstraint)
+            ->select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->get()
+            ->pluck('count', 'status');
+
+        $lastRealAdCreatedAt = DB::table('ads')
+            ->where($realAdsColumnConstraint)
+            ->max('created_at');
+
         return response()->json([
             'total_users'    => $totalUsers,
             'total_ads'      => $totalAds,
@@ -160,6 +226,20 @@ class AdminAnalyticsController extends Controller
             'recent_users'   => $recentUsers,
             'period'         => $period,
             'since'          => $since->toDateString(),
+            'inventory_integrity' => [
+                'note' => 'active_ads, active_promoted_ads, impressions and clicks include seeded catalog placeholders; use the real_* values for seller conversion metrics.',
+                'active_ads_real' => $realActiveAds,
+                'active_ads_catalog' => $catalogActiveAds,
+                'promoted_ads_real' => $realPromotedAds,
+                'promoted_ads_catalog' => $catalogPromotedAds,
+                'impressions_real' => $realImpressions,
+                'impressions_catalog' => $catalogImpressions,
+                'clicks_real' => $realClicks,
+                'clicks_catalog' => $catalogClicks,
+                'ctr_real' => $realImpressions > 0 ? round(($realClicks / $realImpressions) * 100, 2) : 0,
+                'real_ads_by_status' => $realAdsByStatus,
+                'last_real_ad_created_at' => $lastRealAdCreatedAt,
+            ],
         ]);
     }
 }
