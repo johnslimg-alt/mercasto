@@ -173,7 +173,7 @@ export default function BottomSheet({
               type="button"
               data-testid="bottom-sheet-close"
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="h-12 w-12 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
               aria-label={closeLabel}
             >
               ✕

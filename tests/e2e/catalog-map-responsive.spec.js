@@ -366,3 +366,40 @@ test('shared fullscreen map controls stay usable on representative vertical rout
     await close.click();
   }
 });
+
+test('mobile fullscreen map controls keep a 48px square hit area', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'explicit viewports drive the geometry');
+
+  for (const viewport of [{ width: 390, height: 667 }, { width: 430, height: 932 }]) {
+    await installStandaloneMapSession(page);
+    await mockStandaloneMapApi(page);
+    await page.setViewportSize(viewport);
+
+    const dialog = await openStandaloneFullscreenMap(page, '/negocios');
+
+    // The floating near-me button hides its label below sm, so its width used to
+    // collapse to the icon: 41x48. Both axes must satisfy the touch minimum.
+    // It is rendered by the embedded map shell, outside the fullscreen dialog.
+    const nearMe = page.getByTestId('map-near-me');
+    await expect(nearMe).toBeVisible();
+    const nearMeBox = await nearMe.boundingBox();
+    expect(nearMeBox?.width, `map-near-me width @${viewport.width}`).toBeGreaterThanOrEqual(48);
+    expect(nearMeBox?.height, `map-near-me height @${viewport.width}`).toBeGreaterThanOrEqual(48);
+
+    for (const testId of ['map-fullscreen-near-me', 'map-filter-toggle', 'map-close']) {
+      const box = await dialog.getByTestId(testId).boundingBox();
+      expect(box?.width, `${testId} width @${viewport.width}`).toBeGreaterThanOrEqual(48);
+      expect(box?.height, `${testId} height @${viewport.width}`).toBeGreaterThanOrEqual(48);
+    }
+
+    const canvas = await dialog.getByTestId('map-fullscreen-canvas').boundingBox();
+    expect(canvas?.y, `canvas top @${viewport.width}`).toBeGreaterThanOrEqual(-1);
+    expect(canvas?.y + canvas?.height, `canvas bottom @${viewport.width}`).toBeLessThanOrEqual(viewport.height + 1);
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `horizontal overflow @${viewport.width}`).toBeLessThanOrEqual(1);
+
+    await dialog.getByTestId('map-close').click();
+  }
+});
+
