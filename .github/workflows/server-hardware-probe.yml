@@ -1,0 +1,86 @@
+name: Server Hardware Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/server-hardware-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: github.head_ref == 'ops/server-hardware-probe'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/server_probe_key
+          chmod 600 ~/.ssh/server_probe_key
+          for i in 1 2 3 4 5; do
+            if ssh-keyscan -T 5 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Probe server hardware
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/server_probe_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "=== HOST ==="
+          hostname
+          uname -srmo
+          printf 'virtualization='
+          systemd-detect-virt 2>/dev/null || true
+
+          echo "=== CPU ==="
+          lscpu | grep -E '^(Architecture|CPU\(s\)|On-line CPU|Vendor ID|Model name|Thread\(s\) per core|Core\(s\) per socket|Socket\(s\)|CPU max MHz|CPU min MHz|Virtualization|L1d cache|L1i cache|L2 cache|L3 cache):'
+          printf 'avx='
+          grep -m1 -qw avx /proc/cpuinfo && echo yes || echo no
+          printf 'avx2='
+          grep -m1 -qw avx2 /proc/cpuinfo && echo yes || echo no
+          printf 'avx512f='
+          grep -m1 -qw avx512f /proc/cpuinfo && echo yes || echo no
+
+          echo "=== MEMORY ==="
+          free -h
+          awk '/MemTotal|MemAvailable|SwapTotal|SwapFree/ {print}' /proc/meminfo
+
+          echo "=== STORAGE ==="
+          df -hT /
+          lsblk -o NAME,TYPE,SIZE,FSTYPE,MOUNTPOINTS | head -40
+
+          echo "=== GPU ==="
+          if command -v nvidia-smi >/dev/null 2>&1; then
+            nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
+          else
+            echo "nvidia_smi=absent"
+          fi
+          if command -v lspci >/dev/null 2>&1; then
+            lspci | grep -Ei 'vga|3d|display' || true
+          fi
+
+          echo "=== LOAD ==="
+          uptime
+          ps -eo pid,comm,%cpu,%mem,rss --sort=-rss | head -20
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/server_probe_key
