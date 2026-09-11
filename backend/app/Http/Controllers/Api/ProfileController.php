@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Events\NewNotification;
 use App\Jobs\PreScreenKycDocumentWithAI;
 use App\Support\AnalyticsTrackingConsent;
+use App\Support\ConsentProofRetention;
 use App\Support\EmailIdentity;
 use App\Support\MailLocale;
 use App\Support\SensitiveActionReauth;
@@ -590,6 +591,13 @@ class ProfileController extends Controller
         // Защита финансовой отчетности: платежи НЕЛЬЗЯ удалять физически. Отвязываем их, сохраняя историю для бухгалтерии.
         DB::table('payments')->where('user_id', $user->id)->update(['user_id' => null]);
         DB::table('payments')->whereIn('ad_id', $adIds)->update(['ad_id' => null]);
+
+        // LFPDPPP (EG-04): pseudonymise the consent proof before the user row disappears,
+        // so the admin removal path keeps demonstrable consent exactly like self-delete.
+        ConsentProofRetention::pseudonymiseForDeletedUser(
+            $user->id,
+            ConsentProofRetention::BASIS_ADMIN_DELETION,
+        );
 
         // Защита от Database Bloat: отзываем все токены доступа пользователя перед удалением
         $user->tokens()->delete();

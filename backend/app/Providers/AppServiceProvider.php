@@ -178,6 +178,19 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(240)->by($request->ip());
         });
 
+        // Data-subject exports are full-account reads (LFPDPPP derecho de acceso):
+        // expensive, rare and sensitive, so they get a tight per-user budget that no
+        // other endpoint shares.
+        RateLimiter::for("data-export", function ($request) {
+            $user = $request->user();
+            $key = $user ? "user:{$user->id}" : "ip:{$request->ip()}";
+
+            return [
+                Limit::perHour(3)->by($key),
+                Limit::perDay(10)->by($key),
+            ];
+        });
+
         Gate::define("viewHorizon", function ($user) {
             return $user && $user->role === "admin";
         });
