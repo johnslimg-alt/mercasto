@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\MetaCapiService;
 use App\Services\OpenAiAdsCapiService;
 use App\Support\AnalyticsTrackingConsent;
+use App\Support\PaymentLedger;
 use App\Support\PaymentPayloadSanitizer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -101,7 +102,7 @@ class PaymentController extends Controller
         // Защита от DB Bloat DoS: переиспользуем 'pending' сессии
         $existing = DB::table('payments')->where(['user_id' => $user->id, 'ad_id' => $request->ad_id, 'description' => $description, 'status' => 'pending'])->first();
         if ($existing) {
-            DB::table('payments')->where('id', $existing->id)->update([
+            DB::table('payments')->where('id', $existing->id)->update(array_merge([
                 'clip_checkout_id' => $checkoutId,
                 'product_code' => $productCode,
                 'amount' => $amount,
@@ -110,13 +111,18 @@ class PaymentController extends Controller
                 'clip_checkout_response' => null,
                 'webhook_payload' => null,
                 'updated_at' => now(),
-            ]);
+            ], PaymentLedger::ledgerColumns([
+                // A fresh checkout has no provider settlement evidence yet.
+                'funding_source' => PaymentLedger::FUNDING_CLIP_CHECKOUT,
+            ])));
         } else {
-            DB::table('payments')->insert([
+            DB::table('payments')->insert(array_merge([
                 'user_id' => $user->id, 'ad_id' => $request->ad_id, 'clip_checkout_id' => $checkoutId, 
                 'amount' => $amount, 'description' => $description, 'product_code' => $productCode, 'status' => 'pending',
                 'created_at' => now(), 'updated_at' => now()
-            ]);
+            ], PaymentLedger::ledgerColumns([
+                'funding_source' => PaymentLedger::FUNDING_CLIP_CHECKOUT,
+            ])));
         }
 
         $this->rememberMetaPurchaseContext($checkoutId, $request);
@@ -261,6 +267,7 @@ class PaymentController extends Controller
         );
 
         $signature = $request->header('X-Clip-Signature') ?? $request->header('X-Webhook-Signature');
+        $signatureVerified = false;
         if ($signature) {
             $secret = config('services.clip.webhook_secret');
             if (empty($secret)) {
@@ -284,6 +291,23 @@ class PaymentController extends Controller
 
                 return response()->json(['status' => 'invalid_signature'], 401);
             }
+
+            $signatureVerified = true;
+        }
+
+        // Refunds and disputes never fulfill a checkout. They used to be
+        // dropped here entirely, which is why no refund was ever persisted.
+        // They are now written to the payment_refunds ledger and folded into
+        // payments.refunded_amount.
+        if ($this->isRefundNotification($resource, $paymentStatus)) {
+            return $this->handleRefundNotification(
+                $payload,
+                $checkoutId,
+                $paymentRequestId,
+                $resource,
+                $paymentStatus,
+                $signatureVerified,
+            );
         }
 
         // Refund notifications use some of the same statuses. Never fulfill a
@@ -369,13 +393,15 @@ class PaymentController extends Controller
                     ->first();
 
                 if ($this->promotionAdEligibilityError($promotionAd, (int) $lockedPayment->user_id)) {
-                    DB::table('payments')->where('id', $lockedPayment->id)->update([
+                    DB::table('payments')->where('id', $lockedPayment->id)->update(array_merge([
                         'status' => 'paid_review',
                         'clip_payment_request_id' => $verificationId,
                         'webhook_payload' => json_encode(PaymentPayloadSanitizer::webhook($payload)),
                         'clip_payment_request_url' => null,
                         'updated_at' => now(),
-                    ]);
+                    ], PaymentLedger::ledgerColumns(
+                        $this->providerSettlementColumns($lockedPayment)
+                    )));
 
                     $reviewNotification = [
                         'user_id' => $lockedPayment->user_id,
@@ -401,13 +427,15 @@ class PaymentController extends Controller
                 }
             }
 
-            DB::table('payments')->where('id', $lockedPayment->id)->update([
+            DB::table('payments')->where('id', $lockedPayment->id)->update(array_merge([
                 'status' => 'paid',
                 'clip_payment_request_id' => $verificationId,
                 'webhook_payload' => json_encode(PaymentPayloadSanitizer::webhook($payload)),
                 'clip_payment_request_url' => null,
                 'updated_at' => now(),
-            ]);
+            ], PaymentLedger::ledgerColumns(
+                $this->providerSettlementColumns($lockedPayment)
+            )));
 
             $fulfilledPayment = DB::table('payments')->where('id', $lockedPayment->id)->first();
             $notificationData = null;
@@ -456,6 +484,384 @@ class PaymentController extends Controller
         }
 
         return response()->json(['status' => 'received'], 200);
+    }
+
+    /**
+     * Ledger columns written when a Clip webhook settles a checkout.
+     *
+     * `funding_source = clip_webhook` is the only value that proves external
+     * cash, which is why the report treats it as verified revenue.
+     *
+     * @return array<string, mixed>
+     */
+    private function providerSettlementColumns(object $payment): array
+    {
+        $amount = (float) $payment->amount;
+        $fee = PaymentLedger::feeAmountFor(PaymentLedger::FUNDING_CLIP_WEBHOOK, $amount);
+        $refunded = (float) ($payment->refunded_amount ?? 0.0);
+
+        return [
+            'funding_source' => PaymentLedger::FUNDING_CLIP_WEBHOOK,
+            'settled_at' => now(),
+            'fee_rate_applied' => PaymentLedger::feeRate(),
+            'fee_amount' => $fee,
+            'net_amount' => PaymentLedger::netAmount($amount, $fee, $refunded),
+            'refunded_amount' => $refunded,
+        ];
+    }
+
+    /**
+     * Is this notification money going back to the payer?
+     */
+    private function isRefundNotification(string $resource, string $status): bool
+    {
+        if (in_array($resource, ['REFUND', 'REFUNDS', 'DISPUTE', 'DISPUTES', 'CHARGEBACK'], true)) {
+            return true;
+        }
+
+        return in_array($status, [
+            'refunded',
+            'refund',
+            'refund_pending',
+            'refund_in_progress',
+            'partially_refunded',
+            'partially_refund',
+            'disputed',
+            'dispute',
+            'chargeback',
+            'charged_back',
+        ], true);
+    }
+
+    /**
+     * Persist a refund/dispute notification exactly once and fold it into the
+     * payment row.
+     *
+     * Refunds were previously dropped before they could reach a payment, so
+     * `status` never held a refund value and no refund record existed anywhere.
+     */
+    private function handleRefundNotification(
+        array $payload,
+        ?string $checkoutId,
+        ?string $paymentRequestId,
+        string $resource,
+        string $status,
+        bool $signatureVerified,
+    ) {
+        if (! $signatureVerified) {
+            // A checkout can be authenticated by reading it back from Clip; a
+            // refund cannot. Unsigned refund payloads are refused so a forged
+            // notification can never zero out recorded revenue.
+            Log::warning('Rejected unsigned Clip refund notification', [
+                'ip_hash' => hash('sha256', (string) request()->ip()),
+                'resource' => $resource ?: null,
+                'status' => $status ?: null,
+                'payment_request_id_present' => (bool) $paymentRequestId,
+            ]);
+
+            return response()->json(['status' => 'signature_required'], 401);
+        }
+
+        if (! PaymentLedger::refundLedgerReady()) {
+            Log::error('Clip refund notification arrived before the refund ledger table exists');
+
+            // Fail closed: Clip retries, so nothing is lost once the migration
+            // has been applied.
+            return response()->json(['status' => 'refund_ledger_unavailable'], 503);
+        }
+
+        $payment = $this->findClipPayment($checkoutId, $paymentRequestId);
+        if (! $payment) {
+            Log::info('Clip refund references an unknown checkout', [
+                'checkout_id_present' => (bool) $checkoutId,
+                'payment_request_id_present' => (bool) $paymentRequestId,
+            ]);
+
+            return response()->json(['status' => 'received'], 200);
+        }
+
+        if (! PaymentLedger::isSettled($payment->status)) {
+            // No captured money is recorded on this row, so there is nothing to
+            // refund. Clip retries webhooks, and the paid transition is
+            // verified by read-back, so an out-of-order refund is applied when
+            // the notification is retried after settlement.
+            Log::warning('Clip refund received for an unsettled payment', [
+                'payment_id' => $payment->id,
+                'payment_status' => $payment->status,
+                'resource' => $resource ?: null,
+                'status' => $status ?: null,
+            ]);
+
+            return response()->json(['status' => 'refund_without_capture'], 200);
+        }
+
+        $state = $this->refundState($resource, $status);
+        $amount = min($this->refundAmount($payload, $payment), (float) $payment->amount);
+        $refundKey = $this->refundIdempotencyKey($payload, $payment, $resource, $status, $amount);
+
+        $result = $this->recordRefund(
+            $payment,
+            $refundKey,
+            $state,
+            $amount,
+            $this->clipNotificationTime($payload),
+            $payload,
+        );
+
+        Log::info('Clip refund notification recorded', [
+            'payment_id' => $payment->id,
+            'refund_state' => $state,
+            'duplicate' => $result['duplicate'],
+            'applied' => $result['applied'],
+            'refunded_amount' => $result['refunded_amount'],
+        ]);
+
+        return response()->json(['status' => 'received'], 200);
+    }
+
+    /**
+     * Idempotent write of one refund event.
+     *
+     * @return array{duplicate: bool, applied: bool, refunded_amount: float}
+     */
+    private function recordRefund(
+        object $payment,
+        string $refundKey,
+        string $state,
+        float $amount,
+        Carbon $recordedAt,
+        array $payload,
+    ): array {
+        $terminal = in_array($state, ['refunded', 'disputed'], true);
+
+        return DB::transaction(function () use ($payment, $refundKey, $state, $amount, $recordedAt, $payload, $terminal): array {
+            $lockedPayment = DB::table('payments')
+                ->where('id', $payment->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedPayment) {
+                return ['duplicate' => false, 'applied' => false, 'refunded_amount' => 0.0];
+            }
+
+            $existing = DB::table('payment_refunds')
+                ->where('provider_refund_id', $refundKey)
+                ->first();
+
+            $duplicate = $existing !== null;
+
+            if ($existing !== null && ($existing->applied_at !== null || ! $terminal)) {
+                // Webhook retry (or a still-pending refund): never insert a
+                // second record and never count the amount twice.
+                return [
+                    'duplicate' => true,
+                    'applied' => false,
+                    'refunded_amount' => (float) ($lockedPayment->refunded_amount ?? 0.0),
+                ];
+            }
+
+            if ($existing !== null) {
+                // A pending refund became terminal: upgrade the same record
+                // instead of inserting a second one.
+                DB::table('payment_refunds')->where('id', $existing->id)->update([
+                    'state' => $state,
+                    'amount' => $amount,
+                    'recorded_at' => $recordedAt,
+                    'payload' => json_encode($this->sanitizedRefundPayload($payload)),
+                    'updated_at' => now(),
+                ]);
+                $refundId = (int) $existing->id;
+            } else {
+                $refundId = (int) DB::table('payment_refunds')->insertGetId([
+                    'payment_id' => $lockedPayment->id,
+                    'provider' => 'clip',
+                    'provider_refund_id' => $refundKey,
+                    'state' => $state,
+                    'amount' => $amount,
+                    'currency' => 'MXN',
+                    'payload' => json_encode($this->sanitizedRefundPayload($payload)),
+                    'recorded_at' => $recordedAt,
+                    'applied_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            if (! $terminal) {
+                return ['duplicate' => $duplicate, 'applied' => false, 'refunded_amount' => (float) ($lockedPayment->refunded_amount ?? 0.0)];
+            }
+
+            DB::table('payment_refunds')->where('id', $refundId)->update([
+                'applied_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Always recomputed from the ledger, so replaying a webhook can
+            // never inflate the refunded total.
+            $refundedTotal = (float) DB::table('payment_refunds')
+                ->where('payment_id', $lockedPayment->id)
+                ->whereNotNull('applied_at')
+                ->sum('amount');
+
+            $charged = (float) $lockedPayment->amount;
+            $refundedTotal = round(min($refundedTotal, $charged), 2);
+            $fee = (float) ($lockedPayment->fee_amount ?? 0.0);
+
+            $updates = array_merge(
+                PaymentLedger::ledgerColumns([
+                    'refunded_amount' => $refundedTotal,
+                    'refunded_at' => $recordedAt,
+                    'net_amount' => PaymentLedger::netAmount($charged, $fee, $refundedTotal),
+                ]),
+                ['updated_at' => now()],
+            );
+
+            // A payment waiting on operator review keeps that flag: the review
+            // is the more actionable state and the refund ledger carries the
+            // money detail.
+            if ((string) $lockedPayment->status !== 'paid_review') {
+                $updates['status'] = $refundedTotal >= $charged ? 'refunded' : 'partially_refunded';
+            }
+
+            DB::table('payments')->where('id', $lockedPayment->id)->update($updates);
+
+            return [
+                'duplicate' => $duplicate,
+                'applied' => true,
+                'refunded_amount' => $refundedTotal,
+            ];
+        });
+    }
+
+    /**
+     * Terminal vs pending refund state.
+     */
+    private function refundState(string $resource, string $status): string
+    {
+        if (in_array($resource, ['DISPUTE', 'DISPUTES', 'CHARGEBACK'], true)
+            || in_array($status, ['disputed', 'dispute', 'chargeback', 'charged_back'], true)) {
+            return 'disputed';
+        }
+
+        if (in_array($status, ['refund_pending', 'refund_in_progress', 'pending'], true)) {
+            return 'refund_pending';
+        }
+
+        return 'refunded';
+    }
+
+    /**
+     * Amount returned to the payer.
+     *
+     * When a terminal refund notification carries no amount, the whole
+     * recorded charge is assumed to be returned: that is the only value the
+     * ledger can defend, and it is never larger than the original charge.
+     */
+    private function refundAmount(array $payload, object $payment): float
+    {
+        foreach ([
+            $payload['amount'] ?? null,
+            $payload['refund_amount'] ?? null,
+            data_get($payload, 'refund.amount'),
+            data_get($payload, 'payment_request.amount'),
+            data_get($payload, 'transaction.amount'),
+            data_get($payload, 'object.amount'),
+        ] as $candidate) {
+            if (is_numeric($candidate) && (float) $candidate > 0) {
+                return round((float) $candidate, 2);
+            }
+        }
+
+        return round((float) $payment->amount, 2);
+    }
+
+    /**
+     * Deterministic idempotency key: the provider refund/dispute id when the
+     * notification carries one, otherwise a hash of the stable identity fields
+     * (never the delivery timestamp, so retries collapse onto one record).
+     */
+    private function refundIdempotencyKey(
+        array $payload,
+        object $payment,
+        string $resource,
+        string $status,
+        float $amount,
+    ): string {
+        $providerId = $this->firstClipString(
+            $payload['refund_id'] ?? null,
+            $payload['dispute_id'] ?? null,
+            data_get($payload, 'refund.id'),
+            data_get($payload, 'refund.refund_id'),
+            data_get($payload, 'dispute.id'),
+            $resource === 'REFUND' ? ($payload['id'] ?? null) : null,
+            data_get($payload, 'payment_request.refund_id'),
+        );
+
+        if ($providerId !== null && strlen($providerId) <= 64
+            && preg_match('/^[A-Za-z0-9._:-]+$/', $providerId) === 1) {
+            return 'clip:' . $providerId;
+        }
+
+        return 'clip:sha256:' . hash('sha256', implode('|', [
+            (string) $payment->id,
+            $resource,
+            $status,
+            number_format($amount, 2, '.', ''),
+            (string) $this->firstClipString(
+                $payload['transaction_id'] ?? null,
+                data_get($payload, 'transaction.id'),
+            ),
+            (string) $this->firstClipString(
+                $payload['reference'] ?? null,
+                data_get($payload, 'metadata.external_reference'),
+                $payload['me_reference_id'] ?? null,
+            ),
+        ]));
+    }
+
+    /**
+     * Provider timestamp for the notification, falling back to the local clock.
+     */
+    private function clipNotificationTime(array $payload): Carbon
+    {
+        $candidate = $this->firstClipString(
+            $payload['completed_at'] ?? null,
+            $payload['refunded_at'] ?? null,
+            $payload['created_at'] ?? null,
+            data_get($payload, 'refund.created_at'),
+            data_get($payload, 'resource_created_at'),
+        );
+
+        if ($candidate !== null) {
+            try {
+                return Carbon::parse($candidate);
+            } catch (\Throwable) {
+                // Fall through to the local clock.
+            }
+        }
+
+        return now();
+    }
+
+    /**
+     * Privacy-safe refund metadata: references and state only, never card data
+     * or payer identity.
+     *
+     * @return array<string, mixed>
+     */
+    private function sanitizedRefundPayload(array $payload): array
+    {
+        return array_filter([
+            'schema_version' => 1,
+            'provider' => 'clip',
+            'event' => 'refund_notification',
+            'resource' => $this->firstClipString($payload['resource'] ?? null),
+            'provider_status' => $this->firstClipString(
+                $payload['resource_status'] ?? null,
+                $payload['status'] ?? null,
+            ),
+            'recorded_at' => $this->clipNotificationTime($payload)->toIso8601String(),
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
     private function findClipPayment(?string $checkoutId, ?string $paymentRequestId): ?object
@@ -946,7 +1352,8 @@ class PaymentController extends Controller
                 $creditUser->save();
             }
 
-            $paymentId = DB::table('payments')->insertGetId([
+            $paidAt = now();
+            $paymentId = DB::table('payments')->insertGetId(array_merge([
                 'user_id' => $user->id,
                 'ad_id' => $request->ad_id,
                 'clip_checkout_id' => 'balance_' . Str::uuid(),
@@ -955,9 +1362,18 @@ class PaymentController extends Controller
                 'product_code' => $productCode,
                 'status' => 'paid',
                 'webhook_payload' => json_encode(PaymentPayloadSanitizer::internal('account_balance')),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                'created_at' => $paidAt,
+                'updated_at' => $paidAt,
+            ], PaymentLedger::ledgerColumns([
+                // Internal balance: no external cash enters Mercasto through
+                // this row, and Clip charges no fee on it.
+                'funding_source' => PaymentLedger::FUNDING_INTERNAL_BALANCE,
+                'settled_at' => $paidAt,
+                'fee_rate_applied' => 0.0,
+                'fee_amount' => 0.00,
+                'net_amount' => PaymentLedger::netAmount($amount, 0.0, 0.0),
+                'refunded_amount' => 0,
+            ])));
 
             $payment = DB::table('payments')->where('id', $paymentId)->first();
 
@@ -1232,10 +1648,12 @@ class PaymentController extends Controller
             return $query;
         };
 
+        $ledgerReady = PaymentLedger::paymentsLedgerReady();
+
         $rows = $applyFilters(
             DB::table('payments')
                 ->leftJoin('ads', 'payments.ad_id', '=', 'ads.id')
-                ->select([
+                ->select(array_merge([
                     'payments.id',
                     'payments.status',
                     'payments.amount',
@@ -1253,7 +1671,15 @@ class PaymentController extends Controller
                     'ads.boost_type as listing_boost_type',
                     'ads.boost_expires_at as listing_boost_expires_at',
                     'ads.expires_at as listing_expires_at',
-                ])
+                ], $ledgerReady ? [
+                    'payments.funding_source',
+                    'payments.funding_source_locked',
+                    'payments.fee_amount',
+                    'payments.net_amount',
+                    'payments.refunded_amount',
+                    'payments.refunded_at',
+                    'payments.settled_at',
+                ] : []))
         )
             ->orderByDesc('payments.created_at')
             ->orderByDesc('payments.id')
@@ -1277,6 +1703,49 @@ class PaymentController extends Controller
             }
         }
 
+        // Reported money is not the same as collected money: only a verified
+        // Clip webhook proves cash, so the split is exposed next to the
+        // headline total instead of letting one number imply the other. Rows
+        // that predate the backfill are classified from their payload so the
+        // split is correct during the deploy window too.
+        $byFundingSource = [];
+        $bucketTotals = [
+            'verified_cash_amount' => 0.0,
+            'claimed_unverified_amount' => 0.0,
+            'internal_balance_amount' => 0.0,
+        ];
+
+        $applyFilters(DB::table('payments'))
+            ->whereIn('payments.status', PaymentLedger::SETTLED_STATUSES)
+            ->select(array_merge([
+                'payments.id',
+                'payments.status',
+                'payments.amount',
+                'payments.clip_checkout_id',
+                'payments.webhook_payload',
+            ], $ledgerReady ? ['payments.funding_source'] : []))
+            ->orderBy('payments.id')
+            ->chunkById(500, function ($settledRows) use (&$byFundingSource, &$bucketTotals, $ledgerReady): void {
+                foreach ($settledRows as $settledRow) {
+                    $fundingSource = $ledgerReady && ! empty($settledRow->funding_source)
+                        ? (string) $settledRow->funding_source
+                        : PaymentLedger::classify($settledRow->clip_checkout_id ?? null, $settledRow->webhook_payload ?? null);
+
+                    $amount = round((float) $settledRow->amount, 2);
+                    $byFundingSource[$fundingSource]['records'] = ($byFundingSource[$fundingSource]['records'] ?? 0) + 1;
+                    $byFundingSource[$fundingSource]['amount'] = round(($byFundingSource[$fundingSource]['amount'] ?? 0) + $amount, 2);
+
+                    match (PaymentLedger::settlementClass($settledRow->status, $fundingSource)) {
+                        'verified_cash' => $bucketTotals['verified_cash_amount'] += $amount,
+                        'internal_balance' => $bucketTotals['internal_balance_amount'] += $amount,
+                        'claimed_unverified' => $bucketTotals['claimed_unverified_amount'] += $amount,
+                        default => null,
+                    };
+                }
+            });
+
+        $refundLedgerReady = PaymentLedger::refundLedgerReady();
+
         return response()->json([
             'data' => collect($rows->items())
                 ->map(fn ($row) => $this->reconciliationRow($row))
@@ -1295,9 +1764,17 @@ class PaymentController extends Controller
                 'unmatched_listing_reference' => (int) $applyFilters(DB::table('payments'))
                     ->whereNull('payments.ad_id')
                     ->count(),
-                // Clip refunds are not persisted anywhere yet, so the view states
-                // that explicitly instead of implying "no refunds happened".
-                'refund_tracking' => 'not_configured',
+                'verified_cash_amount' => round($bucketTotals['verified_cash_amount'], 2),
+                'claimed_unverified_amount' => round($bucketTotals['claimed_unverified_amount'], 2),
+                'internal_balance_amount' => round($bucketTotals['internal_balance_amount'], 2),
+                'by_funding_source' => $byFundingSource,
+                'refund_tracking' => $refundLedgerReady ? 'tracked' : 'not_configured',
+                'refund_records' => $refundLedgerReady
+                    ? (int) DB::table('payment_refunds')->count()
+                    : 0,
+                'refunded_amount' => $refundLedgerReady
+                    ? round((float) DB::table('payment_refunds')->whereNotNull('applied_at')->sum('amount'), 2)
+                    : 0.0,
             ],
         ]);
     }
@@ -1313,6 +1790,12 @@ class PaymentController extends Controller
 
         $boostExpiresAt = $row->listing_boost_expires_at ? (string) $row->listing_boost_expires_at : null;
 
+        $ledgerReady = PaymentLedger::paymentsLedgerReady();
+        $fundingSource = $ledgerReady && ! empty($row->funding_source)
+            ? (string) $row->funding_source
+            : PaymentLedger::classify($row->clip_checkout_id ?? null, $row->webhook_payload ?? null);
+        $refundedAmount = $ledgerReady ? round((float) ($row->refunded_amount ?? 0.0), 2) : 0.0;
+
         return [
             'payment_id' => (int) $row->id,
             'status' => $status,
@@ -1325,9 +1808,18 @@ class PaymentController extends Controller
             'user_reference' => $row->user_id !== null ? 'user:' . $row->user_id : null,
             'listing_reference' => $row->ad_id !== null ? 'ad:' . $row->ad_id : null,
             'created_at' => $row->created_at ? (string) $row->created_at : null,
-            'settled_at' => $isPaid ? ($webhook['recorded_at'] ?? null) : null,
+            'settled_at' => $ledgerReady && ! empty($row->settled_at)
+                ? (string) $row->settled_at
+                : ($isPaid ? ($webhook['recorded_at'] ?? null) : null),
             'settled_via' => $isPaid ? ($webhook['event'] ?? null) : null,
-            'refund_state' => 'not_tracked',
+            'funding_source' => $fundingSource,
+            'settlement_class' => PaymentLedger::settlementClass($status, $fundingSource),
+            'verified_cash' => $isPaid && PaymentLedger::isVerified($fundingSource),
+            'fee_amount' => $ledgerReady && $row->fee_amount !== null ? round((float) $row->fee_amount, 2) : null,
+            'net_amount' => $ledgerReady && $row->net_amount !== null ? round((float) $row->net_amount, 2) : null,
+            'refunded_amount' => $refundedAmount,
+            'refunded_at' => $ledgerReady && ! empty($row->refunded_at) ? (string) $row->refunded_at : null,
+            'refund_state' => $this->refundStateLabel($refundedAmount, (float) $row->amount),
             'promotion' => [
                 'delivered' => $isPaid && $row->ad_id !== null,
                 'listing_status' => $row->listing_status,
@@ -1347,21 +1839,25 @@ class PaymentController extends Controller
      */
     private function decodeProviderMetadata(mixed $payload): array
     {
-        if (! is_string($payload) || $payload === '') {
-            return [];
-        }
-
-        $decoded = json_decode($payload, true);
-        if (! is_array($decoded)) {
-            return [];
-        }
+        $metadata = PaymentLedger::settlementMetadata($payload);
 
         return [
-            'event' => isset($decoded['event']) && is_string($decoded['event']) ? $decoded['event'] : null,
-            'recorded_at' => isset($decoded['recorded_at']) && is_string($decoded['recorded_at'])
-                ? $decoded['recorded_at']
-                : null,
+            'event' => $metadata['event'],
+            'recorded_at' => $metadata['recorded_at'],
         ];
+    }
+
+    private function refundStateLabel(float $refundedAmount, float $charged): string
+    {
+        if (! PaymentLedger::refundLedgerReady()) {
+            return 'not_tracked';
+        }
+
+        if ($refundedAmount <= 0.0) {
+            return 'none_recorded';
+        }
+
+        return $refundedAmount >= $charged ? 'refunded' : 'partially_refunded';
     }
 
     private function boostIsActive(mixed $promoted, ?string $boostExpiresAt): bool
