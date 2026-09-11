@@ -144,6 +144,10 @@ npm run smoke:security
 
 Plus, by hand on production:
 - `/` renders V2; `/design-v2` redirects to `/`.
+- **Open a shared search URL such as `/?search=Nissan` and confirm the search box shows
+  `Nissan`.** The URL→state hydrator is gated to `/` and `/listings`
+  (`src/App.jsx:1290`), so the inputs are deliberately empty on `/design-v2`; after the
+  switch they must populate on `/`. If they do not, the hydrated path list is wrong.
 - `view-source`/devtools: `robots` is `index,follow…`, canonical is `https://mercasto.com/`.
 - Search, filters, category navigation, pricing modal, publish CTA, saved search,
   favourites and card → detail all work while logged out and logged in.
