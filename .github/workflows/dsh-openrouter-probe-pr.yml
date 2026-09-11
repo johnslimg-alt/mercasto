@@ -1,4 +1,4 @@
-name: Emergency Harness 502 Repair
+name: Emergency Harness Status
 
 on:
   pull_request:
@@ -10,12 +10,12 @@ permissions:
   contents: read
 
 jobs:
-  repair:
+  diagnose:
     if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Validate SSH recovery secrets
+      - name: Prepare SSH
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -24,108 +24,58 @@ jobs:
           set -euo pipefail
           test -n "$SERVER_HOST"
           test -n "$SERVER_SSH_KEY"
-
-      - name: Install temporary SSH key
-        shell: bash
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
-        run: |
-          set -euo pipefail
           install -d -m 0700 ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/harness_repair_key
-          chmod 600 ~/.ssh/harness_repair_key
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/harness_status_key
+          chmod 600 ~/.ssh/harness_status_key
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      - name: Repair Harness 502
+      - name: Diagnose Harness
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/harness_repair_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
-          set -u
-          echo "=== BEFORE ==="
-          systemctl show deepseek-harness.service --no-pager -p ActiveState -p SubState -p Result -p NRestarts -p ExecMainStatus || true
-          journalctl -u deepseek-harness.service -n 100 --no-pager 2>&1 \
-            | sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' \
-            | tail -100 || true
-
-          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-          B=/root/.dsh/backups/emergency-502
-          install -d -m 0700 "$B"
-          cp -a /root/.dsh/settings.yaml "$B/settings.yaml.$STAMP"
-          cp -a /root/.dsh/.credentials.yaml "$B/credentials.yaml.$STAMP"
-          chmod 0600 "$B/"*".$STAMP"
-
-          echo "=== DISABLE LEGACY PAUSE GUARD ==="
-          systemctl disable --now dsh-pause.timer dsh-resume.timer 2>/dev/null || true
-          if [ -x /usr/local/sbin/dsh-deepseek-credential-gate ]; then
-            /usr/local/sbin/dsh-deepseek-credential-gate resume || true
-          fi
-          rm -f /etc/systemd/system/deepseek-harness.service.d/20-ai-window-guard.conf
-
-          echo "=== FORCE KNOWN-GOOD DEFAULT ==="
-          python3 - /root/.dsh/settings.yaml <<'PY'
-          import os,re,sys,tempfile
-          from pathlib import Path
-          p=Path(sys.argv[1]); text=p.read_text()
-          block="agent-default-model:\n  provider: deepseek-official\n  model: deepseek-flash\n"
-          lines=text.splitlines(keepends=True)
-          start=None
-          for i,line in enumerate(lines):
-              if re.match(r"^agent-default-model:\s*(?:#.*)?$",line.rstrip("\n")):
-                  start=i; break
-          if start is None:
-              new=text.rstrip()+"\n\n"+block
-          else:
-              end=len(lines)
-              for i in range(start+1,len(lines)):
-                  if re.match(r"^[A-Za-z0-9_.-]+:\s*",lines[i]):
-                      end=i; break
-              new="".join(lines[:start])+block+"".join(lines[end:])
-          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".settings.repair.",text=True)
-          with os.fdopen(fd,"w") as h:
-              h.write(new); h.flush(); os.fsync(h.fileno())
-          os.chmod(tmp,p.stat().st_mode & 0o777); os.replace(tmp,p)
-          PY
-
-          echo "=== VALIDATE CONFIG ==="
-          npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile web --dump-config >/tmp/dsh-dump.txt 2>/tmp/dsh-dump.err
-          echo "dump_config_rc=$?"
-          tail -40 /tmp/dsh-dump.err | sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' || true
-
-          echo "=== RESTART ==="
-          systemctl daemon-reload
-          systemctl reset-failed deepseek-harness.service || true
-          systemctl restart deepseek-harness.service
-          systemctl restart deepseek-harness-proxy.service
-
-          ok=0
-          for i in $(seq 1 45); do
-            if systemctl is-active --quiet deepseek-harness.service && ss -lnt | grep -q '127.0.0.1:3080'; then
-              ok=1; break
-            fi
-            sleep 2
-          done
-
-          echo "=== AFTER ==="
-          systemctl show deepseek-harness.service --no-pager -p ActiveState -p SubState -p Result -p NRestarts -p ExecMainStatus || true
-          systemctl show deepseek-harness-proxy.service --no-pager -p ActiveState -p SubState -p Result || true
+          ssh -i ~/.ssh/harness_status_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set +e
+          red='s/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g'
+          echo "=== SYSTEMD ==="
+          systemctl show deepseek-harness.service --no-pager -p ActiveState -p SubState -p Result -p NRestarts -p ExecMainStatus -p ExecStart
+          systemctl cat deepseek-harness.service
+          echo "=== PORTS ==="
           ss -lntp | grep -E ':(3080|3081)\b' || true
-          curl -sSI --max-time 20 https://harness.flyaicrm.com/ | head -12 || true
-
-          if [ "$ok" != 1 ]; then
-            echo "=== FAILURE JOURNAL ==="
-            journalctl -u deepseek-harness.service -n 120 --no-pager 2>&1 \
-              | sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' \
-              | tail -120
-            exit 42
-          fi
-          echo HARNESS_502_REPAIR_OK
+          echo "=== CREDENTIAL REFS ==="
+          python3 - <<'PY'
+          import yaml
+          p="/root/.dsh/.credentials.yaml"
+          try:
+              d=yaml.safe_load(open(p)) or {}
+              print(sorted((d.get("refs") or {}).keys()))
+          except Exception as e:
+              print("credentials_parse_error",type(e).__name__,str(e))
+          PY
+          echo "=== DEFAULT MODEL ==="
+          python3 - <<'PY'
+          import yaml
+          p="/root/.dsh/settings.yaml"
+          try:
+              d=yaml.safe_load(open(p)) or {}
+              print(d.get("agent-default-model"))
+              print("llm-pi-ai providers=",sorted(((d.get("llm-pi-ai") or {}).get("providers") or {}).keys()))
+          except Exception as e:
+              print("settings_parse_error",type(e).__name__,str(e))
+          PY
+          echo "=== DUMP CONFIG ==="
+          timeout 60s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile web --dump-config >/tmp/dsh-status-dump.out 2>/tmp/dsh-status-dump.err
+          echo "dump_rc=$?"
+          tail -80 /tmp/dsh-status-dump.err | sed -E "$red"
+          echo "=== JOURNAL ==="
+          journalctl -u deepseek-harness.service -n 160 --no-pager 2>&1 | sed -E "$red" | tail -160
+          echo "=== PROXY ==="
+          systemctl show deepseek-harness-proxy.service --no-pager -p ActiveState -p SubState -p Result
+          curl -sSI --max-time 10 http://127.0.0.1:3080/ | head -12 || true
+          curl -skSI --max-time 10 https://127.0.0.1:8443/ | head -12 || true
           REMOTE
 
-      - name: Cleanup SSH key
+      - name: Cleanup
         if: always()
-        shell: bash
-        run: rm -f ~/.ssh/harness_repair_key
+        run: rm -f ~/.ssh/harness_status_key
