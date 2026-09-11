@@ -320,7 +320,7 @@ export default function HomeScreenV2({
             />
             <button type="button" className={'v2-filter-button ' + (filtersOpen ? 'is-active' : '')}
               data-testid="home-open-filters"
-              onClick={() => setFiltersOpen(v => !v)} aria-expanded={filtersOpen} aria-label={t.filter}>
+              onClick={() => setFiltersOpen(v => { if (!v) events.filterOpened({ source: 'design_v2_filters' }); return !v; })} aria-expanded={filtersOpen} aria-label={t.filter}>
               <SlidersHorizontal size={17} /><span>{t.filter}</span>
             </button>
             <button type="submit" className="v2-search-button" aria-label={t.search_btn}>

@@ -856,8 +856,17 @@ export const events = {
   offerMade: (amount, params = {}) =>
     trackEvent('offer_made', { value: amount, currency: 'MXN', ...params }),
 
-  favoriteAdded: (params = {}) =>
-    trackEvent(FUNNEL_EVENTS.FAVORITE_ADDED, params),
+  favoriteAdded: (listingId, params = {}) =>
+    trackEvent(FUNNEL_EVENTS.FAVORITE_ADDED, listingAnalyticsParams(listingId, params.category || '', params)),
+
+  // Filter funnel. Opening and applying filters were never tracked, so filter
+  // usage could not be reported at all (ТЗ §13). `filterApplied` is emitted from
+  // the shared search path so every surface is covered, not just the V2 home.
+  filterOpened: (params = {}) =>
+    trackEvent('filter_opened', params),
+
+  filterApplied: (params = {}) =>
+    trackEvent('filter_applied', params),
 
   phoneVerified: (params = {}) =>
     trackEvent('phone_verified', params),

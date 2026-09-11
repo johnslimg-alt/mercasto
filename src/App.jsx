@@ -927,6 +927,29 @@ function App() {
         source: filters.source || 'header_search',
       });
     }
+    // Report which filters were actually applied, so filter usage is measurable.
+    // Only structured filter facts are sent — never the free-text location, which
+    // could carry personal data.
+    const dynamicKeys = nextDynamicFilters && typeof nextDynamicFilters === 'object'
+      ? Object.keys(nextDynamicFilters)
+      : [];
+    const conditionList = Array.isArray(nextCondition) ? nextCondition : [];
+    const hasFilters = Boolean(
+      String(nextMinPrice || '').trim()
+      || String(nextMaxPrice || '').trim()
+      || conditionList.length
+      || dynamicKeys.length,
+    );
+    if (hasFilters) {
+      events.filterApplied({
+        category: nextCategory || '',
+        has_min_price: Boolean(String(nextMinPrice || '').trim()),
+        has_max_price: Boolean(String(nextMaxPrice || '').trim()),
+        condition: conditionList.join(','),
+        dynamic_keys: dynamicKeys.join(','),
+        source: filters.source || 'unknown',
+      });
+    }
   }, [
     activeCat,
     buildHomeFilterPath,
@@ -2679,8 +2702,16 @@ function App() {
       const res = await fetch(`${API_URL}/ads/${id}/favorite`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        if (data.status === 'added') setFavoriteIds(prev => [...prev, id]);
-        else setFavoriteIds(prev => prev.filter(fId => fId !== id));
+        if (data.status === 'added') {
+          setFavoriteIds(prev => [...prev, id]);
+          // Favourite intent is one of the strongest buyer signals and was not
+          // tracked at all: `favoriteAdded` had no call sites (ТЗ §13).
+          const ad = (allAds || []).find(a => String(a.id) === String(id))
+            || (serverAds || []).find(a => String(a.id) === String(id));
+          events.favoriteAdded(id, { category: ad?.category || '', source: 'listing_card' });
+        } else {
+          setFavoriteIds(prev => prev.filter(fId => fId !== id));
+        }
         loadFavorites();
         loadFavoriteAds();
       }

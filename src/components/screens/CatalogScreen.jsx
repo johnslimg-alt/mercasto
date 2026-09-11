@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bell, Loader2, Settings2 } from 'lucide-react';
+import { events } from '../../utils/analytics';
 import SidebarFilters from '../common/SidebarFilters';
 import SplitViewContainer from '../common/SplitViewContainer';
 import BottomSheet from '../ui/BottomSheet';
@@ -222,7 +223,7 @@ export default function CatalogScreen({
           <button
             data-testid="catalog-mobile-filters"
             aria-expanded={showMobileFilters}
-            onClick={() => setShowMobileFilters(value => !value)}
+            onClick={() => setShowMobileFilters(value => { if (!value) events.filterOpened({ source: 'catalog_filters' }); return !value; })}
             className={`btn-sm flex items-center gap-2 border transition-colors ${showMobileFilters ? 'border-slate-900 bg-slate-900 text-white dark:border-[#84CC16] dark:bg-[#84CC16] dark:text-slate-950' : 'border-slate-300 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'}`}
           >
             <Settings2 size={16} /> {t.filters}
