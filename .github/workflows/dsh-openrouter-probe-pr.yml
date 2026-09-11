@@ -49,7 +49,7 @@ jobs:
           C=/root/.dsh/.credentials.yaml
           S=/root/.dsh/settings.yaml
           echo "=== HARNESS ==="
-          systemctl is-active deepseek-harness.service
+          echo "harness_state=$(systemctl is-active deepseek-harness.service || true)"
           systemctl show deepseek-harness.service --no-pager -p ExecStart -p EnvironmentFiles -p Environment | sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g'
           echo "=== CREDENTIAL STRUCTURE ==="
           python3 - "$C" <<'PY'
