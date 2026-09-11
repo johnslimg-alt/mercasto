@@ -1,0 +1,20 @@
+[Unit]
+Description=Reap orphaned Mercasto test processes (Vite/Playwright) on the CI host
+Documentation=https://github.com/johnslimg-alt/mercasto/blob/main/docs/runner-oom-stability.md
+After=network-online.target
+ConditionPathExists=__REPO__/scripts/runner-orphan-cleanup.sh
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+EnvironmentFile=-/etc/mercasto-runner/stability.env
+ExecStart=/usr/bin/env bash __REPO__/scripts/runner-orphan-cleanup.sh --apply --scope mercasto --log /var/log/mercasto-runner-orphan-cleanup.log
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

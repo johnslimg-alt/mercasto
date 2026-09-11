@@ -47,6 +47,11 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# This suite starts a database, an API, an Ollama stub and a browser at once.
+if [[ -x scripts/runner-memory-preflight.sh ]]; then
+  bash scripts/runner-memory-preflight.sh --label "isolated-launch-e2e"
+fi
+
 wait_for_url() {
   local url="$1"
   local label="$2"
