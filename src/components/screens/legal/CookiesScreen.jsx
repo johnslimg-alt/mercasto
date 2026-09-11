@@ -181,7 +181,8 @@ export default function CookiesScreen() {
                     {[
                       {
                         title: 'Banner de consentimiento',
-                        desc: 'Al ingresar por primera vez a Mercasto, verás un banner que te permite elegir qué cookies aceptar. Puedes modificar tu preferencia en cualquier momento escribiéndonos a privacidad@mercasto.com.',
+                        desc: 'Al ingresar por primera vez a Mercasto verás un banner donde eliges qué cookies aceptar. Puedes cambiar o retirar tu decisión en cualquier momento; al retirarla detenemos la analítica y eliminamos las cookies de medición de tu navegador.',
+                        action: true,
                       },
                       {
                         title: 'Configuración del navegador',
@@ -197,6 +198,16 @@ export default function CookiesScreen() {
                         <div>
                           <p className="font-semibold text-slate-800 text-sm">{item.title}</p>
                           <p className="text-slate-600 text-sm mt-0.5">{item.desc}</p>
+                          {item.action ? (
+                            <button
+                              type="button"
+                              data-testid="cookie-settings-legal"
+                              onClick={() => window.dispatchEvent(new CustomEvent('mercasto:open-cookie-preferences'))}
+                              className="mt-2 px-3 py-1.5 text-xs font-semibold text-white bg-[#0b6f61] hover:bg-[#085147] rounded-lg transition-colors"
+                            >
+                              Administrar mis preferencias de cookies
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     ))}

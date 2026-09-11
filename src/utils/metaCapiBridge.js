@@ -1,6 +1,6 @@
 import { trackEvent } from './analytics';
 import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
-import { isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
+import { hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const META_API_BASE = '/api/meta/events';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
@@ -98,6 +98,9 @@ async function sendServerEvent(endpoint, payload) {
 }
 
 function sendBrowserEvent(metaConfig, payload, eventID) {
+  // The browser Pixel copy is a tracking vendor: it may only receive data while
+  // consent is granted. The server-side CAPI relay stays untouched.
+  if (!hasVendorConsent()) return false;
   if (typeof window.fbq !== 'function') return false;
 
   const isReg = metaConfig.metaName === 'CompleteRegistration';

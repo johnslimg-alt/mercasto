@@ -118,33 +118,19 @@
     <!-- manifest non-critical: fetchpriority=low keeps it out of the critical path -->
     <link rel="manifest" href="/manifest.json" fetchpriority="low">
     <title>Mercasto | La plataforma de clasificados más moderna e inteligente con AI</title>
-    <!-- Google tag (gtag.js) — deferred off the critical path to protect load performance -->
+    <!-- Google tag (gtag.js) — consent gated.
+         This snippet only queues local dataLayer commands: it fetches nothing and
+         writes no cookies. The gtag.js library itself is requested exclusively by
+         loadGa4() in src/utils/analytics.js, after the visitor grants analytics
+         consent through the cookie banner (localStorage.cookie_consent === 'all'). -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      (function () {
-        var GA_ID = 'G-VX87HQC817';
-        var loaded = false;
-        function loadGA() {
-          if (loaded) return;
-          loaded = true;
-          var s = document.createElement('script');
-          s.async = true;
-          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
-          document.head.appendChild(s);
-          gtag('js', new Date());
-          // Mercasto sends SPA page_view events from src/utils/analytics.js.
-          // Disabling the config pageview prevents the initial page from being counted twice.
-          gtag('config', GA_ID, { send_page_view: false });
-        }
-        // Load GA on the first real user interaction so it never competes with
-        // the critical render path. Real visitors interact within moments;
-        // a long safety-net timeout still captures non-interacting sessions.
-        ['scroll', 'click', 'keydown', 'touchstart', 'pointerdown', 'mousemove'].forEach(function (ev) {
-          window.addEventListener(ev, loadGA, { once: true, passive: true });
-        });
-        setTimeout(loadGA, 30000);
-      })();
+      window.__mercastoGaMeasurementId = 'G-VX87HQC817';
+      gtag('js', new Date());
+      // Mercasto sends SPA page_view events from src/utils/analytics.js.
+      // Disabling the config pageview prevents the initial page from being counted twice.
+      gtag('config', window.__mercastoGaMeasurementId, { send_page_view: false });
     </script>
     <script>
       try {

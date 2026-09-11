@@ -1,5 +1,12 @@
 import React from 'react';
 import MercastoLogo from './MercastoLogo';
+import { OPEN_COOKIE_PREFERENCES_EVENT } from '../../utils/trackingConsent';
+
+// Consent must remain withdrawable after the first answer, so the footer keeps a
+// permanent entry point that re-opens the cookie dialog.
+function openCookiePreferences() {
+  window.dispatchEvent(new CustomEvent(OPEN_COOKIE_PREFERENCES_EVENT));
+}
 
 export default function AppFooter({
   navigate,
@@ -44,6 +51,8 @@ export default function AppFooter({
         <a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer transition-colors">{t.privacy_policy}</a>
         <span className="text-slate-600">·</span>
         <a href="/cookies" onClick={(e) => { e.preventDefault(); navigate('/cookies'); }} className="hover:text-white cursor-pointer transition-colors">{t.footer_cookies}</a>
+        <span className="text-slate-600">·</span>
+        <button type="button" onClick={openCookiePreferences} data-testid="cookie-settings" className="hover:text-white cursor-pointer transition-colors underline underline-offset-2">{t.cookies_settings || 'Preferencias de cookies'}</button>
             </div>
           </div>
         </div>
