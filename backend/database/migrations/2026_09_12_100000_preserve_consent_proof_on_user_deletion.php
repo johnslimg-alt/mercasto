@@ -1,8 +1,8 @@
 <?php
 
-use App\Support\ConsentProofRetention;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -48,7 +48,7 @@ return new class extends Migration
         }
 
         // Cannot be represented in the old NOT NULL + cascade schema. Lossy by nature.
-        \Illuminate\Support\Facades\DB::table('user_consents')
+        DB::table('user_consents')
             ->whereNull('user_id')
             ->delete();
 

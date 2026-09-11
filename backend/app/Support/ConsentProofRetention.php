@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * EG-04 — retention of demonstrable consent proof after erasure.
@@ -49,7 +50,7 @@ final class ConsentProofRetention
      */
     public static function pseudonymiseForDeletedUser(int $userId, string $basis): int
     {
-        if (! \Illuminate\Support\Facades\Schema::hasTable('user_consents')) {
+        if (! Schema::hasTable('user_consents')) {
             return 0;
         }
 
@@ -62,11 +63,11 @@ final class ConsentProofRetention
             'updated_at' => $now,
         ];
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('user_consents', 'subject_ref')) {
+        if (Schema::hasColumn('user_consents', 'subject_ref')) {
             $update['subject_ref'] = self::subjectRef($userId);
         }
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('user_consents', 'retention_expires_at')) {
+        if (Schema::hasColumn('user_consents', 'retention_expires_at')) {
             $update['retention_expires_at'] = $now->copy()->addMonths(self::RETENTION_MONTHS);
         }
 
@@ -94,11 +95,11 @@ final class ConsentProofRetention
      */
     public static function purgeExpired(): int
     {
-        if (! \Illuminate\Support\Facades\Schema::hasTable('user_consents')) {
+        if (! Schema::hasTable('user_consents')) {
             return 0;
         }
 
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('user_consents', 'retention_expires_at')) {
+        if (! Schema::hasColumn('user_consents', 'retention_expires_at')) {
             return 0;
         }
 

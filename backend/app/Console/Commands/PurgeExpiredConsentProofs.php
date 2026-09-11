@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Support\ConsentProofRetention;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * EG-04 — enforce the documented retention window on pseudonymised consent proofs.
@@ -22,9 +24,9 @@ class PurgeExpiredConsentProofs extends Command
     public function handle(): int
     {
         if ($this->option('dry-run')) {
-            $count = \Illuminate\Support\Facades\Schema::hasTable('user_consents')
-                && \Illuminate\Support\Facades\Schema::hasColumn('user_consents', 'retention_expires_at')
-                ? \Illuminate\Support\Facades\DB::table('user_consents')
+            $count = Schema::hasTable('user_consents')
+                && Schema::hasColumn('user_consents', 'retention_expires_at')
+                ? DB::table('user_consents')
                     ->whereNull('user_id')
                     ->whereNotNull('retention_expires_at')
                     ->where('retention_expires_at', '<=', now())
