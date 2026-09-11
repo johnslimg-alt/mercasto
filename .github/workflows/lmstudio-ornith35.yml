@@ -1,4 +1,4 @@
-name: LM Studio Ornith 35B Install
+name: LM Studio Ornith 35B Repair and Estimate
 
 on:
   pull_request:
@@ -10,10 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  install:
+  repair:
     if: github.head_ref == 'ops/lmstudio-ornith35'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - name: Prepare SSH
         shell: bash
@@ -31,7 +31,7 @@ jobs:
           done
           exit 1
 
-      - name: Download and import official Ornith 1.5 35B-A3B Q4_K_M
+      - name: Repair imported filename and estimate memory
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -42,30 +42,36 @@ jobs:
           export HOME=/root
           export PATH="/root/.lmstudio/bin:$PATH"
           LMS=/root/.lmstudio/bin/lms
-          test -x "$LMS"
+          DIR=/root/.lmstudio/models/ornith-ai/Ornith-1.5-35B-A3B-GGUF
+          BAD="$DIR/Ornith-1.5-35B-Q4_K_M.gguf.part"
+          GOOD="$DIR/Ornith-1.5-35B-Q4_K_M.gguf"
 
-          echo "=== STORAGE BEFORE ==="
-          df -h /
+          echo "=== REPAIR ==="
+          if [ -f "$BAD" ] && [ ! -f "$GOOD" ]; then
+            mv "$BAD" "$GOOD"
+          fi
+          test -f "$GOOD"
+          stat -c 'bytes=%s path=%n' "$GOOD"
+
+          echo "=== LM STUDIO MODELS ==="
           "$LMS" ls --llm || true
 
-          if "$LMS" ls --llm 2>/dev/null | grep -qi 'ornith.*35b'; then
-            echo "Ornith 1.5 35B already present"
-          else
-            tmp=/root/Ornith-1.5-35B-Q4_K_M.gguf.part
-            rm -f "$tmp"
-            curl -fL --retry 5 --retry-delay 3 --retry-all-errors               -o "$tmp"               'https://huggingface.co/ornith-ai/Ornith-1.5-35B-A3B-GGUF/resolve/main/Ornith-1.5-35B-Q4_K_M.gguf?download=true'
-            size=$(stat -c '%s' "$tmp")
-            echo "downloaded_bytes=$size"
-            test "$size" -gt 21000000000
-            test "$size" -lt 23500000000
-            "$LMS" import "$tmp" --user-repo ornith-ai/Ornith-1.5-35B-A3B-GGUF --yes
-          fi
+          echo "=== LOAD HELP ==="
+          "$LMS" load --help | sed -n '1,140p' || true
 
-          echo "=== MODELS AFTER ==="
-          "$LMS" ls --llm
-          echo "=== STORAGE AFTER ==="
+          echo "=== MEMORY BEFORE ==="
+          free -h
           df -h /
-          echo ORNITH35_IMPORT_OK
+
+          echo "=== ESTIMATES ==="
+          for ctx in 8192 16384 32768; do
+            echo "--- context=$ctx ---"
+            "$LMS" load "$GOOD" --estimate-only --context-length "$ctx" --gpu off || true
+          done
+
+          echo "=== FINAL MODELS ==="
+          "$LMS" ls --llm || true
+          echo ORNITH35_REPAIR_ESTIMATE_OK
           REMOTE
 
       - name: Cleanup
