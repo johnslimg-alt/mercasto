@@ -2215,12 +2215,12 @@ body *::-webkit-scrollbar {
   border-radius: var(--mc-radius-md);
 }
 
-/* These live inside the components layer on purpose: the rule they override
-   (`.mobile-search-submit`, ~line 979) declares 999px with !important, and the
-   cascade reverses layer order for important declarations - an unlayered
-   !important rule would LOSE to a layered one. Same layer, later in the file,
-   same weight: this wins. */
-@layer components {
+/* The rule these override (`.mobile-search-submit`, ~line 979) lives in
+   `@layer base` and declares 999px with !important. The cascade REVERSES layer
+   order for important declarations, so base-important beats components-important
+   and an unlayered override loses too. The only weight that wins is the same
+   layer, later in the file - hence @layer base here. */
+@layer base {
   .mobile-search-box,
   .mobile-search-combo {
     border-radius: var(--mc-radius-lg) !important;
