@@ -214,7 +214,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
             type="button"
             onClick={closeOnboarding}
             disabled={saving}
-            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10 disabled:opacity-50"
+            className="absolute top-4 right-4 -m-2.5 p-3.5 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/10 disabled:opacity-50"
             aria-label={dictionary.close_btn}
           >
             <X size={20} />

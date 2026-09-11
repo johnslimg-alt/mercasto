@@ -113,7 +113,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                 ref={initialFocusRef}
                 type="button"
                 onClick={closeModal}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="absolute top-4 right-4 -m-1.5 p-3.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label={t.close_btn}
               >
                 <X size={20} className="text-gray-500" />

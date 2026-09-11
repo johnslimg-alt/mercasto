@@ -54,7 +54,7 @@ export default function CookieBanner({ t, lang }) {
       <div className="relative max-w-4xl mx-auto bg-[#0F172A] text-white rounded-2xl shadow-2xl border border-white/10 px-5 py-4 pr-12 sm:pr-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <button
           onClick={essential}
-          className="absolute top-3 right-3 p-2 text-slate-500 hover:text-slate-300 transition-colors rounded-xl hover:bg-white/10"
+          className="absolute top-3 right-3 -m-2 p-4 text-slate-500 hover:text-slate-300 transition-colors rounded-xl hover:bg-white/10"
           aria-label={dictionary.close_btn}
         >
           <X className="w-4 h-4" />
