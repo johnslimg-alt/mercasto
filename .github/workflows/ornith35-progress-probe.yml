@@ -1,0 +1,53 @@
+name: Ornith 35B Progress Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/ornith35-progress-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: github.head_ref == 'ops/ornith35-progress-probe'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          ssh-keyscan -T 10 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Probe progress
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "=== FILE ==="
+          if [ -f /root/Ornith-1.5-35B-Q4_K_M.gguf.part ]; then
+            stat -c 'bytes=%s size=%s modified=%y' /root/Ornith-1.5-35B-Q4_K_M.gguf.part
+            du -h /root/Ornith-1.5-35B-Q4_K_M.gguf.part
+          else
+            echo "part_absent"
+          fi
+          echo "=== DOWNLOAD PROCESS ==="
+          ps -eo pid,etimes,%cpu,%mem,args | grep -E '[c]url .*Ornith-1.5-35B|[l]ms import' || true
+          echo "=== LM MODELS ==="
+          /root/.lmstudio/bin/lms ls --llm || true
+          echo "=== DISK ==="
+          df -h /
+          REMOTE
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/key
