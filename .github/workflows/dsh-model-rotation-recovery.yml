@@ -18,6 +18,7 @@ jobs:
       github.actor == 'johnslimg-alt' &&
       (
         github.event.comment.body == 'RUN:dsh_rotation_preflight:MERCASTO' ||
+        github.event.comment.body == 'RUN:dsh_rotation_probe_openrouter:MERCASTO' ||
         github.event.comment.body == 'RUN:dsh_rotation_install_zai:MERCASTO' ||
         github.event.comment.body == 'RUN:dsh_rotation_install_zai-coding:MERCASTO'
       )
@@ -34,6 +35,9 @@ jobs:
           case "$BODY" in
             RUN:dsh_rotation_preflight:MERCASTO)
               echo "mode=preflight" >> "$GITHUB_OUTPUT"
+              ;;
+            RUN:dsh_rotation_probe_openrouter:MERCASTO)
+              echo "mode=probe_openrouter" >> "$GITHUB_OUTPUT"
               ;;
             RUN:dsh_rotation_install_zai:MERCASTO)
               echo "mode=install_zai" >> "$GITHUB_OUTPUT"
@@ -145,6 +149,24 @@ jobs:
 
           if [ "$MODE" = "preflight" ]; then
             echo "DSH_ROTATION_PREFLIGHT_OK"
+            exit 0
+          fi
+
+          if [ "$MODE" = "probe_openrouter" ]; then
+            echo "=== OPENROUTER CREDENTIAL PRESENCE ==="
+            python3 - "$CREDENTIALS" <<'PY'
+          import sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          text = p.read_text(encoding="utf-8", errors="ignore") if p.exists() else ""
+          print("openrouter_credential_ref=" + ("yes" if "OPENROUTER_API_KEY" in text else "no"))
+          PY
+            echo "=== OPENROUTER PROVIDER REFERENCES ==="
+            grep -RHIinE 'openrouter|OPENROUTER_API_KEY' "$SETTINGS" "$PROFILE" /root/.npm/_npx 2>/dev/null \
+              | sed -E 's/(api[_-]?key|token|secret|password)[^:]*:.*/\1: <redacted>/Ig' \
+              | sed -E 's/(sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' \
+              | head -120 || true
+            echo "DSH_ROTATION_OPENROUTER_PROBE_OK"
             exit 0
           fi
 
