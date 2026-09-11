@@ -1,4 +1,4 @@
-name: Emergency Harness Final Dedupe Repair
+name: DSH GLM Free Direct Smoke
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  repair:
+  smoke:
     if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -23,96 +23,98 @@ jobs:
         run: |
           set -euo pipefail
           install -d -m 0700 ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/harness_final_key
-          chmod 600 ~/.ssh/harness_final_key
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/dsh_glm_smoke_key
+          chmod 600 ~/.ssh/dsh_glm_smoke_key
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      - name: Remove duplicate profile plugin and restore Harness
+      - name: Direct smoke GLM Free and restore DeepSeek
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/harness_final_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          ssh -i ~/.ssh/dsh_glm_smoke_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
-          P=/root/.dsh/profiles/web/cordis.patch.yml
-          B=/root/.dsh/backups/emergency-502
+          S=/root/.dsh/settings.yaml
+          B=/root/.dsh/backups/model-rotation
           STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
           install -d -m 0700 "$B"
-          cp -a "$P" "$B/cordis.patch.yml.before-dedupe.$STAMP"
-          chmod 0600 "$B/cordis.patch.yml.before-dedupe.$STAMP"
+          cp -a "$S" "$B/settings.yaml.pre-glm-direct-smoke.$STAMP"
+          chmod 0600 "$B/settings.yaml.pre-glm-direct-smoke.$STAMP"
 
-          python3 - "$P" <<'PY'
-          import re,sys
-          from pathlib import Path
-          p=Path(sys.argv[1])
-          lines=p.read_text().splitlines(True)
-          out=[]
-          i=0
-          removed=0
-          while i < len(lines):
-              m=re.match(r'^(\s*)-\s+id:\s*llm-pi-ai\s*$', lines[i].rstrip('\n'))
-              if not m:
-                  out.append(lines[i]); i+=1; continue
-              indent=len(m.group(1))
-              removed+=1
-              i+=1
-              while i < len(lines):
-                  raw=lines[i].rstrip('\n')
-                  if not raw.strip():
-                      i+=1
-                      continue
-                  lead=len(raw)-len(raw.lstrip())
-                  if lead <= indent:
-                      break
-                  i+=1
-          if removed != 1:
-              raise SystemExit(f"expected one custom llm-pi-ai block, removed={removed}")
-          p.write_text(''.join(out))
-          print("removed_profile_llm_pi_ai=1")
+          python3 - <<'PY'
+          import yaml
+          c=yaml.safe_load(open("/root/.dsh/.credentials.yaml")) or {}
+          refs=c.get("refs") or {}
+          print("openrouter_credential_present=" + ("yes" if "OPENROUTER_API_KEY" in refs else "no"))
+          s=yaml.safe_load(open("/root/.dsh/settings.yaml")) or {}
+          p=((s.get("llm-pi-ai") or {}).get("providers") or {}).get("openrouter") or {}
+          print("openrouter_provider_present=" + ("yes" if p else "no"))
+          print("openrouter_model_configured=" + ("yes" if any((m or {}).get("id")=="z-ai/glm-5.3-flash:free" for m in p.get("models",[])) else "no"))
           PY
 
-          echo "=== PATCH REFERENCES ==="
-          grep -nE 'id:|name:' "$P" | head -60
-          if grep -qE '^\s*-\s+id:\s*llm-pi-ai\s*$' "$P"; then
-            echo "duplicate remains" >&2
-            exit 31
-          fi
-          grep -q 'id: mcp-graphify' "$P"
+          set_default() {
+            provider="$1"; model="$2"
+            python3 - "$S" "$provider" "$model" <<'PY'
+          import os,re,sys,tempfile
+          from pathlib import Path
+          p=Path(sys.argv[1]); provider=sys.argv[2]; model=sys.argv[3]
+          text=p.read_text()
+          block=f"agent-default-model:\n  provider: {provider}\n  model: {model}\n"
+          lines=text.splitlines(keepends=True); start=None
+          for i,line in enumerate(lines):
+              if re.match(r"^agent-default-model:\s*(?:#.*)?$",line.rstrip("\n")):
+                  start=i; break
+          if start is None:
+              new=text.rstrip()+"\n\n"+block
+          else:
+              end=len(lines)
+              for i in range(start+1,len(lines)):
+                  if re.match(r"^[A-Za-z0-9_.-]+:\s*",lines[i]):
+                      end=i; break
+              new="".join(lines[:start])+block+"".join(lines[end:])
+          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".settings.smoke.",text=True)
+          try:
+              with os.fdopen(fd,"w") as h:
+                  h.write(new); h.flush(); os.fsync(h.fileno())
+              os.chmod(tmp,p.stat().st_mode & 0o777); os.replace(tmp,p)
+          finally:
+              if os.path.exists(tmp): os.unlink(tmp)
+          PY
+          }
 
-          echo "=== RESTART ==="
-          systemctl daemon-reload
-          systemctl reset-failed deepseek-harness.service || true
-          systemctl restart deepseek-harness.service
-          systemctl restart deepseek-harness-proxy.service
+          restore_deepseek() {
+            set_default deepseek-official deepseek-flash
+          }
+          trap restore_deepseek EXIT
 
-          ok=0
-          for i in $(seq 1 35); do
-            if systemctl is-active --quiet deepseek-harness.service && ss -lnt | grep -q '127.0.0.1:3080'; then
-              ok=1; break
-            fi
-            sleep 2
-          done
+          echo "=== GLM FREE ==="
+          set_default openrouter 'z-ai/glm-5.3-flash:free'
+          set +e
+          timeout 120s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless 'Reply with exactly: GLM_FREE_DIRECT_OK' >/tmp/glm-direct.out 2>&1
+          rc=$?
+          set -e
+          sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' /tmp/glm-direct.out | tail -80
+          test "$rc" -eq 0
+          grep -q 'GLM_FREE_DIRECT_OK' /tmp/glm-direct.out
+          echo GLM_FREE_DIRECT_SMOKE_OK
 
-          echo "=== VERIFY ==="
-          systemctl show deepseek-harness.service --no-pager -p ActiveState -p SubState -p Result -p NRestarts -p ExecMainStatus
-          systemctl show deepseek-harness-proxy.service --no-pager -p ActiveState -p SubState -p Result
-          ss -lntp | grep -E ':(3080|3081)\b' || true
-          echo "=== LOCAL ==="
-          curl -sSI --max-time 15 http://127.0.0.1:3080/ | head -12 || true
-          echo "=== PUBLIC ==="
-          curl -skSI --max-time 20 https://harness.flyaicrm.com/ | head -12 || true
-          echo "=== GRAPHIFY ==="
-          pgrep -af 'graphify\.serve' || true
+          echo "=== DEEPSEEK RESTORE SMOKE ==="
+          restore_deepseek
+          set +e
+          timeout 120s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless 'Reply with exactly: DEEPSEEK_DIRECT_OK' >/tmp/ds-direct.out 2>&1
+          rc=$?
+          set -e
+          sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' /tmp/ds-direct.out | tail -80
+          test "$rc" -eq 0
+          grep -q 'DEEPSEEK_DIRECT_OK' /tmp/ds-direct.out
+          echo DEEPSEEK_DIRECT_SMOKE_OK
 
-          if [ "$ok" != 1 ]; then
-            journalctl -u deepseek-harness.service -n 120 --no-pager 2>&1 \
-              | sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' | tail -120
-            exit 42
-          fi
-          echo HARNESS_FINAL_DEDUPE_REPAIR_OK
+          rm -f /tmp/glm-direct.out /tmp/ds-direct.out
+          trap - EXIT
+          echo DSH_DUAL_MODEL_DIRECT_SMOKE_OK
           REMOTE
 
       - name: Cleanup
         if: always()
-        run: rm -f ~/.ssh/harness_final_key
+        run: rm -f ~/.ssh/dsh_glm_smoke_key
