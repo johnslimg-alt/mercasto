@@ -1,0 +1,73 @@
+name: LM Studio Ornith 35B Install
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/lmstudio-ornith35.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    if: github.head_ref == 'ops/lmstudio-ornith35'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          for i in 1 2 3 4 5; do
+            ssh-keyscan -T 5 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Download and import official Ornith 1.5 35B-A3B Q4_K_M
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          export HOME=/root
+          export PATH="/root/.lmstudio/bin:$PATH"
+          LMS=/root/.lmstudio/bin/lms
+          test -x "$LMS"
+
+          echo "=== STORAGE BEFORE ==="
+          df -h /
+          "$LMS" ls --llm || true
+
+          if "$LMS" ls --llm 2>/dev/null | grep -qi 'ornith.*35b'; then
+            echo "Ornith 1.5 35B already present"
+          else
+            tmp=/root/Ornith-1.5-35B-Q4_K_M.gguf.part
+            rm -f "$tmp"
+            curl -fL --retry 5 --retry-delay 3 --retry-all-errors               -o "$tmp"               'https://huggingface.co/ornith-ai/Ornith-1.5-35B-A3B-GGUF/resolve/main/Ornith-1.5-35B-Q4_K_M.gguf?download=true'
+            size=$(stat -c '%s' "$tmp")
+            echo "downloaded_bytes=$size"
+            test "$size" -gt 21000000000
+            test "$size" -lt 23500000000
+            "$LMS" import "$tmp" --user-repo ornith-ai/Ornith-1.5-35B-A3B-GGUF --yes
+          fi
+
+          echo "=== MODELS AFTER ==="
+          "$LMS" ls --llm
+          echo "=== STORAGE AFTER ==="
+          df -h /
+          echo ORNITH35_IMPORT_OK
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/key
