@@ -93,6 +93,7 @@ export default function AppHeader({
   highlightedIndex,
   isAdminRoute,
   hideCategoryBar = false,
+  hideHeaderSearch = false,
   isDarkMode,
   isHeaderCategoryActive,
   lang,
@@ -148,7 +149,7 @@ export default function AppHeader({
             <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="header-logo-link flex shrink-0 items-center gap-2 transition-opacity hover:opacity-90">
               <MercastoLogo className="h-6 sm:h-7 lg:h-8" tagline={t.ai_brand_short} />
             </a>
-            <div className={isAdminRoute ? "hidden" : "hidden min-w-0 flex-1 items-center lg:flex"}>
+            <div className={(isAdminRoute || hideHeaderSearch) ? "hidden" : "hidden min-w-0 flex-1 items-center lg:flex"}>
               <div ref={desktopSearchRef} className="relative min-w-0 flex-1">
               <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="desktop-header-control desktop-header-search-control header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
@@ -388,7 +389,7 @@ export default function AppHeader({
             </div>
           </div>
           {/* Mobile Search + Location + Account */}
-          <div className={isAdminRoute ? "hidden" : "mobile-search-row py-2.5 lg:hidden"}>
+          <div className={(isAdminRoute || hideHeaderSearch) ? "hidden" : "mobile-search-row py-2.5 lg:hidden"}>
             <div ref={mobileSearchRef} className="relative min-w-0">
               <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-full focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />

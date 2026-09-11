@@ -19,7 +19,7 @@ test('header autocomplete ignores a stale slower response', async ({ page }, tes
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/listings', { waitUntil: 'domcontentloaded' });
   await page.getByTestId('desktop-search-input').waitFor({ state: 'visible' });
   const input = page.getByTestId('desktop-search-input');
   await input.fill('iphone');
@@ -54,7 +54,7 @@ for (const [lang, copy] of Object.entries(AUTOCOMPLETE_COPY)) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(['ipad']) });
     });
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.goto('/listings', { waitUntil: 'domcontentloaded' });
     const input = page.getByTestId('desktop-search-input');
     await input.waitFor({ state: 'visible' });
     await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe(lang);
@@ -84,7 +84,7 @@ async function expectSearchParam(page, expected) {
 test('desktop autocomplete chooses the highlighted suggestion with Enter', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await mockSingleSuggestion(page);
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/listings', { waitUntil: 'domcontentloaded' });
 
   const input = page.getByTestId('desktop-search-input');
   await input.fill('ipd');
@@ -100,7 +100,7 @@ test('mobile autocomplete chooses the highlighted suggestion with Enter', async 
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await page.setViewportSize({ width: 390, height: 844 });
   await mockSingleSuggestion(page);
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/listings', { waitUntil: 'domcontentloaded' });
 
   const input = page.getByTestId('mobile-search-input');
   await input.fill('ipd');
@@ -118,7 +118,7 @@ test('autocomplete chooses a highlighted recent search with Enter', async ({ pag
     localStorage.setItem('mercasto_recent_searches', JSON.stringify(['Toyota Corolla']));
     localStorage.setItem('cookiesAccepted', 'true');
   });
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/listings', { waitUntil: 'domcontentloaded' });
 
   const input = page.getByTestId('desktop-search-input');
   await input.focus();

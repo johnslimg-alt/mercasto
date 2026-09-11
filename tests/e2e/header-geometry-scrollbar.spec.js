@@ -98,7 +98,8 @@ test('RTL home category rail mirrors the trailing fade without obscuring the fir
 
 test('desktop header preserves search width at the 1024px breakpoint', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 800 });
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  // /listings, not /: the Home V2 route deliberately hides the header search.
+  await page.goto('/listings', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(250);
 
   const headerBox = await page.locator('.site-header').boundingBox();
