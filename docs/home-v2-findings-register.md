@@ -8,11 +8,11 @@ Nothing here has been fixed. Production was not touched and no cutover was perfo
 
 ## Blockers for production readiness
 
-| # | Finding | Severity | Owner | Evidence |
+| # | Finding | Severity | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| 1 | **CLS 0.4444 desktop / up to 0.7935 mobile** against the ТЗ target of < 0.1. HomeScreenV2 first paints with empty listing data (`doc=1351px`, promo rail at y=546) then grows to 5668px when ads resolve, moving the rail to y=2342 — a ~1800px jump. A fixed payload drops CLS to 0.0021, proving it is data-driven. | **High** | `HomeScreenV2.jsx` (other session) | `docs/home-v2-performance-audit.md` |
-| 2 | **The paid *Destacados* rail can silently show unpromoted ads.** On a failed featured fetch the fallback is `safeAds.slice(0, 4)`; proven by rendering the rail byte-identical to the first four of *Tendencias* when the endpoint 404s. Production returns 200 today, so the exposure is environmental/transient. | **High** | `HomeScreenV2.jsx` | `docs/home-v2-real-data-audit.md` |
-| 3 | **V2 branch is behind `origin/main` on #1100** (public/storage image URL normalisation), and V2 resolves listing thumbnails through that helper. Fixed on the hybrid branch via a conflict-free merge; the V2 branch itself still needs it. | **High** | V2 branch owner | merge commit `1d513be3` |
+| 1 | ~~**CLS 0.4444 desktop / up to 0.7935 mobile** against the ТЗ target of < 0.1.~~ **FIXED on this branch** (`bb91d4a5`): sections now reserve their geometry with skeletons while the feed is pending. Measured desktop **0.4444 → 0.0030**, mobile → **0.0239**, matching the ideal stable-payload baseline. | ~~High~~ resolved | **Fixed** | `docs/home-v2-performance-audit.md` |
+| 2 | **The paid *Destacados* rail can silently show unpromoted ads.** On a failed featured fetch the fallback is `safeAds.slice(0, 4)`; proven by rendering the rail byte-identical to the first four of *Tendencias* when the endpoint 404s. Production returns 200 today, so the exposure is environmental/transient. | **High** | Open | `docs/home-v2-real-data-audit.md` |
+| 3 | **V2 branch is behind `origin/main` on #1100** (public/storage image URL normalisation), and V2 resolves listing thumbnails through that helper. Fixed on the hybrid branch via a conflict-free merge; the V2 branch itself still needs it. | **High** | Open on the V2 branch | merge commit `1d513be3` |
 
 ## Functional gaps
 
