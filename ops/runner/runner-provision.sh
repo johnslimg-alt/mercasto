@@ -204,15 +204,39 @@ if [ "$APPLY" -eq 1 ]; then
   systemctl list-timers mercasto-runner-orphan-cleanup.timer --no-legend 2>/dev/null || true
   for unit in "${INSTALLED_UNITS[@]:-}"; do
     [ -n "$unit" ] || continue
-    printf '%s: Restart=%s RestartSec=%s KillMode=%s OOMScoreAdjust=%s active=%s\n' \
+    printf '%s: Restart=%s RestartDelay=%s KillMode=%s OOMScoreAdjust=%s active=%s\n' \
       "$unit" \
       "$(systemctl show -p Restart --value "$unit" 2>/dev/null || echo '?')" \
-      "$(systemctl show -p RestartSec --value "$unit" 2>/dev/null || echo '?')" \
+      "$(systemctl show -p RestartUSec --value "$unit" 2>/dev/null || echo '?')" \
       "$(systemctl show -p KillMode --value "$unit" 2>/dev/null || echo '?')" \
       "$(systemctl show -p OOMScoreAdjust --value "$unit" 2>/dev/null || echo '?')" \
       "$(systemctl is-active "$unit" 2>/dev/null || echo '?')"
   done
-  bash "$REPO_DIR/scripts/runner-orphan-cleanup.sh" --scope mercasto | tail -3
+
+  verify_failed=0
+  for unit in "${INSTALLED_UNITS[@]:-}"; do
+    [ -n "$unit" ] || continue
+    case "$(systemctl show -p Restart --value "$unit" 2>/dev/null || true)" in
+      on-failure) ;;
+      *) echo "verification failed: $unit does not have Restart=on-failure" >&2; verify_failed=1 ;;
+    esac
+    case "$(systemctl show -p KillMode --value "$unit" 2>/dev/null || true)" in
+      control-group) ;;
+      *) echo "verification failed: $unit does not have KillMode=control-group" >&2; verify_failed=1 ;;
+    esac
+  done
+
+  if [ -f "$REPO_DIR/scripts/runner-orphan-cleanup.sh" ]; then
+    bash "$REPO_DIR/scripts/runner-orphan-cleanup.sh" --scope mercasto | tail -3
+  else
+    echo "note: $REPO_DIR/scripts/runner-orphan-cleanup.sh is not in that checkout yet;"
+    echo "      the timer stays dormant (ConditionPathExists) until it lands."
+  fi
+
+  if [ "$verify_failed" -ne 0 ]; then
+    echo "RUNNER_PROVISION=FAIL" >&2
+    exit 1
+  fi
   echo "RUNNER_PROVISION=PASS"
 else
   echo
