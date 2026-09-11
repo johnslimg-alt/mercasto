@@ -9,6 +9,7 @@ import { events } from '../../utils/analytics';
 import { formatNumber } from '../../utils/localeFormat';
 import { localizedText } from '../../utils/localize';
 import { clearRecentlyViewed, getRecentlyViewed } from '../../utils/recentlyViewed';
+import { getImageUrl } from '../../utils/imageHelpers';
 import { AUTOMOTIVE_PRICE_OPTIONS, AUTOMOTIVE_QUICK_BRANDS, getAutomotiveQuickYears } from '../../utils/automotiveQuickFilters';
 import { PopularSearchesSection, CitiesSection, NewsletterSection } from '../home/HomeDiscoverySections';
 import FAQSchema from '../seo/FAQSchema';
@@ -330,10 +331,9 @@ export default function HomeScreenV2({
               </div>
               <div className="v2-ad-rail v2-scroll">
                 {recentAds.map(ad => {
-                  const thumb = ad.thumbnail;
-                  const imgSrc = thumb
-                    ? (thumb.startsWith('http') ? thumb : `https://mercasto.com/storage/${thumb}`)
-                    : '/placeholder-ad.svg';
+                  // Shared resolver: handles absolute URLs, storage-relative
+                  // paths, JSON arrays and the placeholder fallback in one place.
+                  const imgSrc = getImageUrl(ad.thumbnail);
                   const locationStr = ad.state || ad.location?.split(',')[0] || 'México';
                   const title = localizedText(ad.title);
                   return (

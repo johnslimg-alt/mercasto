@@ -1,6 +1,6 @@
 # Home V2 parity audit — Legacy vs V2
 
-Generated: 2026-09-11T00:56:23.450Z
+Generated: 2026-09-11T00:56:55.850Z
 
 - Legacy: `src/components/screens/HomeScreen.jsx` (1201 lines)
 - V2:     `src/components/screens/HomeScreenV2.jsx` (551 lines)
@@ -99,7 +99,6 @@ _None._
 ## Imports present only in legacy
 
 - `../../constants/locationsAndCategories`
-- `../../utils/imageHelpers`
 - `../SEO`
 - `../common/AdSenseBanner`
 - `../common/SkeletonCard`
