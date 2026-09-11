@@ -1,4 +1,4 @@
-name: LM Studio Ornith 1.5 Install
+name: LM Studio Ornith 1.5 Import Fix
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ jobs:
   install:
     if: github.head_ref == 'ops/lmstudio-ornith15'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - name: Prepare SSH
         shell: bash
@@ -31,7 +31,7 @@ jobs:
           done
           exit 1
 
-      - name: Download and import official Ornith 1.5 9B Q4_K_M
+      - name: Finalize Ornith filename and verify LM Studio
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -42,24 +42,37 @@ jobs:
           export HOME=/root
           export PATH="/root/.lmstudio/bin:$PATH"
           LMS=/root/.lmstudio/bin/lms
-          test -x "$LMS"
+          DIR=/root/.lmstudio/models/ornith-ai/Ornith-1.5-9B-GGUF
+          PART="$DIR/Ornith-1.5-9B-Q4_K_M.gguf.part"
+          FINAL="$DIR/Ornith-1.5-9B-Q4_K_M.gguf"
 
-          if "$LMS" ls --llm 2>/dev/null | grep -qi 'ornith.*1\.5.*9b'; then
-            echo "Ornith 1.5 9B already present"
-          else
-            tmp=/root/Ornith-1.5-9B-Q4_K_M.gguf.part
-            rm -f "$tmp"
-            curl -fL --retry 5 --retry-delay 3 --retry-all-errors               -o "$tmp"               'https://huggingface.co/ornith-ai/Ornith-1.5-9B-GGUF/resolve/main/Ornith-1.5-9B-Q4_K_M.gguf?download=true'
-            size=$(stat -c '%s' "$tmp")
-            echo "downloaded_bytes=$size"
-            test "$size" -gt 5500000000
-            test "$size" -lt 6500000000
-            "$LMS" import "$tmp" --user-repo ornith-ai/Ornith-1.5-9B-GGUF --yes
+          if [ -f "$PART" ] && [ ! -f "$FINAL" ]; then
+            mv "$PART" "$FINAL"
           fi
+          test -f "$FINAL"
+          size=$(stat -c '%s' "$FINAL")
+          echo "ornith_bytes=$size"
+          test "$size" -eq 5780090816
 
-          echo "=== MODELS ==="
-          "$LMS" ls --llm
-          echo ORNITH15_IMPORT_OK
+          echo "=== LM STUDIO MODELS ==="
+          "$LMS" ls --llm --detailed
+          "$LMS" ls --llm --json > /tmp/lms-llm.json
+          python3 - /tmp/lms-llm.json <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          text=json.dumps(d).lower()
+          ok="ornith" in text and "1.5" in text
+          print("ornith_visible=" + ("yes" if ok else "no"))
+          if not ok: raise SystemExit(41)
+          PY
+          rm -f /tmp/lms-llm.json
+
+          echo "=== MEMORY ESTIMATE ==="
+          key=$("$LMS" ls --llm --json | python3 -c 'import json,sys; d=json.load(sys.stdin); xs=d if isinstance(d,list) else d.get("models",d.get("data",[])); print(next((x.get("modelKey") or x.get("key") or x.get("path") for x in xs if "ornith" in str(x).lower()),""))')
+          echo "ornith_model_key=$key"
+          test -n "$key"
+          "$LMS" load "$key" --context-length 8192 --gpu off --estimate-only || true
+          echo ORNITH15_READY_OK
           REMOTE
 
       - name: Cleanup
