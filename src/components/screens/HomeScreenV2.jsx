@@ -60,8 +60,46 @@ function SectionHeader({ title, action, onAction }) {
   );
 }
 
-function AdRail({ items, renderAdCard, className = '' }) {
-  if (!items?.length) return null;
+/**
+ * Reserves the exact box a listing card will occupy: a 4/3 media block plus a
+ * body matching AdCard's minimum content height. Without this the first paint
+ * renders with empty listing arrays, the sections collapse, and the whole page
+ * grows by ~4300 px when the ads resolve — the layout shift measured in
+ * docs/home-v2-performance-audit.md.
+ */
+/** Number of trending cards the section renders once the feed settles. */
+const TRENDING_SKELETON_COUNT = 12;
+
+function CardSkeleton() {
+  return (
+    <div className="v2-card-skeleton" aria-hidden="true">
+      <div className="v2-card-skeleton-media" />
+      <div className="v2-card-skeleton-body">
+        <span className="v2-sk-line v2-sk-price" />
+        <span className="v2-sk-line" />
+        <span className="v2-sk-line v2-sk-short" />
+        <span className="v2-sk-line v2-sk-meta" />
+        <span className="v2-sk-cta" />
+      </div>
+    </div>
+  );
+}
+
+function AdRail({ items, renderAdCard, className = '', pending = false, skeletonCount = 4 }) {
+  if (!items?.length) {
+    // `pending` means the feed has not arrived yet: hold the space instead of
+    // collapsing the section. A settled-but-empty section still renders nothing.
+    if (!pending) return null;
+    return (
+      <div className={'v2-ad-rail v2-scroll ' + className} aria-hidden="true">
+        {Array.from({ length: skeletonCount }, (_, i) => (
+          <div className="v2-card-shell" key={`v2-skeleton-${i}`}>
+            <CardSkeleton />
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className={'v2-ad-rail v2-scroll ' + className}>
       {items.map(ad => (
@@ -90,6 +128,9 @@ export default function HomeScreenV2({
   const labels = CATEGORY_LABELS[lang] || CATEGORY_LABELS.es;
   const safeAds = Array.isArray(serverAds) ? serverAds : [];
   const trending = safeAds.slice(0, 12);
+  // True until the first listing feed arrives. Sections use it to reserve their
+  // geometry with skeletons instead of collapsing and shifting the page.
+  const feedPending = safeAds.length === 0;
   // No fake counters: `safeAds.length` is the size of the loaded page, not the
   // number of ads on the marketplace. The real total comes from the API
   // (`adsTotal`, set from `data.total`) and is shown only when it is known.
@@ -308,7 +349,7 @@ export default function HomeScreenV2({
             <SectionHeader title={t.featured_ads}
               action={t.promote_ad}
               onAction={() => openPricing('design_v2_featured')} />
-            <AdRail items={featuredRows} renderAdCard={renderAdCard} className="v2-featured-rail" />
+            <AdRail items={featuredRows} renderAdCard={renderAdCard} className="v2-featured-rail" pending={feedPending} skeletonCount={4} />
           </section>
 
           <section className="v2-section v2-trending-section">
@@ -316,7 +357,13 @@ export default function HomeScreenV2({
               action={t.see_all}
               onAction={() => executeSearch?.('', '', '', { source:'design_v2_all' })} />
             <div className={'v2-trending-grid ' + (showAllTrending ? 'is-expanded' : '')}>
-              {trending.map(ad => <div className="v2-trend-card" key={ad.id}>{renderAdCard(ad)}</div>)}
+              {trending.length > 0
+                ? trending.map(ad => <div className="v2-trend-card" key={ad.id}>{renderAdCard(ad)}</div>)
+                : (feedPending
+                  ? Array.from({ length: TRENDING_SKELETON_COUNT }, (_, i) => (
+                      <div className="v2-trend-card" key={`v2-skeleton-${i}`}><CardSkeleton /></div>
+                    ))
+                  : null)}
             </div>
             {!showAllTrending && trending.length > 8 && (
               <button type="button" className="v2-more" onClick={() => setShowAllTrending(true)}>{sectionCopy.showMore}</button>
