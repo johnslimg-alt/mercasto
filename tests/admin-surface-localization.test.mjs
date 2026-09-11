@@ -118,7 +118,12 @@ test('admin route hides marketplace catalog search and category navigation', () 
   assert.ok(app.includes('isAdminRoute={isAdminRoute}'));
   assert.ok(header.includes('isAdminRoute ? "hidden" : "hidden min-w-0 flex-1 items-center lg:flex"'));
   assert.ok(header.includes('isAdminRoute ? "hidden" : "mobile-search-row py-2.5 lg:hidden"'));
-  assert.ok(header.includes('data-testid="header-category-bar" className={isAdminRoute ? "hidden"'));
+  // The shell hides the catalog bar on admin routes, and Home V2 asks for the
+  // same via hideCategoryBar on /design-v2 - admin must stay hidden either way.
+  assert.match(
+    header,
+    /data-testid="header-category-bar" className=\{\(isAdminRoute \|\| hideCategoryBar\) \? "hidden"/,
+  );
 });
 
 test('admin dark safety layer covers legacy medium-light slate and gray surfaces', () => {

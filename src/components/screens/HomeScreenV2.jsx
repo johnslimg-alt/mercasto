@@ -300,7 +300,9 @@ export default function HomeScreenV2({
         </div>
       </section>
 
-      <main className="v2-content">
+      {/* App.jsx owns the single top-level main landmark; a screen must not
+          introduce a second one, so this stays a plain container. */}
+      <div className="v2-content">
         <div className="v2-wrap">
           <section className="v2-section">
             <SectionHeader title={t.featured_ads}
@@ -544,7 +546,7 @@ export default function HomeScreenV2({
 
           <FAQSchema pageType="home" lang={lang} variant="v2" />
         </div>
-      </main>
+      </div>
     </div>
   );
 }
