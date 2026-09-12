@@ -283,3 +283,24 @@
   border-radius:12px;
   background:var(--v2-soft);
 }
+
+/* ── Search width and rail centring ──────────────────────────────────────────
+   Owner feedback on desktop: the search bar spanned the whole content width
+   (1288px of 1320) and looked absurd, and the category rail sat hard left with
+   ~460px of dead space beside it. Applies at every breakpoint - on a phone the
+   max-width simply resolves to the padded container width, which is already the
+   behaviour there. */
+.v2-search-form{
+  max-width:640px;
+  margin-inline:auto;
+}
+
+@media (min-width:1024px){
+  /* Centre the rail only when it fits. fit-content keeps the horizontal scroller
+     working on narrow screens, where centring the overflowing track would clip
+     the first item. */
+  .v2-category-rail{
+    width:fit-content;
+    margin-inline:auto;
+  }
+}

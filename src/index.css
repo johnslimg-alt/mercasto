@@ -2232,3 +2232,57 @@ body *::-webkit-scrollbar {
     border-radius: var(--mc-radius-md) !important;
   }
 }
+
+/* ── Desktop header controls: one consistent treatment ───────────────────────
+   Owner feedback: the row beside the logo looked ugly and crooked because it
+   mixed outlined controls (language, location, shops) with bare icon buttons.
+   The Base44 mockup treats every one of them as borderless until hover, so the
+   border is made transparent rather than removed - that keeps the box size, so
+   nothing shifts on hover or in the geometry contract. The search shell is
+   excluded: there the border is the control. */
+@layer components {
+  /* 640px, not 1024px: the desktop header row is already on screen at tablet
+     widths, and the owner asked for the row to be consistent on desktop, tablet
+     and phone alike. */
+  @media (min-width: 640px) {
+    .desktop-header-row .desktop-header-control:not(.desktop-header-search-control) {
+      border-color: transparent;
+      background: transparent;
+    }
+
+    .desktop-header-row .desktop-header-control:not(.desktop-header-search-control):hover {
+      background: rgba(15, 23, 42, .05);
+      border-color: var(--line);
+    }
+
+    html.dark .desktop-header-row .desktop-header-control:not(.desktop-header-search-control):hover {
+      background: rgba(255, 255, 255, .08);
+    }
+  }
+}
+
+/* ── Mobile header controls: same borderless treatment ───────────────────────
+   The owner asked for the row beside the logo to look consistent on phone too.
+   These kept a visible border and a near-white fill while the desktop row went
+   borderless, so the two breakpoints disagreed. Border and background are made
+   transparent rather than dropped, which keeps the 48px touch targets exactly
+   as the accessibility contract requires them. The mobile search field is
+   deliberately untouched - there the box is what makes it read as an input. */
+@layer components {
+  @media (max-width: 639.98px) {
+    .mobile-top-controls .mobile-theme-icon,
+    .mobile-top-controls .mobile-language-select,
+    .mobile-top-controls .mobile-location-select-top,
+    .mobile-account-button--top {
+      border-color: transparent;
+      background: transparent;
+    }
+
+    .mobile-top-controls .mobile-theme-icon:active,
+    .mobile-top-controls .mobile-language-select:active,
+    .mobile-top-controls .mobile-location-select-top:active,
+    .mobile-account-button--top:active {
+      background: rgba(15, 23, 42, .06);
+    }
+  }
+}
