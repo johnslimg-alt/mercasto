@@ -67,9 +67,7 @@ class ModeratePendingAds extends Command
                 $cycleQuery->where('created_at', '>=', $ad->moderation_submitted_at);
             }
             $cycle = $cycleQuery->latest('id')->first();
-            $activateOnApproval = $cycle
-                ? (bool) data_get($cycle->metadata, 'rollout.activate_on_human_approval', false)
-                : $wasPending;
+            $activateOnApproval = $this->resolveActivationOnApproval($ad, $cycle, $wasPending);
 
             $ad->forceFill([
                 'status' => 'archived',
@@ -97,5 +95,39 @@ class ModeratePendingAds extends Command
         $this->info("Queued {$ads->count()} ad(s) for moderation.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Decide whether a favourable moderation outcome should publish the ad.
+     *
+     * Activation intent is sticky. Once an ad has been queued as a fresh
+     * submission, every later re-queue keeps that intent. Previously the intent
+     * was recomputed from the CURRENT status, but the pipeline represents
+     * "in review" by parking the ad as `archived`, so on the second pass the ad
+     * no longer looked like a fresh submission. Fresh seller ads therefore
+     * silently degraded into "seller confirmation required" and could be
+     * approved yet remain invisible. Re-queues must never downgrade intent.
+     */
+    private function resolveActivationOnApproval(Ad $ad, ?AdModerationDecision $cycle, bool $wasPending): bool
+    {
+        if ($wasPending) {
+            return true;
+        }
+
+        if ($cycle && data_get($cycle->metadata, 'rollout.activate_on_human_approval') === true) {
+            return true;
+        }
+
+        return AdModerationDecision::query()
+            ->where('ad_id', $ad->id)
+            ->where('source', 'system')
+            ->where('decision', 'queued')
+            ->get()
+            ->contains(
+                fn (AdModerationDecision $decision): bool => data_get(
+                    $decision->metadata,
+                    'rollout.activate_on_human_approval'
+                ) === true
+            );
     }
 }

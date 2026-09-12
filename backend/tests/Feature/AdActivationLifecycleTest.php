@@ -139,8 +139,12 @@ class AdActivationLifecycleTest extends TestCase
 
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
-        $this->assertSame('approved', $ad->ai_moderation_status);
+        // 'approved' now strictly means the ad is publicly visible, so an
+        // approval that waits for the seller is stored as reactivation_pending.
+        $this->assertSame(Ad::MODERATION_REACTIVATION_PENDING, $ad->ai_moderation_status);
         $this->assertNull($ad->expires_at);
+        $this->assertTrue($ad->isSellerConfirmationReactivationEligible());
+        $this->assertSame(0, Ad::query()->approvedButHidden()->count());
         $this->assertDatabaseHas('user_notifications', [
             'user_id' => $seller->id,
             'type' => 'seller_reactivation_ready',

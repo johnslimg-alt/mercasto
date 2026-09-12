@@ -35,6 +35,8 @@ test('review-ready bulk reactivation requires a current seller-confirmation wind
     republished_at: null,
   };
   assert.equal(isSellerConfirmationPending(ready), true);
+  // The backend now persists a granted-but-hidden approval as 'reactivation_pending'.
+  assert.equal(isSellerConfirmationPending({ ...ready, ai_moderation_status: 'reactivation_pending' }), true);
   assert.equal(isReviewReadyForBulkReactivation(ready), true);
   assert.equal(isReviewReadyForBulkReactivation({ ...ready, city: '' }), false);
   assert.equal(isSellerConfirmationPending({ ...ready, expires_at: future }), false);

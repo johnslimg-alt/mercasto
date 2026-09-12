@@ -15,6 +15,24 @@ class Ad extends Model
 {
     use HasFactory;
 
+    /**
+     * Canonical moderation status meaning "human/model review finished favourably
+     * AND the ad is publicly visible".
+     *
+     * Hard invariant: an ad whose `ai_moderation_status` is this value MUST have
+     * `status = 'active'`. Approval outcomes that must not be published yet are
+     * stored as MODERATION_REACTIVATION_PENDING instead, so that the combination
+     * "approved but invisible" is not representable by any code path.
+     */
+    public const MODERATION_APPROVED = 'approved';
+
+    /**
+     * Approval that has been granted but must not publish until the seller
+     * confirms the listing is still available. This deliberately is NOT
+     * MODERATION_APPROVED: it keeps "approved" a synonym for "visible".
+     */
+    public const MODERATION_REACTIVATION_PENDING = 'reactivation_pending';
+
     private const CATEGORY_ATTRIBUTE_STORAGE_ALIASES = [
         'brand' => ['marca'],
         'model' => ['modelo'],
@@ -249,12 +267,77 @@ class Ad extends Model
         return $this->hasOne(AdModerationDecision::class)->latestOfMany();
     }
 
+    /**
+     * Resolve the complete persisted attribute set for an approval outcome.
+     *
+     * This is the single source of truth for what approval means. It structurally
+     * cannot return MODERATION_APPROVED together with a hidden status, which is
+     * what previously left approved ads stranded in `archived` forever.
+     *
+     * It deliberately includes the publication lifetime, because activation must
+     * never be a status-only change: the shared indexability contract used by the
+     * sitemap generator and the SEO shell requires a real, future `expires_at`,
+     * so an "active" ad without one would be published yet still invisible to
+     * search engines. Every publishing path uses the same `Ad::freshExpiry()`
+     * helper as the legitimate seller/admin publish flow.
+     *
+     * @return array{status: string, ai_moderation_status: string, expires_at: Carbon|null, reminder_sent_at: null}
+     */
+    public static function approvalOutcome(bool $publishNow): array
+    {
+        return $publishNow
+            ? [
+                'status' => 'active',
+                'ai_moderation_status' => self::MODERATION_APPROVED,
+                'expires_at' => self::freshExpiry(),
+                'reminder_sent_at' => null,
+            ]
+            : [
+                'status' => 'archived',
+                'ai_moderation_status' => self::MODERATION_REACTIVATION_PENDING,
+                'expires_at' => null,
+                'reminder_sent_at' => null,
+            ];
+    }
+
+    /**
+     * Ad is approved and therefore expected to be publicly visible.
+     */
+    public function isApprovedAndVisible(): bool
+    {
+        return $this->ai_moderation_status === self::MODERATION_APPROVED
+            && $this->status === 'active';
+    }
+
+    /**
+     * Query scope for real ads that claim approval while remaining hidden, i.e.
+     * ads the moderation pipeline hid but never republished. This must always
+     * return zero rows, and it is exactly the set that reconciliation repairs.
+     *
+     * Catalog fillers are excluded because they are placeholders that may
+     * legitimately sit hidden, and ads that still hold remaining listing time
+     * (expires_at not null) are excluded because a seller archived those
+     * deliberately. It exists so reconciliation and tests can detect any
+     * violation of the visibility invariant.
+     */
+    public function scopeApprovedButHidden(Builder $query): Builder
+    {
+        return $query
+            ->where('is_catalog_filler', false)
+            ->where('ai_moderation_status', self::MODERATION_APPROVED)
+            ->where('status', '!=', 'active')
+            ->whereNull('expires_at');
+    }
+
     public function scopeSellerConfirmationPending(Builder $query): Builder
     {
         return $query
             ->where('is_catalog_filler', false)
             ->where('status', 'archived')
-            ->where('ai_moderation_status', 'approved')
+            ->whereIn('ai_moderation_status', [
+                self::MODERATION_REACTIVATION_PENDING,
+                self::MODERATION_APPROVED,
+            ])
             ->whereNull('expires_at')
             ->whereHas('latestDecision', function (Builder $decisionQuery): void {
                 $decisionQuery
@@ -270,8 +353,15 @@ class Ad extends Model
 
     public function isSellerConfirmationReactivationEligible(): bool
     {
+        // MODERATION_APPROVED is accepted for rows written before the
+        // reactivation_pending status existed; reconciliation moves those to
+        // `active`, after which this branch is unreachable.
         if ($this->status !== 'archived'
-            || $this->ai_moderation_status !== 'approved'
+            || ! in_array(
+                (string) $this->ai_moderation_status,
+                [self::MODERATION_REACTIVATION_PENDING, self::MODERATION_APPROVED],
+                true
+            )
             || $this->is_catalog_filler
             || $this->expires_at !== null) {
             return false;

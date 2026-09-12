@@ -78,6 +78,8 @@ const formatWait = (seconds = 0, t) => {
 const statusInfo = (status, t) => {
   const value = String(status || 'queued');
   if (value.includes('approved')) return { label: t('statuses.approved'), css: 'bg-emerald-100 text-emerald-700' };
+  // Approved by the model/human, but still hidden until the seller confirms availability.
+  if (value === 'reactivation_pending') return { label: t('statuses.reactivationPending'), css: 'bg-teal-100 text-teal-700' };
   if (value.includes('rejected')) return { label: t('statuses.rejected'), css: 'bg-red-100 text-red-700' };
   if (value === 'processing' || value === 'queued') {
     return {
