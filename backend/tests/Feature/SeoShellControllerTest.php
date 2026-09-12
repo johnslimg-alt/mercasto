@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Api\IndexNowController;
 use App\Models\Ad;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -218,6 +219,141 @@ class SeoShellControllerTest extends TestCase
         $response->assertSee('"@type":"WebPage"', false);
         $response->assertDontSee('"@type":"Product"', false);
         $response->assertDontSee('https://schema.org/InStock', false);
+    }
+
+    public function test_published_listing_with_a_live_expiry_is_indexable_at_the_canonical_route(): void
+    {
+        // A genuine published listing with real content and a live expiry is indexable, and
+        // its structured data must point at the route nginx actually proxies to Laravel.
+        $user = User::factory()->create();
+        $ad = Ad::create([
+            'user_id' => $user->id,
+            'title' => json_encode(['es' => 'Bicicleta urbana', 'en' => 'City bicycle']),
+            'description' => json_encode([
+                'es' => 'Bicicleta urbana lista para rodar por toda la ciudad, frenos y llantas recién revisados.',
+                'en' => 'Ready to ride.',
+            ]),
+            'price' => 3500,
+            'location' => 'Guadalajara',
+            'category' => 'deportes',
+            'condition' => 'usado',
+            'image_url' => 'ads/bicicleta.webp',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+
+        $response = $this->get("https://mercasto.test/ads/{$ad->id}");
+
+        $response->assertOk();
+        $response->assertSee('content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"', false);
+        $response->assertSee('"@type":"Product"', false);
+        $response->assertSee('https://schema.org/InStock', false);
+        // Structured data must point at the live listing route, not /ad/{id}.
+        $response->assertSee("\"url\":\"https://mercasto.test/ads/{$ad->id}\"", false);
+        $response->assertDontSee('https://mercasto.test/ad/' . $ad->id, false);
+    }
+
+    public function test_listing_without_an_expiry_is_noindex_like_the_ads_sitemap(): void
+    {
+        // App\Support\ListingIndexability (shared with SitemapController) requires a non-null
+        // future expiry: a listing with no advertised lifetime is not published in
+        // /sitemap-ads.xml, so the shell must not claim an indexability the sitemap contradicts.
+        $user = User::factory()->create();
+        $ad = Ad::create([
+            'user_id' => $user->id,
+            'title' => 'Bicicleta urbana',
+            'description' => 'Bicicleta urbana lista para rodar por toda la ciudad, frenos revisados.',
+            'price' => 3500,
+            'location' => 'Guadalajara',
+            'category' => 'deportes',
+            'condition' => 'usado',
+            'image_url' => 'ads/bicicleta.webp',
+            'status' => 'active',
+            'expires_at' => null,
+            'is_catalog_filler' => false,
+        ]);
+
+        $response = $this->get("https://mercasto.test/ads/{$ad->id}");
+
+        $response->assertOk();
+        $response->assertSee('<title>Bicicleta urbana | Anuncio no disponible</title>', false);
+        $response->assertSee('content="noindex,follow,max-image-preview:large"', false);
+        $response->assertSee('"@type":"WebPage"', false);
+        $response->assertDontSee('"@type":"Product"', false);
+    }
+
+    public function test_indexnow_submits_the_canonical_listing_route(): void
+    {
+        Http::fake(['https://www.bing.com/*' => Http::response('', 200)]);
+
+        $user = User::factory()->create();
+        $ad = Ad::create([
+            'user_id' => $user->id,
+            'title' => 'Bicicleta urbana',
+            'description' => 'Bicicleta urbana lista para rodar por toda la ciudad, frenos revisados.',
+            'price' => 3500,
+            'location' => 'Guadalajara',
+            'category' => 'deportes',
+            'condition' => 'usado',
+            'image_url' => 'ads/bicicleta.webp',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+
+        IndexNowController::notifyAdChange($ad, 'create');
+
+        Http::assertSent(function ($request) use ($ad) {
+            $submitted = $request->data()['urlList'][0] ?? '';
+
+            return str_ends_with($submitted, "/ads/{$ad->id}")
+                && ! str_contains($submitted, "/ad/{$ad->id}");
+        });
+    }
+
+    public function test_placeholder_title_listing_is_noindex_but_not_marked_unavailable(): void
+    {
+        $user = User::factory()->create();
+        $ad = Ad::create([
+            'user_id' => $user->id,
+            'title' => 'test 1',
+            'description' => 'Publicación de prueba usada para validar el formulario durante el desarrollo.',
+            'price' => 10,
+            'location' => 'México',
+            'category' => 'hogar',
+            'condition' => 'usado',
+            'image_url' => 'ads/prueba.webp',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+
+        $response = $this->get("https://mercasto.test/ads/{$ad->id}");
+
+        $response->assertOk();
+        $response->assertSee('<title>test 1 | Mercasto</title>', false);
+        $response->assertSee('content="noindex,follow,max-image-preview:large"', false);
+        $response->assertSee('"@type":"WebPage"', false);
+        $response->assertDontSee('"@type":"Product"', false);
+    }
+
+    public function test_filtered_listings_page_is_noindex_and_clean_listings_page_is_indexable(): void
+    {
+        $this->get('https://mercasto.test/listings')
+            ->assertOk()
+            ->assertSee('content="index,follow,max-image-preview:large"', false);
+
+        foreach (['search=casa', 'category=motor', 'q=casa', 'subcategory=casas', 'page=2'] as $query) {
+            $this->get("https://mercasto.test/listings?{$query}")
+                ->assertOk()
+                ->assertSee('content="noindex,follow,max-image-preview:large"', false);
+        }
+
+        // Detail overlays and tracking parameters are not filters.
+        $this->get('https://mercasto.test/listings?ad=4321&utm_source=newsletter')
+            ->assertOk()
+            ->assertSee('content="index,follow,max-image-preview:large"', false);
     }
 
     public function test_inactive_ad_returns_branded_noindex_404_shell(): void

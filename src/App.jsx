@@ -16,6 +16,10 @@ import { subcategoriesByLang } from './constants/subcategoryTranslations';
 import { getVerticalCanonicalAlias, getVerticalSeo } from './constants/verticalSeo';
 import { getPublicSeo } from './constants/publicSeo';
 import {
+  ROBOTS_INDEXABLE, ROBOTS_NOINDEX, ROBOTS_PRIVATE,
+  assessListingIndexability, listingUrl, resultsPageRobots,
+} from './utils/seoIndexability';
+import {
   AuthEntryRoute, LegacyAccountListingRoute, ReferralRedirect, RequireAuth,
 } from './app/routeHelpers';
 import { useRefQueryParam } from './app/referralQuery';
@@ -1647,16 +1651,15 @@ function App() {
     let ogImage = "https://mercasto.com/icon-512x512.png";
     let ogType = "website";
 
+    // Catalog references are detected with the explicit marker helper, never truthiness:
+    // an unexpected payload shape must never relabel real inventory as a placeholder.
     const isViewedCatalogFiller = isCatalogReference(viewedAd);
-    const viewedExpiry = viewedAd?.expires_at ? new Date(viewedAd.expires_at) : null;
-    const isViewedListingIndexable = Boolean(
-      viewedAd
-      && !isViewedCatalogFiller
-      && viewedAd.status === 'active'
-      && viewedExpiry
-      && Number.isFinite(viewedExpiry.getTime())
-      && viewedExpiry.getTime() > Date.now()
-    );
+    // Indexability is decided by the shared policy module, which composes the availability
+    // contract shared with the ads sitemap (App\Support\ListingIndexability) with the
+    // thin-content gate, so the hydrated DOM can never disagree with the server-rendered
+    // shell (App\Support\SeoIndexability::assessListing).
+    const listingIndexability = assessListingIndexability(viewedAd, { lang });
+    const isViewedListingIndexable = listingIndexability.indexable;
 
     if (viewedAd) {
       title = `${localizedText(viewedAd.title, lang)} | Mercasto`;
@@ -1664,7 +1667,9 @@ function App() {
         ? localizedText(viewedAd.description, lang).substring(0, 160)
         : (t.ai_brand_description || desc);
       ogImage = getImageUrl(viewedAd.image_url);
-      ogType = isViewedListingIndexable ? "product" : "website";
+      // A catalog reference must never advertise a purchasable product, even if the page
+      // policy ever changes: only real, indexable inventory may claim og:type=product.
+      ogType = (isViewedListingIndexable && !isViewedCatalogFiller) ? "product" : "website";
     } else if (viewedCompany) {
       title = `${viewedCompany.name} | Mercasto`;
       desc = viewedCompany.bio
@@ -1701,7 +1706,7 @@ function App() {
     document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
     document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
     const canonicalHref = viewedAd
-      ? `https://mercasto.com/ads/${viewedAd.id}`
+      ? listingUrl(viewedAd.id)
       : viewedCompany
         ? `https://mercasto.com/vendedor/${viewedCompany.id}`
         : verticalCanonicalAlias
@@ -1720,26 +1725,28 @@ function App() {
       /^\/perfil\/editar\/?$/,
       /^\/anuncio\/\d+\/editar\/?$/,
     ];
-    const searchParams = new URLSearchParams(location.search);
-    const contentFilterKeys = [
-      'q', 'search', 'category', 'cat', 'state', 'city', 'location',
-      'min_price', 'max_price', 'condition', 'sort', 'page',
-    ];
-    const isFilteredResultsPage = ['/', '/listings'].includes(location.pathname)
-      && contentFilterKeys.some(key => searchParams.has(key));
+    const isResultsPage = ['/', '/listings'].includes(location.pathname.replace(/\/+$/, '') || '/');
     const isPrivateRoute = privatePathPatterns.some(pattern => pattern.test(location.pathname));
+    // `/ads/{id}` is proxied to the Laravel SEO shell, which already rendered the correct
+    // robots directive. Leave it in place until the ad payload arrives so the crawler-visible
+    // value never flips optimistically.
+    const isServerRenderedListing = /^\/ads\/\d+\/?$/.test(location.pathname);
     const robotsContent = isPrivateRoute
-      ? 'noindex,nofollow,noarchive'
-      : isFilteredResultsPage || Boolean(verticalCanonicalAlias) || (viewedAd && !isViewedListingIndexable)
-        ? 'noindex,follow,max-image-preview:large'
-        : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+      ? ROBOTS_PRIVATE
+      : viewedAd
+        ? listingIndexability.robots
+        : isResultsPage
+          ? resultsPageRobots(location.pathname, location.search)
+          : verticalCanonicalAlias
+            ? ROBOTS_NOINDEX
+            : ROBOTS_INDEXABLE;
     let robotsEl = document.querySelector('meta[name="robots"]');
     if (!robotsEl) {
       robotsEl = document.createElement('meta');
       robotsEl.setAttribute('name', 'robots');
       document.head.appendChild(robotsEl);
     }
-    if (routeSeoOwner !== 'not-found') {
+    if (routeSeoOwner !== 'not-found' && !(isServerRenderedListing && !viewedAd)) {
       robotsEl.setAttribute('content', robotsContent);
     }
 
@@ -1768,7 +1775,7 @@ function App() {
         "image": getImageUrl(viewedAd.image_url),
         "offers": {
           "@type": "Offer",
-          "url": `https://mercasto.com/ads/${viewedAd.id}`,
+          "url": listingUrl(viewedAd.id),
           "price": viewedAd.price,
           "priceCurrency": "MXN",
           "itemCondition": viewedAd.condition === 'new' ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",

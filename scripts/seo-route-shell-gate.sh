@@ -23,8 +23,14 @@ grep -qF 'alt={alt}' src/App.jsx
 grep -qF "alt={localizedText(ad.title, lang) || detailCopy.imageAlt}" src/components/screens/AdDetailScreen.jsx
 grep -qF 'meta[name="twitter:title"]' src/App.jsx
 grep -qF '<html lang="es-MX">' index.html
-grep -qF "'noindex,nofollow,noarchive'" src/App.jsx
-grep -qF "'noindex,follow,max-image-preview:large'" src/App.jsx
+# robots directives live in the shared policy module (src/utils/seoIndexability.js)
+# and App.jsx must consume them, so SSR and the hydrated DOM cannot drift.
+grep -qF "export const ROBOTS_PRIVATE = 'noindex,nofollow,noarchive'" src/utils/seoIndexability.js
+grep -qF "export const ROBOTS_NOINDEX = 'noindex,follow,max-image-preview:large'" src/utils/seoIndexability.js
+grep -qF "export const ROBOTS_INDEXABLE = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1'" src/utils/seoIndexability.js
+grep -qF 'ROBOTS_INDEXABLE, ROBOTS_NOINDEX, ROBOTS_PRIVATE' src/App.jsx
+grep -qF "public const ROBOTS_PRIVATE = 'noindex,nofollow,noarchive'" backend/app/Support/SeoIndexability.php
+grep -qF "public const ROBOTS_NOINDEX = 'noindex,follow,max-image-preview:large'" backend/app/Support/SeoIndexability.php
 grep -qF 'Mercasto: compra, vende y renta en todo México' src/components/screens/HomeScreen.jsx
 ! grep -qF 'sitemap-states.xml' <(sed -n '/\$sitemaps = \[/,/\];/p' backend/app/Http/Controllers/Api/SitemapController.php)
 grep -qF 'legacy' backend/app/Http/Controllers/Api/SitemapController.php

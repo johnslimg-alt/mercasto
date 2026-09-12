@@ -6,6 +6,7 @@ import { formatDate, formatNumber } from '../../utils/localeFormat';
 import { filterOptionLabel } from '../../utils/filterOptionTranslations';
 import { canonicalAdCondition, formatAdDetailCopy, getAdDetailCopy } from '../../utils/adDetailCopy';
 import { publicListingAttributeEntries } from '../../utils/publicListingAttributes';
+import { listingUrl } from '../../utils/seoIndexability';
 import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
 
@@ -532,7 +533,7 @@ export default function AdDetailScreen({
           "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
           "offers": {
             "@type": "Offer",
-            "url": `https://mercasto.com/ads/${ad.id}`,
+            "url": listingUrl(ad.id),
             "priceCurrency": "MXN",
             "price": ad.price || "0",
             "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",

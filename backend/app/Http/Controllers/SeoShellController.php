@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Ad;
 use App\Support\ListingIndexability;
+use App\Support\SeoIndexability;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +13,7 @@ use RuntimeException;
 
 class SeoShellController extends Controller
 {
-    public function listings(): Response
+    public function listings(Request $request): Response
     {
         $canonical = url('/listings');
         $description = 'Explora anuncios clasificados en todo México: autos, inmuebles, empleo, servicios, electrónica y más en Mercasto.';
@@ -23,7 +24,10 @@ class SeoShellController extends Controller
             'canonical' => $canonical,
             'type' => 'website',
             'image' => url('/icon-512x512.png'),
-            'robots' => 'index,follow,max-image-preview:large',
+            // Filtered result views must not be indexed, and this has to be decided here:
+            // crawlers that do not execute JavaScript only ever see this server-rendered
+            // response, and it used to say index,follow while the hydrated DOM said noindex.
+            'robots' => SeoIndexability::resultsRobots($request),
         ], [
             '@context' => 'https://schema.org',
             '@type' => 'CollectionPage',
@@ -297,24 +301,35 @@ class SeoShellController extends Controller
             180,
             '',
         );
-        $canonical = url('/ads/' . $ad->id);
+        $canonical = SeoIndexability::listingUrl($ad->id);
         $image = $this->resolveImage($ad);
         $isCatalogFiller = (bool) $ad->is_catalog_filler;
-        $isCurrentlyAvailable = $ad->expires_at && $ad->expires_at->isFuture();
-        // Shared contract with SitemapController so the shell and the ads sitemap can never
-        // drift apart again (a hand-copied filter emptied /sitemap-ads.xml in Aug 2026).
-        $isIndexableListing = ListingIndexability::isIndexable($ad);
+        // Availability is the contract shared with SitemapController so the shell and the ads
+        // sitemap can never drift apart again (a hand-copied filter emptied /sitemap-ads.xml in
+        // Aug 2026). SeoIndexability delegates to ListingIndexability and layers the thin-content
+        // gate on top, so copy the sitemap also refuses to publish can never be indexed either.
+        $indexability = SeoIndexability::assessListing($ad);
+        $isIndexableListing = $indexability['indexable'];
 
         if (! $isIndexableListing) {
+            // A listing can be non-indexable because it is unavailable, or because it is
+            // placeholder/thin content. Only the first case is "not available"; the second is
+            // still a live, usable page. The client mirrors this suffix exactly.
+            $isUnavailable = (bool) array_intersect(
+                ['expired', 'not_active', 'no_expiry'],
+                $indexability['reasons'],
+            );
+            $titleSuffix = $isCatalogFiller
+                ? ' | Catálogo Mercasto'
+                : ($isUnavailable ? ' | Anuncio no disponible' : ' | Mercasto');
+
             return $this->renderShell([
-                'title' => $isCatalogFiller
-                    ? $title . ' | Catálogo Mercasto'
-                    : $title . ' | Anuncio no disponible',
+                'title' => $title . $titleSuffix,
                 'description' => $description,
                 'canonical' => $canonical,
                 'type' => 'website',
                 'image' => $image,
-                'robots' => 'noindex,follow,max-image-preview:large',
+                'robots' => SeoIndexability::ROBOTS_NOINDEX,
             ], [
                 '@context' => 'https://schema.org',
                 '@type' => 'WebPage',
@@ -338,7 +353,8 @@ class SeoShellController extends Controller
             'canonical' => $canonical,
             'type' => 'product',
             'image' => $image,
-            'robots' => 'index,follow,max-image-preview:large',
+            // Same directive the hydrated DOM writes for an indexable listing.
+            'robots' => SeoIndexability::ROBOTS_INDEXABLE,
         ], [
             '@context' => 'https://schema.org',
             '@type' => 'Product',

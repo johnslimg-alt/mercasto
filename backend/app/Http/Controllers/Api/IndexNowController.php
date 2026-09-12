@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ad;
+use App\Support\SeoIndexability;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use App\Models\Ad;
 
 class IndexNowController extends Controller
 {
@@ -139,7 +140,10 @@ class IndexNowController extends Controller
      */
     public static function notifyAdChange(Ad $ad, string $action = 'update')
     {
-        $url = url("/ad/{$ad->id}");
+        // Must be the canonical listing route: `/ad/{id}` is registered neither
+        // in web.php nor in nginx, so submitting it asked IndexNow to crawl a
+        // soft-404 instead of the listing.
+        $url = SeoIndexability::listingUrl($ad->id);
         
         try {
             $controller = new self();
