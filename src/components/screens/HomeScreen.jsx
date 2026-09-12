@@ -428,7 +428,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <button data-testid="home-open-filters" type="button" onClick={() => { setActiveCat(''); navigate('/listings'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter}</button>
 
-                  <a href="/listings" onClick={(e) => { e.preventDefault(); setActiveCat(''); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all}</a>
+                  <a href="/listings" onClick={(e) => { e.preventDefault(); setActiveCat(''); }} className="home-see-all text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all}</a>
 
                 </div>
 
@@ -568,7 +568,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   </div>
 
-                  <a href="/listings?category=inmobiliaria" onClick={(e) => { e.preventDefault(); setActiveCat('inmobiliaria'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline cursor-pointer">{t.view_props || 'Ver propiedades →'}</a>
+                  <a href="/listings?category=inmobiliaria" onClick={(e) => { e.preventDefault(); setActiveCat('inmobiliaria'); }} className="home-see-all text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline cursor-pointer">{t.view_props || 'Ver propiedades →'}</a>
 
                 </div>
 
@@ -638,7 +638,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     <div className="absolute inset-x-4 bottom-16 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-medium text-slate-800 dark:text-white">{formatHomePropertiesLabel(lang, selectedState)}</span>
-                        <button type="button" onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-lime-800 dark:text-lime-400 hover:underline">{t.view_all_mexico} →</button>
+                        <button type="button" onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="home-see-all cursor-pointer font-semibold text-lime-800 dark:text-lime-400 hover:underline">{t.view_all_mexico} →</button>
                       </div>
                     </div>
                   </div>
@@ -665,7 +665,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <button onClick={() => { runSearch('Tiempo Completo', 'empleo'); }} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700">{t.full_time || 'Tiempo completo'}</button>
 
-                  <a href="/listings?category=empleo" onClick={(e) => { e.preventDefault(); setActiveCat('empleo'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all}</a>
+                  <a href="/listings?category=empleo" onClick={(e) => { e.preventDefault(); setActiveCat('empleo'); }} className="home-see-all text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all}</a>
 
                 </div>
 
@@ -770,7 +770,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                 <h2 className="text-[22px] font-bold tracking-tight">{t.services_marketplace || 'Directorio de servicios'}</h2>
 
-                <a href="/listings?category=servicios" onClick={(e) => { e.preventDefault(); setActiveCat('servicios'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline cursor-pointer">{t.browse_services || 'Ver todos →'}</a>
+                <a href="/listings?category=servicios" onClick={(e) => { e.preventDefault(); setActiveCat('servicios'); }} className="home-see-all text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline cursor-pointer">{t.browse_services || 'Ver todos →'}</a>
 
               </div>
 

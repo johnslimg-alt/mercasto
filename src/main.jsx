@@ -18,6 +18,9 @@ import './index.css'
 // Our more-specific dark selectors then win the author cascade without !important.
 import './leaflet-dark-overrides.css'
 import './catalog-touch-targets.css'
+// WCAG 2.5.8 (AA) text-sized navigation targets (footer links, home "see all").
+// Unlayered on purpose so it beats the Tailwind utilities it has to coexist with.
+import './tap-target-accessibility.css'
 import './mobile-shell-touch-targets.css'
 import './header-focus.css'
 import './admin-dark-safety.css'
