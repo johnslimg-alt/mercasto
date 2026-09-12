@@ -193,6 +193,16 @@ jobs:
           HOME=/root /usr/local/bin/hermes dashboard --status 2>&1 | tail -80 || true
           echo "=== listener 9119 ==="
           ss -ltnp 2>/dev/null | grep ':9119' || true
+          echo "=== harness edge config ==="
+          if [ -s /etc/mercasto-edge/harness.conf ]; then
+            sed -E 's/(auth_basic_user_file[[:space:]]+)[^;]+;/\1<AUTH_FILE_REDACTED>;/g' /etc/mercasto-edge/harness.conf | tail -160
+          else
+            echo "missing:/etc/mercasto-edge/harness.conf"
+          fi
+          echo "=== edge mounts ==="
+          docker inspect mercasto_frontend_container --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}' 2>/dev/null \
+            | grep -E 'mercasto-edge|letsencrypt|nginx|cert' \
+            | tail -120 || true
           REMOTE
 
       - name: Remove SSH key
