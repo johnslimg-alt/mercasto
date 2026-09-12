@@ -1,0 +1,51 @@
+name: Find Mercasto Redesign
+
+on:
+  push:
+    branches:
+      - ops/find-mercasto-redesign
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  find:
+    runs-on: [self-hosted]
+    timeout-minutes: 10
+    steps:
+      - name: Find redesign files
+        id: find
+        shell: bash
+        run: |
+          set +e
+          {
+            echo "REDESIGN_FILE_SEARCH_RESULT"
+            echo "host=$(hostname)"
+            echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            find /workspace /var/www /root /opt /srv /work \
+              -type f \
+              \( -iname 'mercasto-redesign.html' \
+                 -o -iname 'mercasto-design-v2.html' \
+                 -o -iname '*mercasto*redesign*.html' \
+                 -o -iname '*redesign*mercasto*.html' \) \
+              -printf '%p | %TY-%Tm-%Td %TH:%TM:%TS | %s bytes\n' 2>/dev/null | sort
+          } | tee /tmp/mercasto-redesign-search.txt
+
+      - name: Report to issue 832
+        if: always()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            let body = 'REDESIGN_FILE_SEARCH_RESULT\n(no output)';
+            try {
+              body = fs.readFileSync('/tmp/mercasto-redesign-search.txt','utf8').trim();
+            } catch (e) {}
+            if (body.length > 60000) body = body.slice(0,60000) + '\n[truncated]';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body
+            });
