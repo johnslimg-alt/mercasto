@@ -179,10 +179,23 @@ preflight_runner_memory() {
   bash scripts/runner-memory-preflight.sh --label "mercasto-verify-quick"
 }
 
+# Rule E5 - environment fidelity. Every npm-running path in this script must prove the
+# installed tree still matches package-lock.json before its results are treated as
+# evidence. The host checkout is long-lived, so drift accumulates silently; a gate that
+# runs npm against a drifted tree validates an artifact neither CI nor production builds.
+# Read-only: this detects and fails, it never installs. See
+# docs/architecture/lockfile-fidelity.md (canonical rule: company verification
+# E5-environment-fidelity.md).
+require_lockfile_fidelity() {
+  print_header "Lockfile fidelity (rule E5)"
+  node scripts/check-lockfile-fidelity.mjs
+}
+
 run_verify_quick() {
   print_header "verify:quick"
   preflight_runner_memory
   if command -v npm >/dev/null 2>&1; then
+    require_lockfile_fidelity
     npm run verify:quick
     bash scripts/offsite-backup-smoke.sh
     bash scripts/media-offsite-backup-smoke.sh
@@ -304,6 +317,7 @@ PY
   security_smoke)
     print_header "Security probes"
     if command -v npm >/dev/null 2>&1; then
+      require_lockfile_fidelity
       npm run smoke:security
     else
       bash scripts/security-probes.sh
@@ -777,6 +791,7 @@ ROOT
   maintenance_reboot)
     require_confirm
     print_header "Maintenance reboot preflight"
+    require_lockfile_fidelity
     npm run maintenance:precheck
 
     if [ ! -f /var/run/reboot-required ]; then

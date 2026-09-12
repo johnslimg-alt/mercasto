@@ -90,6 +90,33 @@ test('mocked deploy enforces cache and upstream refresh order', () => {
   chmodSync(join(fixture, 'scripts', 'production-e2e-account-security-smoke.sh'), 0o755);
   writeFileSync(join(fixture, 'docker-compose.yml'), 'services: {}\n');
   writeFileSync(join(fixture, 'backend', '.env'), 'APP_ENV=testing\n');
+  // run_verify_quick proves lockfile fidelity (rule E5) before it runs npm, so the
+  // fixture needs a genuinely faithful tree. Use the real checker against a small
+  // lockfile-exact install rather than stubbing the check out, so this test still
+  // covers the path it exercises in production.
+  writeFileSync(
+    join(fixture, 'scripts', 'check-lockfile-fidelity.mjs'),
+    read('scripts/check-lockfile-fidelity.mjs', 'utf8')
+  );
+  writeFileSync(
+    join(fixture, 'package-lock.json'),
+    JSON.stringify(
+      {
+        lockfileVersion: 3,
+        packages: {
+          '': { name: 'mercasto-deploy-fixture', version: '1.0.0' },
+          'node_modules/left-pad': { version: '1.3.0' },
+        },
+      },
+      null,
+      2
+    )
+  );
+  mkdirSync(join(fixture, 'node_modules', 'left-pad'), { recursive: true });
+  writeFileSync(
+    join(fixture, 'node_modules', 'left-pad', 'package.json'),
+    JSON.stringify({ name: 'left-pad', version: '1.3.0' })
+  );
   writeFileSync(join(cache, 'config.php'), 'stale');
   writeFileSync(join(cache, 'events.php'), 'stale');
   writeFileSync(join(cache, 'routes-v7.php'), 'stale');
