@@ -539,7 +539,7 @@ WorkingDirectory=/usr/local/lib/hermes-agent
 ExecStart=/usr/local/bin/hermes dashboard --host 127.0.0.1 --port 9119 --no-open
 Restart=on-failure
 RestartSec=3
-TimeoutStartSec=60
+TimeoutStartSec=120
 NoNewPrivileges=true
 
 [Install]
@@ -548,9 +548,22 @@ EOF
 
 systemctl daemon-reload
 systemctl enable --now hermes-dashboard.service
-sleep 3
-systemctl is-active --quiet hermes-dashboard.service
-curl -fsS --max-time 15 "http://127.0.0.1:$DASH_PORT/api/status" >/tmp/hermes-dashboard-status.json
+
+DASH_READY=0
+for attempt in $(seq 1 90); do
+  if curl -fsS --max-time 3 "http://127.0.0.1:$DASH_PORT/api/status" >/tmp/hermes-dashboard-status.json 2>/dev/null; then
+    DASH_READY=1
+    break
+  fi
+  sleep 1
+done
+if [ "$DASH_READY" -ne 1 ]; then
+  systemctl status hermes-dashboard.service --no-pager -l || true
+  journalctl -u hermes-dashboard.service -n 120 --no-pager || true
+  echo "HERMES_DASHBOARD_NOT_READY" >&2
+  exit 56
+fi
+
 python3 - /tmp/hermes-dashboard-status.json <<'PY'
 import json,sys
 data=json.load(open(sys.argv[1]))
@@ -558,32 +571,45 @@ print("dashboard_local_status=ok")
 print("dashboard_auth_required=" + str(data.get("auth_required")).lower())
 PY
 
-HARNESS_CONF="$(
-  grep -RIl \
-    --include='*' \
-    -E 'server_name[[:space:]]+[^;]*harness\.flyaicrm\.com' \
-    /etc/nginx/sites-enabled /etc/nginx/sites-available /etc/nginx/conf.d \
-    2>/dev/null | head -1 || true
-)"
-if [ -z "$HARNESS_CONF" ]; then
-  echo "HERMES_PUBLISH_BLOCKED=harness_nginx_config_not_found" >&2
-  exit 51
+if ! command -v socat >/dev/null 2>&1; then
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq socat
 fi
 
-AUTH_FILE="$(
-  awk '
-    $1 == "auth_basic_user_file" {
-      gsub(/;/,"",$2)
-      print $2
-      exit
-    }
-  ' "$HARNESS_CONF"
-)"
-if [ -z "$AUTH_FILE" ] || [ ! -s "$AUTH_FILE" ]; then
-  echo "HERMES_PUBLISH_BLOCKED=harness_auth_file_not_found" >&2
-  exit 52
-fi
-echo "hermes_auth_source=harness"
+BRIDGE_GATEWAY="$(docker network inspect mercasto_default --format '{{(index .IPAM.Config 0).Gateway}}')"
+test -n "$BRIDGE_GATEWAY"
+BRIDGE_PORT=19119
+
+cat >/etc/systemd/system/hermes-edge-bridge.service <<EOF
+[Unit]
+Description=Hermes loopback bridge for Mercasto edge
+After=network-online.target docker.service hermes-dashboard.service
+Requires=hermes-dashboard.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/socat TCP-LISTEN:$BRIDGE_PORT,bind=$BRIDGE_GATEWAY,reuseaddr,fork TCP:127.0.0.1:$DASH_PORT
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now hermes-edge-bridge.service
+sleep 1
+systemctl is-active --quiet hermes-edge-bridge.service
+curl -fsS --max-time 5 "http://$BRIDGE_GATEWAY:$BRIDGE_PORT/api/status" >/tmp/hermes-bridge-status.json
+docker exec mercasto_frontend_container wget -qO- "http://$BRIDGE_GATEWAY:$BRIDGE_PORT/api/status" >/tmp/hermes-edge-status.json
+
+EDGE_CONF=/etc/mercasto-edge/harness.conf
+CA_SRC=/var/www/mercasto/ops/hermes/hermes-client-ca.crt
+CA_DST=/etc/letsencrypt/hermes-client-ca.crt
+test -s "$EDGE_CONF"
+test -s "$CA_SRC"
+install -m 0644 "$CA_SRC" "$CA_DST"
 
 HARNESS_IP="$(getent ahostsv4 "$HARNESS_DOMAIN" | awk 'NR==1 {print $1}' || true)"
 HERMES_IP="$(getent ahostsv4 "$DOMAIN" | awk 'NR==1 {print $1}' || true)"
@@ -594,28 +620,35 @@ if [ -z "$HARNESS_IP" ] || [ -z "$HERMES_IP" ] || [ "$HARNESS_IP" != "$HERMES_IP
   exit 53
 fi
 
-install -d -m 0755 /var/www/letsencrypt
-install -d -m 0755 /etc/nginx/sites-available /etc/nginx/sites-enabled
-
-cat >/etc/nginx/sites-available/hermes.flyaicrm.com <<EOF
-server {
+python3 - "$EDGE_CONF" "$BRIDGE_GATEWAY" "$BRIDGE_PORT" <<'PY'
+import re,sys
+from pathlib import Path
+path=Path(sys.argv[1])
+gateway=sys.argv[2]
+port=sys.argv[3]
+text=path.read_text()
+text=re.sub(r'\n?# HERMES_FLYAICRM_BEGIN.*?# HERMES_FLYAICRM_END\n?', '\n', text, flags=re.S)
+block=f'''
+# HERMES_FLYAICRM_BEGIN
+server {{
     listen 80;
-    listen [::]:80;
     server_name hermes.flyaicrm.com;
 
-    location ^~ /.well-known/acme-challenge/ {
-        root /var/www/letsencrypt;
-        auth_basic off;
-    }
+    location /.well-known/acme-challenge/ {{
+        root /var/www/certbot;
+    }}
 
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-EOF
-ln -sfn /etc/nginx/sites-available/hermes.flyaicrm.com /etc/nginx/sites-enabled/hermes.flyaicrm.com
-nginx -t
-systemctl reload nginx
+    location / {{
+        return 301 https://$host$request_uri;
+    }}
+}}
+# HERMES_FLYAICRM_END
+'''
+path.write_text(text.rstrip()+"\n\n"+block.lstrip())
+PY
+
+docker exec mercasto_frontend_container nginx -t
+docker exec mercasto_frontend_container nginx -s reload
 
 if [ ! -s /etc/letsencrypt/live/hermes.flyaicrm.com/fullchain.pem ] || \
    [ ! -s /etc/letsencrypt/live/hermes.flyaicrm.com/privkey.pem ]; then
@@ -625,7 +658,7 @@ if [ ! -s /etc/letsencrypt/live/hermes.flyaicrm.com/fullchain.pem ] || \
   fi
   certbot certonly \
     --webroot \
-    -w /var/www/letsencrypt \
+    -w /var/www/certbot \
     -d hermes.flyaicrm.com \
     --non-interactive \
     --agree-tos \
@@ -635,70 +668,95 @@ fi
 test -s /etc/letsencrypt/live/hermes.flyaicrm.com/fullchain.pem
 test -s /etc/letsencrypt/live/hermes.flyaicrm.com/privkey.pem
 
-cat >/etc/nginx/sites-available/hermes.flyaicrm.com <<EOF
-server {
+python3 - "$EDGE_CONF" "$BRIDGE_GATEWAY" "$BRIDGE_PORT" <<'PY'
+import re,sys
+from pathlib import Path
+path=Path(sys.argv[1])
+gateway=sys.argv[2]
+port=sys.argv[3]
+text=path.read_text()
+text=re.sub(r'\n?# HERMES_FLYAICRM_BEGIN.*?# HERMES_FLYAICRM_END\n?', '\n', text, flags=re.S)
+block=f'''
+# HERMES_FLYAICRM_BEGIN
+server {{
     listen 80;
-    listen [::]:80;
     server_name hermes.flyaicrm.com;
 
-    location ^~ /.well-known/acme-challenge/ {
-        root /var/www/letsencrypt;
-        auth_basic off;
-    }
+    location /.well-known/acme-challenge/ {{
+        root /var/www/certbot;
+    }}
 
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
+    location / {{
+        return 301 https://$host$request_uri;
+    }}
+}}
 
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+server {{
+    listen 443 ssl;
     server_name hermes.flyaicrm.com;
 
     ssl_certificate /etc/letsencrypt/live/hermes.flyaicrm.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/hermes.flyaicrm.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
-    auth_basic "Hermes";
-    auth_basic_user_file \${AUTH_FILE};
+    ssl_client_certificate /etc/letsencrypt/hermes-client-ca.crt;
+    ssl_verify_client on;
+    ssl_verify_depth 1;
 
-    location / {
-        proxy_pass http://127.0.0.1:9119;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location / {{
+        proxy_pass http://{gateway}:{port};
         proxy_http_version 1.1;
-        proxy_set_header Host 127.0.0.1:9119;
-        proxy_set_header Origin http://127.0.0.1:9119;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+        proxy_set_header Origin $http_origin;
+        proxy_set_header X-Forwarded-Host hermes.flyaicrm.com;
         proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
-    }
-}
-EOF
+        proxy_buffering off;
+    }}
+}}
+# HERMES_FLYAICRM_END
+'''
+path.write_text(text.rstrip()+"\n\n"+block.lstrip())
+PY
 
-nginx -t
-systemctl reload nginx
+docker exec mercasto_frontend_container nginx -t
+docker exec mercasto_frontend_container nginx -s reload
 
-HTTP_CODE="$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 20 https://hermes.flyaicrm.com/)"
-if [ "$HTTP_CODE" != "401" ]; then
-  echo "Unexpected unauthenticated HTTPS status: $HTTP_CODE" >&2
-  exit 54
-fi
+NO_CERT_CODE="$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 20 https://hermes.flyaicrm.com/)"
+case "$NO_CERT_CODE" in
+  400|403|495|496) ;;
+  *)
+    echo "Expected mTLS rejection without a client certificate, got HTTP $NO_CERT_CODE" >&2
+    exit 54
+    ;;
+esac
 
 echo "hermes_dashboard_service=$(systemctl is-active hermes-dashboard.service)"
+echo "hermes_bridge_service=$(systemctl is-active hermes-edge-bridge.service)"
+echo "hermes_bridge_gateway=$BRIDGE_GATEWAY"
 echo "harness_service=$(systemctl is-active deepseek-harness.service 2>/dev/null || true)"
 echo "harness_proxy=$(systemctl is-active deepseek-harness-proxy.service 2>/dev/null || true)"
 echo "hermes_url=https://hermes.flyaicrm.com"
-echo "hermes_external_auth=nginx_basic_reused_from_harness"
+echo "hermes_external_auth=mtls"
+echo "hermes_no_cert_http=$NO_CERT_CODE"
 echo "HERMES_PUBLISH_OK"
 
 rm -f /tmp/hermes-web-sync.log \
   /tmp/hermes-deepseek-smoke \
   /tmp/hermes-glm-smoke \
   /tmp/hermes-free-router-smoke \
-  /tmp/hermes-dashboard-status.json
+  /tmp/hermes-dashboard-status.json \
+  /tmp/hermes-bridge-status.json \
+  /tmp/hermes-edge-status.json
 ROOT
     ;;
 
