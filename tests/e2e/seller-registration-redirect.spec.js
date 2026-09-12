@@ -58,6 +58,14 @@ test.describe('seller campaign registration return', () => {
     await registrationForm.locator('input[name="name"]').fill(registeredUser.name);
     await registrationForm.locator('input[name="email"]').fill(registeredUser.email);
     await registrationForm.locator('input[name="password"]').fill('SecurePass123!');
+
+    // The dialog autofocuses its first field, so assert every value landed in the input it
+    // was meant for. Without this, a focus steal that redirects the password into the name
+    // field only surfaces much later as an opaque checkValidity() timeout.
+    await expect(registrationForm.locator('input[name="name"]')).toHaveValue(registeredUser.name);
+    await expect(registrationForm.locator('input[name="email"]')).toHaveValue(registeredUser.email);
+    await expect(registrationForm.locator('input[name="password"]')).toHaveValue('SecurePass123!');
+
     const consentCheckbox = registrationForm.locator('input[type="checkbox"]');
     await consentCheckbox.check();
 

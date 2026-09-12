@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef, Suspense } from 'react';
 import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { getTranslations } from './utils/translations';
@@ -569,7 +569,10 @@ function App() {
     }
   }, [authLoading, getAuthModalFocusables]);
 
-  useEffect(() => {
+  // Record which element opened the dialog and give focus back to it on close.
+  // This has to be a layout effect so it samples document.activeElement in the same
+  // commit, before the dialog's own autofocus (below) moves focus into the form.
+  useLayoutEffect(() => {
     if (showAuthModal && !authModalWasOpenRef.current) {
       const active = document.activeElement;
       authModalOpenerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
@@ -614,17 +617,28 @@ function App() {
     return () => window.removeEventListener('keydown', handleEscape, true);
   }, [showAuthModal, authLoading]);
 
-  useEffect(() => {
-    if (!showAuthModal) return undefined;
-    const frame = window.requestAnimationFrame(() => {
-      const dialog = authModalDialogRef.current;
-      if (!dialog) return;
-      const preferred = dialog.querySelector(
-        'input[autofocus], input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])',
-      ) || getAuthModalFocusables()[0];
-      preferred?.focus();
-    });
-    return () => window.cancelAnimationFrame(frame);
+  // Autofocus the first field of the auth dialog when it opens or its mode changes.
+  // This has to run synchronously with the commit (useLayoutEffect) rather than on a
+  // later animation frame: a deferred focus lands after the visitor may have already
+  // focused another field in the same dialog, and every keystroke that follows (typing,
+  // paste, dictation, browser drivers) is then delivered to the wrong input - the
+  // register password ended up appended to the name field that way.
+  useLayoutEffect(() => {
+    if (!showAuthModal) return;
+    const dialog = authModalDialogRef.current;
+    if (!dialog) return;
+    const active = document.activeElement;
+    const activeTag = active?.tagName?.toLowerCase();
+    const editingInDialog = Boolean(active)
+      && active !== dialog
+      && dialog.contains(active)
+      && (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select' || active.isContentEditable === true);
+    // Never steal focus from a field the visitor is already editing in this dialog.
+    if (editingInDialog) return;
+    const preferred = dialog.querySelector(
+      'input[autofocus], input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])',
+    ) || getAuthModalFocusables()[0];
+    preferred?.focus();
   }, [showAuthModal, authMode, requiresTwoFactor, getAuthModalFocusables]);
 
   const [accountType, setAccountType] = useState('particular');
