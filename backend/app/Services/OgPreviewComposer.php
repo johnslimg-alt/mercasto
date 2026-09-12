@@ -51,6 +51,14 @@ class OgPreviewComposer
      * Absolute og:image URL for this listing, or null when this composer cannot
      * help and the caller must keep its current URL.
      *
+     * The URL carries a `v` token derived from the source file's identity. The
+     * path alone is stable for the life of a listing, so an edge cache that
+     * already holds `/share/ads/{id}/og.jpg` (platforms and CDNs keep it for
+     * days) would keep showing the previous product photo after the seller
+     * replaces it. A changed token is a different URL, so the stale entry is
+     * never consulted. The token is advisory: the controller always renders the
+     * current photo and ignores it.
+     *
      * Null is returned only for a photo hosted outside Mercasto: proxying a
      * third-party host from a crawler-facing endpoint would add an unbounded
      * external fetch to the request path. Every listing sampled in production
@@ -62,7 +70,31 @@ class OgPreviewComposer
             return null;
         }
 
-        return route('share.og-image', ['id' => $ad->id]);
+        return route('share.og-image', ['id' => $ad->id, 'v' => $this->versionToken($ad)]);
+    }
+
+    /**
+     * Short token that changes whenever the listing photo changes. `brand` when
+     * there is no readable local photo, because the branded card is deterministic
+     * for every such listing.
+     */
+    public function versionToken(Ad $ad): string
+    {
+        $relative = $this->sourceRelativePath($ad);
+        if ($relative === null) {
+            return 'brand';
+        }
+
+        $source = $this->sourceAbsolutePath($relative);
+        if ($source === null) {
+            return 'brand';
+        }
+
+        return substr(sha1(implode('|', [
+            $relative,
+            (string) @filesize($source),
+            (string) @filemtime($source),
+        ])), 0, 12);
     }
 
     /**
@@ -96,18 +128,18 @@ class OgPreviewComposer
     {
         $relative = $this->sourceRelativePath($ad);
         if ($relative === null) {
-            return $this->brandCard();
+            return $this->cachedBrandCard();
         }
 
         $source = $this->sourceAbsolutePath($relative);
         if ($source === null) {
-            return $this->brandCard();
+            return $this->cachedBrandCard();
         }
 
         // Header-only read: cheap, and false for missing or corrupt files.
         $dimensions = @getimagesize($source);
         if ($dimensions === false || (int) $dimensions[0] < 1 || (int) $dimensions[1] < 1) {
-            return $this->brandCard();
+            return $this->cachedBrandCard();
         }
 
         $sourceWidth = (int) $dimensions[0];
@@ -135,8 +167,38 @@ class OgPreviewComposer
     }
 
     /**
-     * Branded, photo-less 1200x630 card. Prefers the designer's static card when
-     * it is present and genuinely 1200x630, otherwise composes an equivalent one.
+     * Branded, photo-less 1200x630 card, served from the private cache when
+     * possible. Without this, every crawler hit on a listing that has no photo -
+     * or whose referenced file is missing - would re-encode the same card with
+     * GD on each request.
+     */
+    public function cachedBrandCard(): OgPreviewResult
+    {
+        $cachePath = $this->brandCachePath();
+
+        if ($cachePath !== null && $this->cacheDisk()->exists($cachePath)) {
+            $cached = (string) $this->cacheDisk()->get($cachePath);
+            $cacheMime = self::detectMime($cached);
+            if ($cacheMime !== null && $this->isValidPreview($cached)) {
+                return OgPreviewResult::brand($cached, $this->frameWidth(), $this->frameHeight(), $cacheMime);
+            }
+            $this->cacheDisk()->delete($cachePath);
+        }
+
+        $result = $this->brandCard();
+
+        if ($cachePath !== null) {
+            $this->cacheDisk()->put($cachePath, $result->bytes);
+            $this->pruneIfOversized();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Branded, photo-less 1200x630 card. Prefers a statically deployed card when
+     * the backend can read it and it is genuinely the frame size, otherwise
+     * composes an equivalent one.
      */
     public function brandCard(): OgPreviewResult
     {
@@ -232,6 +294,48 @@ class OgPreviewComposer
         ]));
 
         return $directory . '/ad-' . $ad->id . '-' . $fingerprint . '.jpg';
+    }
+
+    /**
+     * Cache path for the branded, photo-less card. Deliberately extension-less:
+     * the payload may be a statically deployed JPEG or PNG, so the name must be
+     * derivable from the inputs alone while the MIME is detected from the bytes.
+     */
+    public function brandCachePath(): ?string
+    {
+        $directory = trim((string) config('og.cache.path', 'og-previews'), '/');
+        if ($directory === '') {
+            return null;
+        }
+
+        $fingerprint = sha1(implode('|', [
+            self::CACHE_VERSION,
+            'brand',
+            (string) $this->frameWidth(),
+            (string) $this->frameHeight(),
+            (string) $this->quality(),
+            implode(',', $this->staticCardCandidates()),
+            // Identity of the deployed card, so replacing it at the same path
+            // regenerates instead of serving the previous artwork.
+            $this->staticCardIdentity(),
+        ]));
+
+        return $directory . '/brand-' . $fingerprint;
+    }
+
+    /**
+     * size:mtime of the first readable static card, or 'composed' when the card
+     * is generated in-service.
+     */
+    private function staticCardIdentity(): string
+    {
+        foreach ($this->staticCardCandidates() as $path) {
+            if (is_file($path)) {
+                return $path . ':' . (string) @filesize($path) . ':' . (string) @filemtime($path);
+            }
+        }
+
+        return 'composed';
     }
 
     /**
@@ -418,27 +522,81 @@ class OgPreviewComposer
         }
     }
 
-    private function staticBrandCard(): ?OgPreviewResult
+    /**
+     * A statically deployed branded card, when the backend process can actually
+     * read one.
+     *
+     * Deployment reality (verified, not assumed): Laravel's `public_path()` is
+     * the BACKEND document root (`backend/public` in the repo, `/var/www/public`
+     * in the container, mounted read-only from `./backend`). The Designer's card
+     * added by PR #1143 lands in the *frontend* `public/` directory, which is
+     * baked into the separate nginx image and is NOT on the backend filesystem -
+     * so this probe will not find it in production. The in-service composed card
+     * is therefore the effective fallback, and an operator who wants the
+     * designed card read by the backend must place it under `backend/public/`
+     * or point `og.preview.static_card` at it. Nothing is duplicated into the
+     * repo for this.
+     */
+    public function staticBrandCard(): ?OgPreviewResult
     {
-        // Served once the designer's branded default card is present (PR #1143).
-        foreach (['og-default-1200x630.jpg', 'og-default-1200x630.png'] as $name) {
-            $path = public_path($name);
+        foreach ($this->staticCardCandidates() as $path) {
             if (! is_file($path)) {
                 continue;
             }
 
-            $bytes = (string) @file_get_contents($path);
+            $bytes = @file_get_contents($path);
+            if (! is_string($bytes)) {
+                continue;
+            }
+
+            $mime = self::detectMime($bytes);
             $dimensions = @getimagesizefromstring($bytes);
-            if ($dimensions === false) {
+            if ($mime === null || $dimensions === false) {
                 continue;
             }
 
             if ((int) $dimensions[0] === $this->frameWidth() && (int) $dimensions[1] === $this->frameHeight()) {
-                return OgPreviewResult::brand($bytes, $this->frameWidth(), $this->frameHeight());
+                return OgPreviewResult::brand($bytes, $this->frameWidth(), $this->frameHeight(), $mime);
             }
         }
 
         return null;
+    }
+
+    /**
+     * Paths a statically deployed card may live at, most specific first.
+     *
+     * @return list<string>
+     */
+    public function staticCardCandidates(): array
+    {
+        $configured = config('og.preview.static_card');
+
+        return array_values(array_filter(array_merge(
+            is_string($configured) && $configured !== ''
+                ? [str_starts_with($configured, '/') ? $configured : public_path($configured)]
+                : [],
+            [
+                public_path('og-default-1200x630.jpg'),
+                public_path('og-default-1200x630.png'),
+            ],
+        )));
+    }
+
+    /**
+     * MIME type of an image payload, or null when it is not a decodable image.
+     * Read from the bytes so a payload is never mislabelled: responses carry
+     * `X-Content-Type-Options: nosniff`.
+     */
+    public static function detectMime(string $bytes): ?string
+    {
+        $dimensions = @getimagesizefromstring($bytes);
+
+        if ($dimensions === false || ! is_string($dimensions['mime'] ?? null)) {
+            return null;
+        }
+
+        return $dimensions['mime'];
     }
 
     private function photoResult(
@@ -449,7 +607,7 @@ class OgPreviewComposer
         array $plan
     ): OgPreviewResult {
         return OgPreviewResult::photo(
-            jpeg: $bytes,
+            bytes: $bytes,
             sourcePath: $relative,
             sourceWidth: $sourceWidth,
             sourceHeight: $sourceHeight,
@@ -493,7 +651,12 @@ class OgPreviewComposer
         return ['x' => $side, 'y' => $top, 'width' => $width, 'height' => $height];
     }
 
-    private function sourceAbsolutePath(string $relative): ?string
+    /**
+     * Absolute filesystem path of a storage-relative listing photo, or null when
+     * it is not readable. Public so the controller's last-resort path can serve
+     * the untouched original without re-resolving it.
+     */
+    public function sourceAbsolutePath(string $relative): ?string
     {
         $disk = Storage::disk('public');
         try {

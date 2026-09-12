@@ -5,17 +5,22 @@ namespace App\Services;
 /**
  * Outcome of a social preview render.
  *
- * Carries the real placement geometry alongside the JPEG bytes so callers and
- * tests can prove the product is fully visible instead of trusting the render
- * call. `photoRect`/`contentBox` are null for the branded, photo-less card.
+ * Carries the real placement geometry and the payload's real MIME type alongside
+ * the bytes, so callers and tests can prove the product is fully visible instead
+ * of trusting the render call. `photoRect`/`contentBox` are null for the branded,
+ * photo-less card.
+ *
+ * `mimeType` is not cosmetic: responses carry `X-Content-Type-Options: nosniff`,
+ * so serving a PNG or WebP payload as `image/jpeg` would be rejected outright.
  */
 final readonly class OgPreviewResult
 {
     public function __construct(
-        public string $jpeg,
+        public string $bytes,
         public int $width,
         public int $height,
         public string $variant,
+        public string $mimeType = 'image/jpeg',
         public ?string $sourcePath = null,
         public ?int $sourceWidth = null,
         public ?int $sourceHeight = null,
@@ -25,7 +30,7 @@ final readonly class OgPreviewResult
     }
 
     public static function photo(
-        string $jpeg,
+        string $bytes,
         string $sourcePath,
         int $sourceWidth,
         int $sourceHeight,
@@ -35,7 +40,7 @@ final readonly class OgPreviewResult
         int $height,
     ): self {
         return new self(
-            jpeg: $jpeg,
+            bytes: $bytes,
             width: $width,
             height: $height,
             variant: 'photo',
@@ -47,13 +52,14 @@ final readonly class OgPreviewResult
         );
     }
 
-    public static function brand(string $jpeg, int $width, int $height): self
+    public static function brand(string $bytes, int $width, int $height, string $mimeType = 'image/jpeg'): self
     {
         return new self(
-            jpeg: $jpeg,
+            bytes: $bytes,
             width: $width,
             height: $height,
             variant: 'brand',
+            mimeType: $mimeType,
         );
     }
 

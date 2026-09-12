@@ -142,16 +142,16 @@ foreach ($cases as $index => [$label, $path, $width, $height]) {
 
     $after = hash('sha256', (string) $disk->get($path));
 
-    $info = getimagesizefromstring($result->jpeg);
+    $info = getimagesizefromstring($result->bytes);
     $file = $outputDirectory . '/preview-' . $index . '.jpg';
-    file_put_contents($file, $result->jpeg);
+    file_put_contents($file, $result->bytes);
 
     $rows[] = [
         'label' => $label,
         'source' => "{$width}x{$height}",
         'bytes_dims' => $info[0] . 'x' . $info[1],
         'mime' => $info['mime'],
-        'size' => strlen($result->jpeg),
+        'size' => strlen($result->bytes),
         'placed' => $result->photoRect
             ? sprintf('%dx%d at (%d,%d)', $result->photoRect['width'], $result->photoRect['height'], $result->photoRect['x'], $result->photoRect['y'])
             : 'n/a (branded card)',
@@ -160,22 +160,22 @@ foreach ($cases as $index => [$label, $path, $width, $height]) {
         'upload_unchanged' => $before === $after ? 'yes' : 'NO (' . substr($before, 0, 12) . ' -> ' . substr($after, 0, 12) . ')',
         'cold_ms' => $coldMs,
         'warm_ms' => $warmMs,
-        'same_bytes' => $result->jpeg === $warm->jpeg ? 'yes' : 'no',
+        'same_bytes' => $result->bytes === $warm->bytes ? 'yes' : 'no',
     ];
 }
 
 foreach ([['missing photo file', $missing], ['corrupt photo file', $corrupt], ['no photo at all', $noPhoto]] as [$label, $model]) {
     $result = $composer->composeFor($model);
-    $info = getimagesizefromstring($result->jpeg);
+    $info = getimagesizefromstring($result->bytes);
     $file = $outputDirectory . '/preview-fallback-' . $result->variant . '-' . substr(sha1($label), 0, 6) . '.jpg';
-    file_put_contents($file, $result->jpeg);
+    file_put_contents($file, $result->bytes);
 
     $rows[] = [
         'label' => $label,
         'source' => '-',
         'bytes_dims' => $info[0] . 'x' . $info[1],
         'mime' => $info['mime'],
-        'size' => strlen($result->jpeg),
+        'size' => strlen($result->bytes),
         'placed' => 'n/a (branded card)',
         'visible' => 'n/a',
         'aspect_kept' => 'n/a',
@@ -235,5 +235,34 @@ echo "\n=== 4. Preview cache ===\n";
 $cached = Storage::disk((string) config('og.cache.disk'))->files((string) config('og.cache.path'));
 printf("  cached preview files : %d (bound: %d, ttl: %d days)\n", count($cached), config('og.cache.max_files'), config('og.cache.ttl_days'));
 printf("  cache location       : %s disk -> %s\n", config('og.cache.disk'), config('og.cache.path'));
+foreach ($cached as $file) {
+    printf("    - %s (%d bytes)\n", basename($file), (int) Storage::disk((string) config('og.cache.disk'))->size($file));
+}
+printf("  brand card cached separately: %s\n", count(array_filter($cached, fn ($f) => str_contains($f, 'brand-'))) > 0 ? 'yes' : 'NO');
+
+echo "\n=== 5. og:image version token (external cache busting) ===\n";
+foreach ($cases as $index => [$label, $path, $width, $height]) {
+    $model = ad(9200 + $index, $path);
+    printf("  %-22s %s\n", $label, $composer->urlFor($model));
+}
+$noPhotoModel = ad(9299, null);
+printf("  %-22s %s\n", 'no photo (branded)', $composer->urlFor($noPhotoModel));
+
+// Same listing, photo actually replaced: the token must change so an externally
+// cached og:image URL is abandoned rather than revalidated.
+$replacePath = 'ads/evidence/replaced.jpg';
+$disk->put($replacePath, photoBytes(1200, 1800));
+$replaceAd = ad(9300, $replacePath);
+$tokenBefore = $composer->versionToken($replaceAd);
+$disk->put($replacePath, photoBytes(1600, 1067));
+clearstatcache();
+$tokenAfter = $composer->versionToken($replaceAd);
+printf(
+    "  %-22s %s -> %s  (%s)\n",
+    'same ad, new photo',
+    $tokenBefore,
+    $tokenAfter,
+    $tokenBefore === $tokenAfter ? 'STALE - BUG' : 'changed, external cache busted'
+);
 
 echo "\nProduced previews written to: {$outputDirectory}\n";

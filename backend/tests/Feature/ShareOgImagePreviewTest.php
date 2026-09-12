@@ -12,6 +12,7 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Interfaces\ImageInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -217,9 +218,184 @@ class ShareOgImagePreviewTest extends TestCase
         $ad = $this->makeAd($path);
 
         $this->assertTrue(app(OgPreviewComposer::class)->canCompose($ad));
+
+        $url = app(OgPreviewComposer::class)->urlFor($ad);
+
         $this->assertSame(
-            url("/share/ads/{$ad->id}/og.jpg"),
-            app(OgPreviewComposer::class)->urlFor($ad)
+            url("/share/ads/{$ad->id}/og.jpg") . '?v=' . app(OgPreviewComposer::class)->versionToken($ad),
+            $url
+        );
+    }
+
+    /**
+     * The path alone is stable for the life of a listing, and platforms/CDNs hold
+     * an og:image for days. Without a version in the URL a replaced photo would
+     * keep rendering the old product until that external cache expired.
+     */
+    public function test_the_handed_out_url_changes_when_the_photo_is_replaced(): void
+    {
+        $path = $this->storePhoto(1200, 1800);
+        $ad = $this->makeAd($path);
+
+        $before = app(OgPreviewComposer::class)->urlFor($ad);
+
+        // Same listing, different photo bytes.
+        Storage::disk('public')->put($path, $this->photoBytes(1600, 1067, 'jpg'));
+        clearstatcache();
+        $after = app(OgPreviewComposer::class)->urlFor($ad);
+
+        $this->assertNotSame($before, $after, 'a replaced photo must produce a new og:image URL');
+
+        // The controller still renders the current photo for either URL.
+        $this->get($after)->assertOk();
+        $this->assertSame(1600, app(OgPreviewComposer::class)->composeFor($ad)->sourceWidth);
+    }
+
+    /**
+     * A deployed card may be a PNG. Responses carry X-Content-Type-Options:
+     * nosniff, so serving PNG bytes as image/jpeg is rejected by the client.
+     */
+    public function test_a_deployed_png_brand_card_is_served_with_its_real_mime_type(): void
+    {
+        $card = $this->makeStaticCard('png');
+        config(['og.preview.static_card' => $card]);
+
+        try {
+            $ad = $this->makeAd(null);
+            $response = $this->get("/share/ads/{$ad->id}/og.jpg");
+
+            $response->assertOk();
+            $response->assertHeader('Content-Type', 'image/png');
+
+            $bytes = (string) $response->getContent();
+            $this->assertSame((string) file_get_contents($card), $bytes, 'the deployed card is served verbatim');
+
+            $dimensions = getimagesizefromstring($bytes);
+            $this->assertSame([1200, 630], [$dimensions[0], $dimensions[1]]);
+            $this->assertSame('image/png', $dimensions['mime']);
+        } finally {
+            @unlink($card);
+        }
+    }
+
+    public function test_a_deployed_jpeg_brand_card_is_served_as_jpeg(): void
+    {
+        $card = $this->makeStaticCard('jpg');
+        config(['og.preview.static_card' => $card]);
+
+        try {
+            $ad = $this->makeAd(null);
+            $response = $this->get("/share/ads/{$ad->id}/og.jpg");
+
+            $response->assertOk();
+            $response->assertHeader('Content-Type', 'image/jpeg');
+            $this->assertSame((string) file_get_contents($card), (string) $response->getContent());
+        } finally {
+            @unlink($card);
+        }
+    }
+
+    /**
+     * No-photo and broken-photo listings are exactly the ones a crawler can hit
+     * repeatedly, so the branded card must come from the cache rather than being
+     * re-encoded with GD on every request.
+     */
+    public function test_the_branded_card_is_cached_instead_of_re_encoded_per_request(): void
+    {
+        $ad = $this->makeAd(null);
+
+        $first = $this->get("/share/ads/{$ad->id}/og.jpg");
+        $first->assertOk();
+        $first->assertHeader('X-Og-Preview-Variant', 'brand');
+
+        $cached = Storage::disk('local')->files('og-previews');
+        $this->assertCount(1, $cached, 'the branded card must be cached');
+        $this->assertStringContainsString('brand-', $cached[0]);
+
+        $second = $this->get("/share/ads/{$ad->id}/og.jpg");
+        $second->assertOk();
+
+        $this->assertSame($first->getContent(), $second->getContent());
+        $this->assertCount(1, Storage::disk('local')->files('og-previews'), 'no duplicate entries');
+    }
+
+    public function test_a_missing_photo_file_also_uses_the_cached_branded_card(): void
+    {
+        $ad = $this->makeAd('ads/catalog/photos/gone.jpg');
+
+        $this->get("/share/ads/{$ad->id}/og.jpg")->assertOk();
+
+        $cached = Storage::disk('local')->files('og-previews');
+        $this->assertCount(1, $cached);
+        $this->assertStringContainsString('brand-', $cached[0]);
+    }
+
+    /**
+     * The advertised TTL sweep only helps if the scheduler actually runs it.
+     */
+    public function test_the_prune_command_is_registered_with_the_scheduler(): void
+    {
+        $this->artisan('schedule:list')
+            ->expectsOutputToContain('og:prune-previews')
+            ->assertSuccessful();
+    }
+
+    /**
+     * The generic /share ingress location appends "no-store", which would override
+     * the preview's public cache policy and make every crawler refetch the card.
+     * The narrow location must exist AND be matched first (nginx tries regex
+     * locations in order of appearance).
+     */
+    public function test_the_ingress_keeps_the_preview_cacheable(): void
+    {
+        $config = (string) file_get_contents(base_path('../default.conf'));
+
+        $narrow = strpos($config, 'location ~ ^/share/ads/[0-9]+/og\.jpg$');
+        $generic = strpos($config, 'location ~ ^/(api|webhooks|broadcasting|sanctum|graphql|share)');
+
+        $this->assertNotFalse($narrow, 'the og.jpg ingress location must exist');
+        $this->assertNotFalse($generic, 'the generic /share ingress location must still exist');
+        $this->assertLessThan($generic, $narrow, 'the og.jpg location must be declared before the generic /share block');
+
+        $block = substr($config, $narrow, $generic - $narrow);
+        $this->assertStringNotContainsString('no-store', $block, 'the og.jpg location must not append no-store');
+        $this->assertStringNotContainsString('Pragma', $block, 'the og.jpg location must not append Pragma: no-cache');
+        // The narrow location must not silently drop the abuse protection.
+        $this->assertStringContainsString('limit_req zone=mercasto_api_per_ip', $block);
+    }
+
+    /**
+     * GD unavailable is the scenario the last-resort path exists for. Serving the
+     * stored photo untouched is strictly better than a 404, which a platform
+     * would cache as "this listing has no image".
+     */
+    public function test_when_compositing_is_impossible_the_original_photo_is_still_served(): void
+    {
+        $path = $this->storePhoto(1200, 1800);
+        $ad = $this->makeAd($path);
+
+        $this->app->instance(OgPreviewComposer::class, new class extends OgPreviewComposer
+        {
+            public function composeFor(Ad $ad): OgPreviewResult
+            {
+                throw new RuntimeException('GD unavailable');
+            }
+
+            public function brandCard(): OgPreviewResult
+            {
+                throw new RuntimeException('GD unavailable');
+            }
+        });
+
+        $response = $this->get("/share/ads/{$ad->id}/og.jpg");
+
+        $response->assertOk();
+        $response->assertHeader('X-Og-Preview-Variant', 'original');
+        $response->assertHeader('Content-Type', 'image/jpeg');
+        $this->assertSame(
+            (string) Storage::disk('public')->get($path),
+            (string) $response->getContent(),
+            'the untouched stored photo must be served'
         );
     }
 
@@ -409,6 +585,23 @@ class ShareOgImagePreviewTest extends TestCase
     {
         $path = 'ads/catalog/photos/' . ($name ?? "photo-{$width}x{$height}.{$extension}");
         Storage::disk('public')->put($path, $this->photoBytes($width, $height, $extension));
+
+        return $path;
+    }
+
+    /** A 1200x630 card written to a temp path, standing in for a deployed asset. */
+    private function makeStaticCard(string $extension): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'og-card-') . '.' . $extension;
+        $image = imagecreatetruecolor(1200, 630);
+        imagefilledrectangle($image, 0, 0, 1199, 629, imagecolorallocate($image, 15, 23, 42));
+
+        match ($extension) {
+            'png' => imagepng($image, $path),
+            default => imagejpeg($image, $path, 90),
+        };
+
+        imagedestroy($image);
 
         return $path;
     }

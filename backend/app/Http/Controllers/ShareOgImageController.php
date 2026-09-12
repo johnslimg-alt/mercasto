@@ -64,6 +64,10 @@ class ShareOgImageController extends Controller
      * Degradation chain. Any failure returns a usable image rather than an error,
      * because platforms cache whatever they get on the first fetch.
      *
+     * The content type always comes from the payload's own bytes, never from an
+     * assumption: these responses carry `X-Content-Type-Options: nosniff`, so a
+     * mislabelled payload is rejected by the client rather than sniffed.
+     *
      * @return array{bytes:string, variant:string, content_type:string}
      */
     private function previewFor(Ad $ad): array
@@ -72,9 +76,9 @@ class ShareOgImageController extends Controller
             $result = $this->composer->composeFor($ad);
 
             return [
-                'bytes' => $result->jpeg,
+                'bytes' => $result->bytes,
                 'variant' => $result->variant,
-                'content_type' => 'image/jpeg',
+                'content_type' => $result->mimeType,
             ];
         } catch (Throwable $exception) {
             report($exception);
@@ -84,40 +88,61 @@ class ShareOgImageController extends Controller
             $result = $this->composer->brandCard();
 
             return [
-                'bytes' => $result->jpeg,
+                'bytes' => $result->bytes,
                 'variant' => 'brand',
-                'content_type' => 'image/jpeg',
+                'content_type' => $result->mimeType,
             ];
         } catch (Throwable $exception) {
             report($exception);
         }
 
-        return $this->lastResort();
+        return $this->lastResort($ad);
     }
 
     /**
-     * GD/Intervention unavailable: fall back to a static branded asset, then to
-     * the legacy icon, so og:image is never an HTTP error.
+     * GD/Intervention unavailable - the one scenario where nothing can be drawn.
+     *
+     * First choice is the stored photo, served byte-for-byte untouched. That needs
+     * no image extension at all and is exactly what this endpoint replaced, so a
+     * listing with a real photo still gets a usable (if uncropped-by-us) preview
+     * instead of a 404 that a platform would cache as "no image".
+     *
+     * A statically deployed branded card is preferred next, but only from a path
+     * the backend can actually read: the Designer's card lives in the frontend
+     * image, not on the backend filesystem, so it is not normally present here.
      *
      * @return array{bytes:string, variant:string, content_type:string}
      */
-    private function lastResort(): array
+    private function lastResort(Ad $ad): array
     {
-        foreach ([
-            'og-default-1200x630.jpg' => 'image/jpeg',
-            'og-default-1200x630.png' => 'image/png',
-            'icon-512x512.png' => 'image/png',
-        ] as $name => $contentType) {
-            $path = public_path($name);
-            if (is_file($path)) {
+        $relative = $this->composer->sourceRelativePath($ad);
+
+        if ($relative !== null) {
+            $path = $this->composer->sourceAbsolutePath($relative);
+            $bytes = $path !== null ? @file_get_contents($path) : false;
+            $mime = is_string($bytes) ? OgPreviewComposer::detectMime($bytes) : null;
+
+            if (is_string($bytes) && $mime !== null) {
                 return [
-                    'bytes' => (string) file_get_contents($path),
-                    'variant' => 'static',
-                    'content_type' => $contentType,
+                    'bytes' => $bytes,
+                    'variant' => 'original',
+                    'content_type' => $mime,
                 ];
             }
         }
 
+        $static = $this->composer->staticBrandCard();
+
+        if ($static !== null) {
+            return [
+                'bytes' => $static->bytes,
+                'variant' => 'static',
+                'content_type' => $static->mimeType,
+            ];
+        }
+
+        // Nothing readable remains: no photo, and no card deployed where the
+        // backend can read it. A 404 is honest here - there is no image to serve.
         abort(404);
     }
 

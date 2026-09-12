@@ -58,6 +58,19 @@ return [
         // Null resolves to the DejaVu font already shipped with dompdf. Text is
         // skipped (not fatal) when no readable font is available.
         'font' => null,
+
+        // Optional path to a statically deployed branded card, used for listings
+        // with no usable photo. Absolute, or relative to the BACKEND document
+        // root (public_path()). When null the service probes public_path() for
+        // og-default-1200x630.jpg then .png.
+        //
+        // Deployment note: PR #1143 adds its card to the *frontend* public/
+        // directory, which is baked into the nginx image and is not on the
+        // backend filesystem, so public_path() does not find it in production.
+        // The service then composes its own 1200x630 card instead. An operator
+        // who wants the designed artwork served by the backend can drop it into
+        // backend/public/ or point this at it - nothing is duplicated for this.
+        'static_card' => env('OG_STATIC_CARD'),
     ],
 
     'cache' => [
