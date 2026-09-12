@@ -1,0 +1,144 @@
+name: LM Studio Qwen vs Ornith Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/lmstudio-ornith15.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    if: github.head_ref == 'ops/lmstudio-ornith15'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          for i in 1 2 3 4 5; do
+            ssh-keyscan -T 5 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: A/B Qwen3.8 9B and Ornith 1.5 9B
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          export HOME=/root
+          export PATH="/root/.lmstudio/bin:$PATH"
+          LMS=/root/.lmstudio/bin/lms
+          "$LMS" daemon up >/dev/null
+          "$LMS" server start >/dev/null 2>&1 || true
+
+          cat >/tmp/tool-request.json <<'JSON'
+          {
+            "messages":[
+              {"role":"system","content":"You are a coding agent. Use tools when a tool can answer the request."},
+              {"role":"user","content":"Read package.json before telling me the project version. Use the provided tool."}
+            ],
+            "tools":[{
+              "type":"function",
+              "function":{
+                "name":"read_file",
+                "description":"Read a file from the repository",
+                "parameters":{
+                  "type":"object",
+                  "properties":{"path":{"type":"string"}},
+                  "required":["path"]
+                }
+              }
+            }],
+            "tool_choice":"auto",
+            "temperature":0
+          }
+          JSON
+
+          cat >/tmp/code-request.json <<'JSON'
+          {
+            "messages":[
+              {"role":"user","content":"You are reviewing Python. What is wrong with this function and give the corrected function only:\n\ndef dedupe(items):\n    seen = set()\n    return [x for x in items if x not in seen and not seen.add(x)]\n\nRequirement: preserve first occurrence order and support unhashable dict/list values too."}
+            ],
+            "temperature":0,
+            "max_tokens":500
+          }
+          JSON
+
+          run_model() {
+            key="$1"; ident="$2"
+            echo "=== $ident LOAD ==="
+            "$LMS" unload --all >/dev/null 2>&1 || true
+            start=$(date +%s%3N)
+            "$LMS" load "$key" --identifier "$ident" --context-length 8192 --gpu off --ttl 120 -y >/tmp/load-$ident.txt 2>&1
+            end=$(date +%s%3N)
+            echo "load_ms=$((end-start))"
+            "$LMS" ps
+
+            python3 - "$ident" /tmp/tool-request.json <<'PY'
+          import json,sys
+          ident=sys.argv[1]; p=sys.argv[2]
+          d=json.load(open(p)); d["model"]=ident
+          json.dump(d,open(f"/tmp/tool-{ident}.json","w"))
+          PY
+            start=$(date +%s%3N)
+            curl -fsS --max-time 120 -H 'Content-Type: application/json'               -d @"/tmp/tool-$ident.json" http://127.0.0.1:1234/v1/chat/completions >"/tmp/tool-$ident.out"
+            end=$(date +%s%3N)
+            echo "tool_ms=$((end-start))"
+            python3 - "/tmp/tool-$ident.out" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          m=d["choices"][0]["message"]
+          calls=m.get("tool_calls") or []
+          print("tool_calls=",len(calls))
+          if calls:
+              print("tool_name=",calls[0].get("function",{}).get("name"))
+              print("tool_args=",calls[0].get("function",{}).get("arguments"))
+          else:
+              print("content=",str(m.get("content",""))[:400].replace("\n"," "))
+          PY
+
+            python3 - "$ident" /tmp/code-request.json <<'PY'
+          import json,sys
+          ident=sys.argv[1]; p=sys.argv[2]
+          d=json.load(open(p)); d["model"]=ident
+          json.dump(d,open(f"/tmp/code-{ident}.json","w"))
+          PY
+            start=$(date +%s%3N)
+            curl -fsS --max-time 180 -H 'Content-Type: application/json'               -d @"/tmp/code-$ident.json" http://127.0.0.1:1234/v1/chat/completions >"/tmp/code-$ident.out"
+            end=$(date +%s%3N)
+            echo "code_ms=$((end-start))"
+            python3 - "/tmp/code-$ident.out" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          m=d["choices"][0]["message"]
+          print("finish_reason=",d["choices"][0].get("finish_reason"))
+          print("answer=",str(m.get("content",""))[:1200].replace("\n","\\n"))
+          print("usage=",d.get("usage"))
+          PY
+          }
+
+          run_model qwen3.8-9b qwen38
+          run_model ornith-1.5-9b ornith15
+
+          "$LMS" unload --all >/dev/null 2>&1 || true
+          rm -f /tmp/tool-request.json /tmp/code-request.json /tmp/tool-*.json /tmp/code-*.json /tmp/tool-*.out /tmp/code-*.out /tmp/load-*.txt
+          echo LM_STUDIO_AB_SMOKE_OK
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/key
