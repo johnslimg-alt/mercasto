@@ -1,0 +1,79 @@
+name: LM Studio Ornith 35B Repair and Estimate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/lmstudio-ornith35.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    if: github.head_ref == 'ops/lmstudio-ornith35'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          for i in 1 2 3 4 5; do
+            ssh-keyscan -T 5 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Repair imported filename and estimate memory
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          export HOME=/root
+          export PATH="/root/.lmstudio/bin:$PATH"
+          LMS=/root/.lmstudio/bin/lms
+          DIR=/root/.lmstudio/models/ornith-ai/Ornith-1.5-35B-A3B-GGUF
+          BAD="$DIR/Ornith-1.5-35B-Q4_K_M.gguf.part"
+          GOOD="$DIR/Ornith-1.5-35B-Q4_K_M.gguf"
+
+          echo "=== REPAIR ==="
+          if [ -f "$BAD" ] && [ ! -f "$GOOD" ]; then
+            mv "$BAD" "$GOOD"
+          fi
+          test -f "$GOOD"
+          stat -c 'bytes=%s path=%n' "$GOOD"
+
+          echo "=== LM STUDIO MODELS ==="
+          "$LMS" ls --llm || true
+
+          echo "=== LOAD HELP ==="
+          "$LMS" load --help | sed -n '1,140p' || true
+
+          echo "=== MEMORY BEFORE ==="
+          free -h
+          df -h /
+
+          echo "=== ESTIMATES ==="
+          for ctx in 8192 16384 32768; do
+            echo "--- context=$ctx ---"
+            "$LMS" load "$GOOD" --estimate-only --context-length "$ctx" --gpu off || true
+          done
+
+          echo "=== FINAL MODELS ==="
+          "$LMS" ls --llm || true
+          echo ORNITH35_REPAIR_ESTIMATE_OK
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/key
