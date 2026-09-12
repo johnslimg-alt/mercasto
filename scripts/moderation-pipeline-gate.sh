@@ -151,6 +151,11 @@ grep -qF "Ad::query()->lockForUpdate()->find(\$item['keeper'])" "$RESOLVE_DUPLIC
 # reactivate statuses outside active/expired/paused/inactive, so an archived row cannot
 # be paid back into publication while it is still under review.
 grep -qF "'status' => 'archived'," "$RESOLVE_DUPLICATES"
+# The command's decision becomes the newest one, so it must carry the SAME structured
+# duplicate signal the detector writes, or the admin payload would immediately clear
+# suspected_duplicate for the very rows the command just routed to review.
+grep -qF "'duplicate' => \$detector->evidenceFor(" "$RESOLVE_DUPLICATES"
+grep -qF 'public const MATCHED_ON' "$DUPLICATE_SERVICE"
 # A truncated candidate window proves nothing, so a negative result must fail closed
 # instead of being treated as unique.
 grep -qF '$duplicates->isInconclusive($this->duplicateSignal) => $duplicates->truncatedReason(),' "$JOB"

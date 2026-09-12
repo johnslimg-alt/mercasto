@@ -255,6 +255,53 @@ class ResolveDuplicateSubmissionsTest extends TestCase
         $this->assertSame('admin_rejected', $expiredCopy->ai_moderation_status);
     }
 
+    public function test_admin_payload_keeps_structured_duplicate_evidence_after_bulk_routing(): void
+    {
+        // Regression: the command's decision becomes the newest one, so without a
+        // compatible `duplicate` signal the admin presenter would immediately return
+        // suspected_duplicate: null for exactly the rows the tool just routed.
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create();
+        $keeper = $this->createAd($seller);
+        $copy = $this->createAd($seller);
+
+        $this->assertSame(0, $this->resolve(['--apply' => true]));
+
+        $this->actingAs($admin)
+            ->getJson("/api/admin/moderation/ads/{$copy->id}")
+            ->assertOk()
+            ->assertJsonPath('suspected_duplicate.is_duplicate', true)
+            ->assertJsonPath('suspected_duplicate.duplicate_of_ad_id', $keeper->id)
+            ->assertJsonPath('suspected_duplicate.matched_on', ListingDuplicateDetector::MATCHED_ON);
+    }
+
+    public function test_bulk_resolution_covers_a_re_submitted_original_the_detector_does_not_flag(): void
+    {
+        // Documented limit: the per-submission detector keys on creation order, so an
+        // OLDER ad re-submitted for moderation after a newer listing already carried the
+        // same content is not flagged at moderation time. The operator sweep groups by
+        // content fingerprint regardless of which row is older, so the pair is still
+        // resolved — this test pins both halves of that statement.
+        $seller = User::factory()->create();
+        $older = $this->createAd($seller);
+        $newer = $this->createAd($seller);
+
+        DB::table('ads')->where('id', $older->id)->update([
+            'created_at' => now()->subDays(5),
+            'moderation_submitted_at' => now(),
+        ]);
+        DB::table('ads')->where('id', $newer->id)->update(['moderation_submitted_at' => now()->subDay()]);
+
+        $this->assertFalse(
+            app(ListingDuplicateDetector::class)->detect($older->fresh())['is_duplicate'],
+            'Documented limit: the older creation-order row is not flagged by detect().'
+        );
+
+        $this->assertSame(0, $this->resolve(['--apply' => true]));
+        $this->assertSame(Ad::MODERATION_APPROVED, $older->fresh()->ai_moderation_status);
+        $this->assertSame('manual_review', $newer->fresh()->ai_moderation_status);
+    }
+
     public function test_near_misses_and_singletons_are_never_touched(): void
     {
         $seller = User::factory()->create();

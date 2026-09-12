@@ -145,6 +145,7 @@ class ResolveDuplicateSubmissions extends Command
             // every actionable row and let a following reconciliation publish both
             // copies. Membership is proven by the detector, not by that equality.
             $referenceId = (int) $keeper->id;
+            $signals = [];
 
             if ($keep === 'earliest' && $candidates->isNotEmpty()) {
                 $verified = [];
@@ -157,6 +158,7 @@ class ResolveDuplicateSubmissions extends Command
                     }
 
                     $verified[] = $candidate;
+                    $signals[$candidate->id] = $signal;
                     $referenceId = (int) $signal['duplicate_of_ad_id'];
                 }
 
@@ -178,7 +180,16 @@ class ResolveDuplicateSubmissions extends Command
             }
 
             foreach ($candidates as $candidate) {
-                $toChange[] = ['ad' => $candidate, 'keeper' => $referenceId, 'fingerprint' => $fingerprint, 'group_size' => $members->count()];
+                $signal = $signals[$candidate->id] ?? null;
+
+                $toChange[] = [
+                    'ad' => $candidate,
+                    'keeper' => $referenceId,
+                    'fingerprint' => $fingerprint,
+                    'group_size' => $members->count(),
+                    'candidate_count' => $signal['candidate_count'] ?? null,
+                    'candidates_truncated' => (bool) ($signal['candidates_truncated'] ?? false),
+                ];
             }
 
             $tableRows[] = [
@@ -322,6 +333,16 @@ class ResolveDuplicateSubmissions extends Command
                 'decision' => $action === 'reject' ? 'rejected' : 'manual_review',
                 'reason' => $detector->reasonForId((int) $item['keeper']),
                 'metadata' => [
+                    // The same structured signal the detector writes, so the admin
+                    // payload keeps rendering suspected_duplicate for the very rows this
+                    // command routed to review. Without it this decision is the newest
+                    // one and the evidence would silently disappear.
+                    'duplicate' => $detector->evidenceFor(
+                        (int) $item['keeper'],
+                        (string) $item['fingerprint'],
+                        $item['candidate_count'] ?? null,
+                        (bool) ($item['candidates_truncated'] ?? false),
+                    ),
                     'duplicate_resolution' => [
                         'command' => 'ads:resolve-duplicate-submissions',
                         'action' => $action,

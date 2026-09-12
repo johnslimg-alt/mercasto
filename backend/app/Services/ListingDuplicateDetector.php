@@ -49,6 +49,46 @@ class ListingDuplicateDetector
     public const ORDER_DESCRIPTION = 'submission order (created_at, then id as tiebreaker)';
 
     /**
+     * The components that must all match for two submissions to be the same content.
+     * Single-sourced so the pipeline, the resolution command and the admin payload
+     * cannot describe one signal in two different shapes.
+     */
+    public const MATCHED_ON = ['seller_id', 'title', 'price', 'description'];
+
+    /**
+     * Build the structured duplicate evidence stored on a moderation decision.
+     *
+     * Single-sourced so any writer — the AI job or the resolution command — records
+     * the same shape that AdminAdModerationController::presentDuplicate() reads.
+     * Without this the command's own audit row would become the newest decision and
+     * silently clear the marker for exactly the rows it just routed to review.
+     *
+     * @return array{
+     *     is_duplicate: bool,
+     *     duplicate_of_ad_id: int|null,
+     *     fingerprint: string,
+     *     candidate_count: int|null,
+     *     candidates_truncated: bool,
+     *     matched_on: array<int, string>
+     * }
+     */
+    public function evidenceFor(
+        int $originalAdId,
+        string $fingerprint,
+        ?int $candidateCount = null,
+        bool $candidatesTruncated = false,
+    ): array {
+        return [
+            'is_duplicate' => true,
+            'duplicate_of_ad_id' => $originalAdId,
+            'fingerprint' => $fingerprint,
+            'candidate_count' => $candidateCount,
+            'candidates_truncated' => $candidatesTruncated,
+            'matched_on' => self::MATCHED_ON,
+        ];
+    }
+
+    /**
      * @return array{
      *     is_duplicate: bool,
      *     fingerprint: string,
@@ -115,7 +155,7 @@ class ListingDuplicateDetector
             'duplicate_of_ad_id' => $match?->id,
             'candidate_count' => $candidates->count(),
             'candidates_truncated' => $truncated,
-            'matched_on' => ['seller_id', 'title', 'price', 'description'],
+            'matched_on' => self::MATCHED_ON,
         ];
     }
 
