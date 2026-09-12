@@ -5,15 +5,20 @@ on:
     branches:
       - main
     paths:
-      # The guard asserts source text in these trees. Keep them directory-wide:
-      # a file-scoped list is how backend/app/Http/Controllers/Api/AdController.php
+      # The guard asserts source text in these trees. Keep them whole-tree and
+      # coarse: a file-scoped list is how backend/app/Http/Controllers/Api/AdController.php
       # ended up asserted by a guard that never ran when that controller changed,
-      # letting the 2026-08 catalog P0 sit undetected. scripts/gate-integrity-check.mjs
-      # fails CI if this list stops covering everything the guard reads.
+      # letting the 2026-08 catalog P0 sit undetected. `backend/**` (not
+      # `backend/app/**`) because the guard also asserts backend tests and can
+      # grow new backend subjects at any time -- PR #1131 added an assertion on
+      # backend/tests/Feature/CatalogRealInventoryRankingTest.php, which a
+      # narrower list silently failed to trigger on.
+      # scripts/gate-integrity-check.mjs fails CI if this list stops covering
+      # everything the guard reads.
       - 'index.html'
       - 'src/**'
       - 'public/**'
-      - 'backend/app/**'
+      - 'backend/**'
       - '.github/workflows/emergency-container-frontend-patch.yml'
       - '.github/workflows/emergency-ssh-frontend-deploy.yml'
       - '.github/workflows/recovery-guard.yml'
