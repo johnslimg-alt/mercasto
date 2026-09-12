@@ -1951,22 +1951,28 @@ body *::-webkit-scrollbar {
  * three utilities to --mc-dark-line (#64748B) measures 3.07:1 on the lightest
  * dark surface in use (#1E293B) and 4.24:1 on #020617.
  *
- * Deliberately unlayered: unlayered rules outrank Tailwind's @layer utilities,
- * so this stays one documented source of truth instead of editing ~400 class
- * usages across the codebase. Translucent variants (dark:border-slate-700/60)
- * are intentionally left alone — they are hairline separators, not boundaries.
+ * Declared inside @layer utilities, NOT unlayered, on purpose: the selector
+ * below (0,2,1) outranks the base utilities it replaces (0,2,0) but stays
+ * *below* every state variant, so `dark:hover:border-*` / `dark:focus:border-*`
+ * (0,3,0) still win. Unlayered rules outrank all layered ones regardless of
+ * specificity, which would have flattened those states.
+ *
+ * Translucent variants (dark:border-slate-700/60) are intentionally left alone —
+ * they are hairline separators, not boundaries.
  */
-html.dark .dark\:border-slate-600,
-html.dark .dark\:border-slate-700,
-html.dark .dark\:border-slate-800,
-html.dark .dark\:divide-slate-600,
-html.dark .dark\:divide-slate-700,
-html.dark .dark\:divide-slate-800 {
-  border-color: var(--mc-dark-line);
-}
+@layer utilities {
+  html.dark .dark\:border-slate-600,
+  html.dark .dark\:border-slate-700,
+  html.dark .dark\:border-slate-800,
+  html.dark .dark\:divide-slate-600,
+  html.dark .dark\:divide-slate-700,
+  html.dark .dark\:divide-slate-800 {
+    border-color: var(--mc-dark-line);
+  }
 
-html.dark .dark\:divide-slate-600 > :not(:last-child),
-html.dark .dark\:divide-slate-700 > :not(:last-child),
-html.dark .dark\:divide-slate-800 > :not(:last-child) {
-  border-color: var(--mc-dark-line);
+  html.dark .dark\:divide-slate-600 > :not(:last-child),
+  html.dark .dark\:divide-slate-700 > :not(:last-child),
+  html.dark .dark\:divide-slate-800 > :not(:last-child) {
+    border-color: var(--mc-dark-line);
+  }
 }

@@ -16,11 +16,20 @@ import { test, expect } from '@playwright/test';
  *   3. the icon-only brand controls (theme toggle, location button, active
  *      tabbar item) meet 1.4.11 in both themes.
  *
+ * Rendering fidelity: the ratio composes (a) the colour's own alpha, (b) element
+ * and ancestor `opacity` (the full chain is multiplied), and (c) every ancestor
+ * background colour until an opaque one is found.
+ *
  * NOT covered (stated plainly, no silent gaps):
  *   - decorative icons and tinted decorative borders (e.g. `bg-[#84CC16]/10`
  *     pills, `border-white/10` hairlines): 1.4.11 does not apply to them;
- *   - hover / focus / disabled state colours (a resting-state audit cannot see
- *     them);
+ *   - inactive/disabled controls (`[disabled]`, `[aria-disabled="true"]`): 1.4.3
+ *     explicitly excludes inactive components, so they are skipped, not passed;
+ *   - hover / focus / active colours (a resting-state audit cannot see them);
+ *   - `background-image`/gradient surfaces: the composite background colour is
+ *     used and the entry is flagged `bgFromImage`. This is an approximation, not
+ *     a pixel sample — the app's gradients are 8-12% radial overlays, so the
+ *     base colour is representative but not exact;
  *   - routes and authenticated surfaces outside ROUTES below;
  *   - text over gradients or photographic backgrounds (reported as
  *     `bgFromImage`, deliberately not asserted: the pixel under the glyph is
@@ -87,6 +96,19 @@ const MEASURE = ({ routes, brandColors }) => {
     return (hi + 0.05) / (lo + 0.05);
   };
 
+  // Element + ancestor opacity multiply: a control inside `opacity-50` renders
+  // its text at half alpha and must be measured that way.
+  function cumulativeOpacity(el) {
+    let opacity = 1;
+    let node = el;
+    while (node && node.nodeType === 1) {
+      const value = Number(getComputedStyle(node).opacity);
+      if (Number.isFinite(value)) opacity *= value;
+      node = node.parentElement;
+    }
+    return opacity;
+  }
+
   function effectiveBackground(el, skipSelf = false) {
     const stack = [];
     let node = skipSelf ? el.parentElement : el;
@@ -122,15 +144,44 @@ const MEASURE = ({ routes, brandColors }) => {
     return parts.join(' > ');
   }
 
+  // Animations that can change opacity make a single-frame ratio meaningless:
+  // `animate-pulse` drives opacity to 0.5, where brand text on a light tint drops
+  // to ~2.6:1. The gate refuses to certify those instead of sampling a lucky frame.
+  const opacityKeyframes = (() => {
+    const names = new Set();
+    for (const sheet of document.styleSheets) {
+      let rules; try { rules = sheet.cssRules; } catch { continue; }
+      for (const rule of rules) {
+        if (rule.type === CSSRule.KEYFRAMES_RULE && /opacity/i.test(rule.cssText)) names.add(rule.name);
+      }
+    }
+    return names;
+  })();
+
+  const underOpacityAnimation = (el) => {
+    let node = el;
+    while (node && node.nodeType === 1) {
+      const names = (getComputedStyle(node).animationName || 'none').split(',').map((n) => n.trim());
+      if (names.some((name) => opacityKeyframes.has(name))) return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
+
   const rendered = (el) => {
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') return false;
-    if (Number(cs.opacity) === 0 || el.closest('[hidden]') || el.closest('[inert]')) return false;
+    if (el.closest('[hidden]') || el.closest('[inert]')) return false;
+    if (cumulativeOpacity(el) === 0) return false;
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
   };
 
-  const result = { route: window.location.pathname, dark: document.documentElement.classList.contains('dark'), text: [], borders: [], controls: [] };
+  // WCAG 1.4.3 exempts inactive user interface components. Skipped, not passed:
+  // they are reported in `skippedInactive` so the omission is visible.
+  const inactive = (el) => Boolean(el.closest('[disabled], [aria-disabled="true"]'));
+
+  const result = { route: window.location.pathname, dark: document.documentElement.classList.contains('dark'), text: [], borders: [], controls: [], skippedInactive: [], uncertifiable: [] };
 
   for (const el of document.querySelectorAll('*')) {
     if (!rendered(el)) continue;
@@ -149,16 +200,25 @@ const MEASURE = ({ routes, brandColors }) => {
         const bold = Number(cs.fontWeight) >= 700;
         const isLarge = fontSize >= 24 || (fontSize >= 18.66 && bold);
         const threshold = isLarge ? 3 : 4.5;
-        result.text.push({
-          selector: cssPath(el),
-          text: ownText,
-          fg: hex(color),
-          bg: hex(bg.color),
-          bgFromImage: bg.sawImage,
-          fontSize,
-          threshold,
-          ratio: Number(ratio(color, bg.color).toFixed(2)),
-        });
+        if (inactive(el)) {
+          result.skippedInactive.push({ selector: cssPath(el), text: ownText, reason: 'inactive component (1.4.3 exempt)' });
+        } else if (underOpacityAnimation(el)) {
+          result.uncertifiable.push({ selector: cssPath(el), text: ownText, reason: 'text under an opacity animation — a single-frame ratio would be meaningless' });
+        } else {
+          const alpha = (color.a ?? 1) * cumulativeOpacity(el);
+          const renderedColor = alpha < 1 ? over({ ...color, a: alpha }, bg.color) : color;
+          result.text.push({
+            selector: cssPath(el),
+            text: ownText,
+            fg: hex(color),
+            effectiveAlpha: Number(alpha.toFixed(3)),
+            bg: hex(bg.color),
+            bgFromImage: bg.sawImage,
+            fontSize,
+            threshold,
+            ratio: Number(ratio(renderedColor, bg.color).toFixed(2)),
+          });
+        }
       }
     }
 
@@ -176,8 +236,10 @@ const MEASURE = ({ routes, brandColors }) => {
       if (isBoundary) {
         const inside = effectiveBackground(el);
         const outside = effectiveBackground(el, true);
-        const ratioIn = ratio(borderColor, inside.color);
-        const ratioOut = ratio(borderColor, outside.color);
+        const borderAlpha = (borderColor.a ?? 1) * cumulativeOpacity(el);
+        const renderedBorder = borderAlpha < 1 ? over({ ...borderColor, a: borderAlpha }, outside.color) : borderColor;
+        const ratioIn = ratio(renderedBorder, inside.color);
+        const ratioOut = ratio(renderedBorder, outside.color);
         result.borders.push({
           selector: cssPath(el),
           fg: hex(borderColor),
@@ -196,16 +258,19 @@ const MEASURE = ({ routes, brandColors }) => {
     if (control) {
       const text = (control.innerText || '').replace(/\s+/g, ' ').trim();
       const svg = control.querySelector('svg');
-      if (!text && svg) {
+      if (!text && svg && !inactive(control)) {
         const color = parse(getComputedStyle(svg).color);
         if (color && brandColors.includes(key(color))) {
           const bg = effectiveBackground(svg);
+          const alpha = (color.a ?? 1) * cumulativeOpacity(svg);
+          const renderedIcon = alpha < 1 ? over({ ...color, a: alpha }, bg.color) : color;
           result.controls.push({
             selector: cssPath(control),
             label: control.getAttribute('aria-label') || '',
             fg: hex(color),
+            effectiveAlpha: Number(alpha.toFixed(3)),
             bg: hex(bg.color),
-            ratio: Number(ratio(color, bg.color).toFixed(2)),
+            ratio: Number(ratio(renderedIcon, bg.color).toFixed(2)),
             threshold: 3,
           });
         }
@@ -221,6 +286,14 @@ function describe(entries, key = 'ratio') {
 }
 
 async function prepare(page, { dark }) {
+  // Isolation guard: a page prepared for one theme must never be re-prepared for
+  // the other, because every registered init script runs on the next navigation
+  // and the last one would silently decide the theme.
+  const theme = dark ? 'dark' : 'light';
+  if (page.__contrastTheme && page.__contrastTheme !== theme) {
+    throw new Error(`page already prepared for "${page.__contrastTheme}", refusing to re-prepare for "${theme}" — use a fresh page`);
+  }
+  page.__contrastTheme = theme;
   await page.addInitScript((theme) => {
     localStorage.setItem('theme', theme);
     localStorage.setItem('lang', 'es');
@@ -254,8 +327,17 @@ async function prepare(page, { dark }) {
   });
 }
 
+async function assertTheme(page, dark) {
+  const applied = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+  expect(applied, `page should render the ${dark ? 'dark' : 'light'} theme it was prepared for`).toBe(dark);
+}
+
 async function settle(page) {
   await expect(page.getByTestId('mobile-header-search').or(page.locator('header')).first()).toBeVisible();
+  // Every route renders the shell footer; waiting for it avoids measuring a
+  // half-hydrated tree (the boundary scan needs the cards/toolbars mounted).
+  await expect(page.locator('footer')).toBeVisible();
+  await page.waitForTimeout(200);
   await page.evaluate(async () => {
     const step = Math.round(window.innerHeight * 0.8);
     for (let y = 0; y <= Math.min(document.documentElement.scrollHeight, 9000); y += step) {
@@ -265,7 +347,7 @@ async function settle(page) {
     window.scrollTo(0, 0);
     await new Promise((r) => setTimeout(r, 120));
   });
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(400);
 }
 
 for (const theme of ['light', 'dark']) {
@@ -274,6 +356,7 @@ for (const theme of ['light', 'dark']) {
       test(`brand text meets WCAG 1.4.3 on ${route}`, async ({ page }) => {
         await prepare(page, { dark: theme === 'dark' });
         await page.goto(route);
+        await assertTheme(page, theme === 'dark');
         await settle(page);
         const result = await page.evaluate(MEASURE, { routes: ROUTES, brandColors: BRAND_TEXT_COLORS });
         const failures = result.text.filter((entry) => entry.ratio < entry.threshold - 0.005);
@@ -281,23 +364,37 @@ for (const theme of ['light', 'dark']) {
           failures,
           `${theme} ${route}: brand-coloured text below its WCAG 1.4.3 threshold\n${describe(failures)}`,
         ).toEqual([]);
+        // Two explicit "cannot certify" buckets, asserted empty rather than
+        // silently skipped: inactive controls (1.4.3 exempts them) and text under
+        // an opacity animation (no single frame is representative).
+        expect(
+          result.uncertifiable,
+          `${theme} ${route}: brand text under an opacity animation cannot be certified — fix the animation or the colour\n${describe(result.uncertifiable, 'reason')}`,
+        ).toEqual([]);
       });
     }
 
     test('dark-mode card and control boundaries meet WCAG 1.4.11', async ({ page }) => {
       test.skip(theme !== 'dark', 'boundary rule is dark-mode specific');
       for (const route of ROUTES) {
-        await prepare(page, { dark: true });
-        await page.goto(route);
-        await settle(page);
-        const result = await page.evaluate(MEASURE, { routes: ROUTES, brandColors: BRAND_TEXT_COLORS });
-        expect(result.dark, `${route} should render in dark mode`).toBe(true);
-        expect(result.borders.length, `${route} should expose card/control boundaries`).toBeGreaterThan(3);
-        const failures = result.borders.filter((entry) => entry.ratio < entry.threshold - 0.005);
-        expect(
-          failures,
-          `${route}: dark-mode boundaries below 3:1\n${describe(failures)}`,
-        ).toEqual([]);
+        // One fresh page per route: prepare() must run exactly once per page.
+        const routePage = await page.context().newPage();
+        try {
+          await prepare(routePage, { dark: true });
+          await routePage.goto(route);
+          await assertTheme(routePage, true);
+          await settle(routePage);
+          const result = await routePage.evaluate(MEASURE, { routes: ROUTES, brandColors: BRAND_TEXT_COLORS });
+          expect(result.dark, `${route} should render in dark mode`).toBe(true);
+          expect(result.borders.length, `${route} should expose card/control boundaries`).toBeGreaterThan(3);
+          const failures = result.borders.filter((entry) => entry.ratio < entry.threshold - 0.005);
+          expect(
+            failures,
+            `${route}: dark-mode boundaries below 3:1\n${describe(failures)}`,
+          ).toEqual([]);
+        } finally {
+          await routePage.close();
+        }
       }
     });
 
@@ -307,6 +404,7 @@ for (const theme of ['light', 'dark']) {
       await page.setViewportSize({ width: 390, height: 844 });
       await prepare(page, { dark: theme === 'dark' });
       await page.goto('/');
+      await assertTheme(page, theme === 'dark');
       await settle(page);
       const result = await page.evaluate(MEASURE, { routes: ROUTES, brandColors: BRAND_TEXT_COLORS });
       const labels = result.controls.map((c) => c.label).filter(Boolean);
@@ -327,21 +425,27 @@ test('pricing modal brand text stays readable on the modal surfaces', async ({ p
   test.skip(testInfo.project.name !== 'chromium-mobile', 'modal layout is mobile-critical');
 
   for (const dark of [false, true]) {
-    await prepare(page, { dark });
-    await page.goto('/');
-    await settle(page);
-    const trigger = page.locator("button:has-text('Ver planes')").first();
-    await expect(trigger).toBeVisible();
-    await trigger.click();
-    await expect(page.locator('h4:has-text("Impulso")')).toBeVisible();
+    const modalPage = await page.context().newPage();
+    try {
+      await prepare(modalPage, { dark });
+      await modalPage.goto('/');
+      await assertTheme(modalPage, dark);
+      await settle(modalPage);
+      const trigger = modalPage.locator("button:has-text('Ver planes')").first();
+      await expect(trigger).toBeVisible();
+      await trigger.click();
+      await expect(modalPage.locator('h4:has-text("Impulso")')).toBeVisible();
 
-    const result = await page.evaluate(MEASURE, { routes: ROUTES, brandColors: BRAND_TEXT_COLORS });
-    const modalEntries = result.text.filter((entry) => /Impulso|Negocio|Plan Actual|Planes mensuales|Destacados|Particular|PRO/i.test(entry.text));
-    expect(modalEntries.length, `pricing modal plan labels should be measured (dark=${dark})`).toBeGreaterThan(1);
-    const failures = result.text.filter((entry) => entry.ratio < entry.threshold - 0.005);
-    expect(
-      failures,
-      `pricing modal (dark=${dark}): brand text below its 1.4.3 threshold\n${describe(failures)}`,
-    ).toEqual([]);
+      const result = await modalPage.evaluate(MEASURE, { routes: ROUTES, brandColors: BRAND_TEXT_COLORS });
+      const modalEntries = result.text.filter((entry) => /Impulso|Negocio|Plan Actual|Planes mensuales|Destacados|Particular|PRO/i.test(entry.text));
+      expect(modalEntries.length, `pricing modal plan labels should be measured (dark=${dark})`).toBeGreaterThan(1);
+      const failures = result.text.filter((entry) => entry.ratio < entry.threshold - 0.005);
+      expect(
+        failures,
+        `pricing modal (dark=${dark}): brand text below its 1.4.3 threshold\n${describe(failures)}`,
+      ).toEqual([]);
+    } finally {
+      await modalPage.close();
+    }
   }
 });

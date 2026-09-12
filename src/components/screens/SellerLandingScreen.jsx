@@ -649,7 +649,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
         {/* Glow Effects */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-[#84CC16]/10 dark:bg-[#84CC16]/5 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
 
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#84CC16]/10 text-[#365314] dark:text-[#84CC16] text-xs font-semibold uppercase tracking-wider mb-6 animate-pulse border border-[#84CC16]/20">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#84CC16]/10 text-[#365314] dark:text-[#84CC16] text-xs font-semibold uppercase tracking-wider mb-6 border border-[#84CC16]/20">
           <Sparkles size={14} />
           <span>{t.ai_brand_tagline}</span>
         </div>
