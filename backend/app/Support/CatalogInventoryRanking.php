@@ -107,8 +107,15 @@ final class CatalogInventoryRanking
 
     /**
      * Explicit filler marker check. Only an explicit truthy flag marks a row as a
-     * catalog reference; anything else (missing attribute, null) is treated as real
-     * inventory so a placeholder can never silently pose as seller inventory.
+     * catalog reference; anything else — null or a missing attribute — is treated as
+     * real inventory.
+     *
+     * That is the safe direction for this policy, and it is deliberately asymmetric:
+     * an unexpected payload can only make a reference look real for one request, never
+     * make real inventory lose its ranking or its padding cap. In practice the listing
+     * queries select `ads.*`, so the flag is always present and this branch is not hit;
+     * the default only matters if a future partial select drops the column, and the
+     * consequence there is under-counting padding rather than hiding real inventory.
      */
     public static function isCatalogReference(mixed $item): bool
     {
