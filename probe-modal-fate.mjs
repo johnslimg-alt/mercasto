@@ -181,7 +181,7 @@ try {
   while (Date.now() < deadline) {
     tries++;
     try {
-      lastVal = await registrationForm.evaluate((f) => f.checkValidity(), { timeout: 2500 });
+      lastVal = await registrationForm.evaluate((f) => f.checkValidity(), { timeout: 8000 });
       if (lastVal === false && firstFalse === null) firstFalse = Date.now();
       if (lastVal === true) break;
     } catch (e) { lastErr = String(e.message).split('\n')[0].slice(0, 100); }
