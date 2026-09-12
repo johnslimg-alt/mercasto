@@ -3,6 +3,9 @@ name: Hosted Server Agent Recovery
 # Out-of-band recovery only: fixed service names, no arbitrary command input.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ops/hermes-publish-ssh
   issue_comment:
     types: [created]
 
@@ -116,3 +119,85 @@ jobs:
           body="$(printf 'HOSTED_AGENT_RECOVERY_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' \
             "$JOB_STATUS" "$GITHUB_RUN_ID" "$RUN_URL")"
           gh api "repos/$REPO/issues/832/comments" -f body="$body"
+
+  hermes_publish:
+    name: Publish Hermes out of band
+    if: >-
+      (github.event_name == 'push' && github.ref_name == 'ops/hermes-publish-ssh') ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.number == 832 &&
+       github.actor == 'johnslimg-alt' &&
+       github.event.comment.body == 'RUN:hermes_publish_ssh:MERCASTO')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate SSH secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/hermes_publish_key
+          chmod 600 ~/.ssh/hermes_publish_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Execute guarded Hermes publish
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/hermes_publish_key "root@$SERVER_HOST" \
+            'cd /var/www/mercasto && OPERATION=hermes_publish CONFIRM=MERCASTO TAIL_LINES=220 bash scripts/server-operator.sh hermes_publish MERCASTO'
+
+      - name: Diagnose Hermes publish failure
+        if: failure()
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/hermes_publish_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          for file in /tmp/hermes-glm-smoke /tmp/hermes-deepseek-smoke /tmp/hermes-web-sync.log; do
+            if [ -s "$file" ]; then
+              echo "=== $(basename "$file") ==="
+              tail -120 "$file" \
+                | sed -E 's/(api[_-]?key|authorization|bearer|token|secret|password)([=: ]+)[^ ]+/\1\2***REDACTED***/Ig' \
+                | sed -E 's/sk-[A-Za-z0-9_-]{16,}/***REDACTED***/g'
+            fi
+          done
+          systemctl is-active hermes-dashboard.service 2>/dev/null || true
+          REMOTE
+
+      - name: Remove SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/hermes_publish_key
+
+      - name: Report Hermes publish result
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          body="$(printf 'HERMES_PUBLISH_SSH_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' \
+            "$JOB_STATUS" "$GITHUB_RUN_ID" "$RUN_URL")"
+          gh api "repos/$REPO/issues/832/comments" -f body="$body"
+

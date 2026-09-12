@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ad;
+use App\Support\ListingIndexability;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
@@ -300,7 +301,9 @@ class SeoShellController extends Controller
         $image = $this->resolveImage($ad);
         $isCatalogFiller = (bool) $ad->is_catalog_filler;
         $isCurrentlyAvailable = $ad->expires_at && $ad->expires_at->isFuture();
-        $isIndexableListing = ! $isCatalogFiller && $isCurrentlyAvailable;
+        // Shared contract with SitemapController so the shell and the ads sitemap can never
+        // drift apart again (a hand-copied filter emptied /sitemap-ads.xml in Aug 2026).
+        $isIndexableListing = ListingIndexability::isIndexable($ad);
 
         if (! $isIndexableListing) {
             return $this->renderShell([

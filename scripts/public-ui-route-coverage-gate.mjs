@@ -29,7 +29,20 @@ assert.deepEqual(
   'Web-middleware API/integration routes require an explicit non-visual classification.',
 );
 
-assert.equal(sitemapRoutes.length, 5, 'Expected the five sitemap XML routes to remain non-visual.');
+// Explicit allowlist instead of a bare count: every sitemap XML route must stay non-visual, and
+// adding/renaming one (e.g. the `/sitemap-ads-{chunk}.xml` inventory chunks) is a deliberate change.
+assert.deepEqual(
+  sitemapRoutes,
+  [
+    'sitemap-ads-{chunk}.xml',
+    'sitemap-ads.xml',
+    'sitemap-categories.xml',
+    'sitemap-main.xml',
+    'sitemap-states.xml',
+    'sitemap.xml',
+  ].sort(),
+  'Sitemap XML routes must stay on the explicit non-visual allowlist.',
+);
 assert.equal(backendStaticScreens.length, 40, 'Expected all 40 current static backend browser surfaces.');
 assert.equal(
   new Set(backendStaticScreens.map(screen => screen.path)).size,

@@ -356,6 +356,410 @@ PY
     docker logs --tail="$TAIL_LINES" mercasto_backend_container 2>&1 | sed -E 's/(APP_KEY|DB_PASSWORD|REDIS_PASSWORD|CLIP_[A-Z_]+|SENTRY_[A-Z_]+)=([^[:space:]]+)/\1=***REDACTED***/g'
     ;;
 
+  hermes_install)
+    require_confirm
+    print_header "Install Hermes Agent CLI"
+    HERMES_INSTALLER="$(mktemp "$SERVER_OPERATOR_TMPDIR/hermes-install.XXXXXX")"
+    curl -fsSL --retry 4 --retry-delay 3 \
+      https://hermes-agent.nousresearch.com/install.sh \
+      -o "$HERMES_INSTALLER"
+    chmod 0700 "$HERMES_INSTALLER"
+    sudo -n env HOME=/root bash "$HERMES_INSTALLER" \
+      --skip-setup \
+      --skip-browser \
+      --skip-computer-use \
+      --non-interactive \
+      --hermes-home /root/.hermes
+    sudo -n test -x /usr/local/bin/hermes
+    sudo -n /usr/local/bin/hermes --version
+    echo "hermes_home=/root/.hermes"
+    echo "harness_service=$(systemctl is-active deepseek-harness.service 2>/dev/null || true)"
+    echo "harness_proxy=$(systemctl is-active deepseek-harness-proxy.service 2>/dev/null || true)"
+    ;;
+
+  hermes_publish)
+    require_confirm
+    print_header "Configure Hermes models and publish dashboard"
+    sudo -n bash <<'ROOT'
+set -euo pipefail
+
+HERMES_HOME=/root/.hermes
+DSH_HOME=/root/.dsh
+CREDS="$DSH_HOME/.credentials.yaml"
+CONFIG="$HERMES_HOME/config.yaml"
+ENV_FILE="$HERMES_HOME/.env"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP="/root/hermes-backups/$STAMP"
+DOMAIN="hermes.flyaicrm.com"
+HARNESS_DOMAIN="harness.flyaicrm.com"
+DASH_PORT=9119
+
+install -d -m 0700 "$BACKUP"
+test -x /usr/local/bin/hermes
+test -s "$CREDS"
+test -s "$CONFIG"
+test -s "$ENV_FILE"
+cp -a "$CONFIG" "$BACKUP/config.yaml"
+cp -a "$ENV_FILE" "$BACKUP/.env"
+chmod 0600 "$BACKUP/config.yaml" "$BACKUP/.env"
+
+python3 - "$CREDS" "$CONFIG" "$ENV_FILE" <<'PY'
+import os
+import sys
+import tempfile
+from pathlib import Path
+import yaml
+
+creds_path = Path(sys.argv[1])
+config_path = Path(sys.argv[2])
+env_path = Path(sys.argv[3])
+
+creds = yaml.safe_load(creds_path.read_text()) or {}
+refs = creds.get("refs") or {}
+
+deep_key = refs.get("DEEPSEEK_API_KEY")
+if not deep_key:
+    for k, v in refs.items():
+        if "DEEPSEEK" in str(k).upper() and isinstance(v, str) and v.strip():
+            deep_key = v.strip()
+            break
+
+openrouter_key = refs.get("OPENROUTER_API_KEY")
+if not deep_key:
+    raise SystemExit("DeepSeek credential not found in DSH credential store")
+if not openrouter_key:
+    raise SystemExit("OpenRouter credential not found in DSH credential store")
+
+env = {}
+for line in env_path.read_text().splitlines():
+    if not line or line.lstrip().startswith("#") or "=" not in line:
+        continue
+    key, value = line.split("=", 1)
+    env[key] = value
+env["DEEPSEEK_API_KEY"] = deep_key.strip()
+env["OPENROUTER_API_KEY"] = openrouter_key.strip()
+
+fd, tmp = tempfile.mkstemp(dir=str(env_path.parent), prefix=".env.", text=True)
+try:
+    with os.fdopen(fd, "w") as fh:
+        for key in sorted(env):
+            fh.write(f"{key}={env[key]}\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, env_path)
+finally:
+    if os.path.exists(tmp):
+        os.unlink(tmp)
+
+config = yaml.safe_load(config_path.read_text()) or {}
+config["model"] = {
+    "provider": "deepseek",
+    "default": "deepseek-v4-flash",
+}
+config["fallback_providers"] = [
+    {
+        "provider": "openrouter",
+        "model": "z-ai/glm-5.3-flash:free",
+    },
+    {
+        "provider": "openrouter",
+        "model": "openrouter/free",
+    },
+]
+
+fd, tmp = tempfile.mkstemp(dir=str(config_path.parent), prefix=".config.", text=True)
+try:
+    with os.fdopen(fd, "w") as fh:
+        yaml.safe_dump(config, fh, sort_keys=False)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, config_path)
+finally:
+    if os.path.exists(tmp):
+        os.unlink(tmp)
+
+print("hermes_primary=deepseek/deepseek-v4-flash")
+print("hermes_fallback_1=openrouter/z-ai/glm-5.3-flash:free")
+print("hermes_fallback_2=openrouter/openrouter/free")
+PY
+
+cd /usr/local/lib/hermes-agent
+/root/.hermes/bin/uv sync --frozen --extra web --extra pty >/tmp/hermes-web-sync.log 2>&1
+
+timeout 180s /usr/local/bin/hermes chat -Q \
+  --provider deepseek \
+  --model deepseek-v4-flash \
+  -q 'Reply with exactly: HERMES_DEEPSEEK_OK' \
+  >/tmp/hermes-deepseek-smoke 2>&1
+grep -q 'HERMES_DEEPSEEK_OK' /tmp/hermes-deepseek-smoke
+echo "HERMES_DEEPSEEK_SMOKE=ok"
+
+set +e
+timeout 180s /usr/local/bin/hermes chat -Q \
+  --provider openrouter \
+  --model z-ai/glm-5.3-flash:free \
+  -q 'Reply with exactly: HERMES_GLM_OK' \
+  >/tmp/hermes-glm-smoke 2>&1
+GLM_RC=$?
+set -e
+
+if [ "$GLM_RC" -eq 0 ] && grep -q 'HERMES_GLM_OK' /tmp/hermes-glm-smoke; then
+  echo "HERMES_GLM_FREE_SMOKE=ok"
+elif grep -qi 'model is unavailable for free' /tmp/hermes-glm-smoke; then
+  echo "HERMES_GLM_FREE_SMOKE=temporarily_unavailable"
+else
+  echo "Unexpected GLM Free smoke failure" >&2
+  tail -40 /tmp/hermes-glm-smoke >&2
+  exit 55
+fi
+
+timeout 180s /usr/local/bin/hermes chat -Q \
+  --provider openrouter \
+  --model openrouter/free \
+  -q 'Reply with exactly: HERMES_FREE_ROUTER_OK' \
+  >/tmp/hermes-free-router-smoke 2>&1
+grep -q 'HERMES_FREE_ROUTER_OK' /tmp/hermes-free-router-smoke
+echo "HERMES_OPENROUTER_FREE_SMOKE=ok"
+
+cat >/etc/systemd/system/hermes-dashboard.service <<'EOF'
+[Unit]
+Description=Hermes Agent Web Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Environment=HOME=/root
+EnvironmentFile=/root/.hermes/.env
+WorkingDirectory=/usr/local/lib/hermes-agent
+ExecStart=/usr/local/bin/hermes dashboard --host 127.0.0.1 --port 9119 --no-open
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=120
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now hermes-dashboard.service
+
+DASH_READY=0
+for attempt in $(seq 1 90); do
+  if curl -fsS --max-time 3 "http://127.0.0.1:$DASH_PORT/api/status" >/tmp/hermes-dashboard-status.json 2>/dev/null; then
+    DASH_READY=1
+    break
+  fi
+  sleep 1
+done
+if [ "$DASH_READY" -ne 1 ]; then
+  systemctl status hermes-dashboard.service --no-pager -l || true
+  journalctl -u hermes-dashboard.service -n 120 --no-pager || true
+  echo "HERMES_DASHBOARD_NOT_READY" >&2
+  exit 56
+fi
+
+python3 - /tmp/hermes-dashboard-status.json <<'PY'
+import json,sys
+data=json.load(open(sys.argv[1]))
+print("dashboard_local_status=ok")
+print("dashboard_auth_required=" + str(data.get("auth_required")).lower())
+PY
+
+if ! command -v socat >/dev/null 2>&1; then
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq socat
+fi
+
+BRIDGE_GATEWAY="$(docker network inspect mercasto_default --format '{{(index .IPAM.Config 0).Gateway}}')"
+test -n "$BRIDGE_GATEWAY"
+BRIDGE_PORT=19119
+
+cat >/etc/systemd/system/hermes-edge-bridge.service <<EOF
+[Unit]
+Description=Hermes loopback bridge for Mercasto edge
+After=network-online.target docker.service hermes-dashboard.service
+Requires=hermes-dashboard.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/socat TCP-LISTEN:$BRIDGE_PORT,bind=$BRIDGE_GATEWAY,reuseaddr,fork TCP:127.0.0.1:$DASH_PORT
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now hermes-edge-bridge.service
+sleep 1
+systemctl is-active --quiet hermes-edge-bridge.service
+curl -fsS --max-time 5 -H "Host: 127.0.0.1:$DASH_PORT" "http://$BRIDGE_GATEWAY:$BRIDGE_PORT/api/status" >/tmp/hermes-bridge-status.json
+docker exec mercasto_frontend_container wget -qO- --header="Host: 127.0.0.1:$DASH_PORT" "http://$BRIDGE_GATEWAY:$BRIDGE_PORT/api/status" >/tmp/hermes-edge-status.json
+
+EDGE_CONF=/etc/mercasto-edge/harness.conf
+CA_SRC=/var/www/mercasto/ops/hermes/hermes-client-ca.crt
+CA_DST=/etc/letsencrypt/hermes-client-ca.crt
+test -s "$EDGE_CONF"
+test -s "$CA_SRC"
+install -m 0644 "$CA_SRC" "$CA_DST"
+
+HARNESS_IP="$(getent ahostsv4 "$HARNESS_DOMAIN" | awk 'NR==1 {print $1}' || true)"
+HERMES_IP="$(getent ahostsv4 "$DOMAIN" | awk 'NR==1 {print $1}' || true)"
+echo "harness_dns=\${HARNESS_IP:-<unresolved>}"
+echo "hermes_dns=\${HERMES_IP:-<unresolved>}"
+if [ -z "$HARNESS_IP" ] || [ -z "$HERMES_IP" ] || [ "$HARNESS_IP" != "$HERMES_IP" ]; then
+  echo "HERMES_DNS_NOT_READY" >&2
+  exit 53
+fi
+
+python3 - "$EDGE_CONF" "$BRIDGE_GATEWAY" "$BRIDGE_PORT" <<'PY'
+import re,sys
+from pathlib import Path
+path=Path(sys.argv[1])
+gateway=sys.argv[2]
+port=sys.argv[3]
+text=path.read_text()
+text=re.sub(r'\n?# HERMES_FLYAICRM_BEGIN.*?# HERMES_FLYAICRM_END\n?', '\n', text, flags=re.S)
+block=f'''
+# HERMES_FLYAICRM_BEGIN
+server {{
+    listen 80;
+    server_name hermes.flyaicrm.com;
+
+    location /.well-known/acme-challenge/ {{
+        root /var/www/certbot;
+    }}
+
+    location / {{
+        return 301 https://$host$request_uri;
+    }}
+}}
+# HERMES_FLYAICRM_END
+'''
+path.write_text(text.rstrip()+"\n\n"+block.lstrip())
+PY
+
+docker exec mercasto_frontend_container nginx -t
+docker exec mercasto_frontend_container nginx -s reload
+
+if [ ! -s /etc/letsencrypt/live/hermes.flyaicrm.com/fullchain.pem ] || \
+   [ ! -s /etc/letsencrypt/live/hermes.flyaicrm.com/privkey.pem ]; then
+  if ! command -v certbot >/dev/null 2>&1; then
+    apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq certbot
+  fi
+  certbot certonly \
+    --webroot \
+    -w /var/www/certbot \
+    -d hermes.flyaicrm.com \
+    --non-interactive \
+    --agree-tos \
+    --register-unsafely-without-email
+fi
+
+test -s /etc/letsencrypt/live/hermes.flyaicrm.com/fullchain.pem
+test -s /etc/letsencrypt/live/hermes.flyaicrm.com/privkey.pem
+
+python3 - "$EDGE_CONF" "$BRIDGE_GATEWAY" "$BRIDGE_PORT" <<'PY'
+import re,sys
+from pathlib import Path
+path=Path(sys.argv[1])
+gateway=sys.argv[2]
+port=sys.argv[3]
+text=path.read_text()
+text=re.sub(r'\n?# HERMES_FLYAICRM_BEGIN.*?# HERMES_FLYAICRM_END\n?', '\n', text, flags=re.S)
+block=f'''
+# HERMES_FLYAICRM_BEGIN
+server {{
+    listen 80;
+    server_name hermes.flyaicrm.com;
+
+    location /.well-known/acme-challenge/ {{
+        root /var/www/certbot;
+    }}
+
+    location / {{
+        return 301 https://$host$request_uri;
+    }}
+}}
+
+server {{
+    listen 443 ssl;
+    server_name hermes.flyaicrm.com;
+
+    ssl_certificate /etc/letsencrypt/live/hermes.flyaicrm.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/hermes.flyaicrm.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    ssl_client_certificate /etc/letsencrypt/hermes-client-ca.crt;
+    ssl_verify_client on;
+    ssl_verify_depth 1;
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location / {{
+        proxy_pass http://{gateway}:{port};
+        proxy_http_version 1.1;
+        proxy_set_header Host 127.0.0.1:9119;
+        proxy_set_header Origin http://127.0.0.1:9119;
+        proxy_set_header X-Forwarded-Host hermes.flyaicrm.com;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+    }}
+}}
+# HERMES_FLYAICRM_END
+'''
+path.write_text(text.rstrip()+"\n\n"+block.lstrip())
+PY
+
+docker exec mercasto_frontend_container nginx -t
+docker exec mercasto_frontend_container nginx -s reload
+
+NO_CERT_CODE="$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 20 https://hermes.flyaicrm.com/)"
+case "$NO_CERT_CODE" in
+  400|403|495|496) ;;
+  *)
+    echo "Expected mTLS rejection without a client certificate, got HTTP $NO_CERT_CODE" >&2
+    exit 54
+    ;;
+esac
+
+echo "hermes_dashboard_service=$(systemctl is-active hermes-dashboard.service)"
+echo "hermes_bridge_service=$(systemctl is-active hermes-edge-bridge.service)"
+echo "hermes_bridge_gateway=$BRIDGE_GATEWAY"
+echo "harness_service=$(systemctl is-active deepseek-harness.service 2>/dev/null || true)"
+echo "harness_proxy=$(systemctl is-active deepseek-harness-proxy.service 2>/dev/null || true)"
+echo "hermes_url=https://hermes.flyaicrm.com"
+echo "hermes_external_auth=mtls"
+echo "hermes_no_cert_http=$NO_CERT_CODE"
+echo "HERMES_PUBLISH_OK"
+
+rm -f /tmp/hermes-web-sync.log \
+  /tmp/hermes-deepseek-smoke \
+  /tmp/hermes-glm-smoke \
+  /tmp/hermes-free-router-smoke \
+  /tmp/hermes-dashboard-status.json \
+  /tmp/hermes-bridge-status.json \
+  /tmp/hermes-edge-status.json
+ROOT
+    ;;
+
   cleanup_build_cache)
     require_confirm
     print_header "Bounded Docker build-cache cleanup"

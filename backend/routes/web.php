@@ -10,6 +10,8 @@ Route::get('/sitemap-main.xml', [SitemapController::class, 'index']);
 Route::get('/sitemap-categories.xml', [SitemapController::class, 'categories']);
 Route::get('/sitemap-states.xml', [SitemapController::class, 'states']);
 Route::get('/sitemap-ads.xml', [SitemapController::class, 'ads']);
+// Ads inventory chunks (chunk 1 keeps the historical /sitemap-ads.xml name).
+Route::get('/sitemap-ads-{chunk}.xml', [SitemapController::class, 'adsChunk'])->whereNumber('chunk');
 
 Route::get('/share/ads/{id}', ShareAdController::class)->whereNumber('id');
 Route::get('/listings', [SeoShellController::class, 'listings']);
