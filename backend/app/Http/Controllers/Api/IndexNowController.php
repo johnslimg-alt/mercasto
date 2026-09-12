@@ -3,166 +3,53 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SubmitIndexNowUrl;
 use App\Models\Ad;
+use App\Support\ListingIndexability;
 use App\Support\SeoIndexability;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * IndexNow submission for listing changes (Bing, Yandex, Seznam, Naver, Yep - not Google).
+ *
+ * The former HTTP endpoints (`submitUrl`, `submitBatch`, `getKey`) were never routed and were
+ * removed; the live path is the ad lifecycle: AdObserver and the bulk reactivation endpoint
+ * call notifyAdChange(), which queues App\Jobs\SubmitIndexNowUrl. The public key must be served
+ * verbatim at /{key}.txt (public/{key}.txt) for the receiving engines to accept a submission -
+ * scripts/indexnow-contract.test.mjs keeps the controller, the key file and the daily batch
+ * script (scripts/submit-all-to-indexnow.sh) in sync.
+ */
 class IndexNowController extends Controller
 {
-    private $indexNowKey = 'a7f5b8c9d2e4f6a1b3c5d7e9f2a4b6c8';
-    private $bingEndpoint = 'https://www.bing.com/indexnow';
-    private $yandexEndpoint = 'https://yandex.com/indexnow';
-
     /**
-     * Submit URL to IndexNow when ad is created/updated
+     * Queue a submission for the canonical (indexable) URL of an ad.
+     *
+     * The old implementation posted synchronously inside the publish request with Laravel's
+     * default timeout, which is why a slow third party could stall a write (and why 588
+     * production submissions were logged as failures). The submission is now queued.
      */
-    public function submitUrl(Request $request)
+    public static function notifyAdChange(Ad $ad, string $action = 'update'): void
     {
-        $request->validate([
-            'url' => 'required|url',
-            'type' => 'in:create,update,delete'
-        ]);
-
-        $url = $request->input('url');
-        $type = $request->input('type', 'update');
-
-        try {
-            // Submit to Bing
-            $bingResponse = $this->submitToSearchEngine($this->bingEndpoint, $url);
-            
-            // Submit to Yandex (optional, user said not interested but including for completeness)
-            // $yandexResponse = $this->submitToSearchEngine($this->yandexEndpoint, $url);
-
-            Log::info('IndexNow URL submitted', [
-                'url' => $url,
-                'type' => $type,
-                'bing_status' => $bingResponse['status'] ?? 'unknown'
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'URL submitted to IndexNow',
-                'url' => $url,
-                'search_engines' => [
-                    'bing' => $bingResponse
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('IndexNow submission failed', [
-                'url' => $url,
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to submit URL to IndexNow',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Submit multiple URLs (batch mode)
-     */
-    public function submitBatch(Request $request)
-    {
-        $request->validate([
-            'urls' => 'required|array',
-            'urls.*' => 'url'
-        ]);
-
-        $urls = $request->input('urls');
-        $results = [];
-
-        foreach ($urls as $url) {
-            try {
-                $response = $this->submitToSearchEngine($this->bingEndpoint, $url);
-                $results[] = [
-                    'url' => $url,
-                    'status' => $response['status'] ?? 'unknown',
-                    'success' => true
-                ];
-            } catch (\Exception $e) {
-                $results[] = [
-                    'url' => $url,
-                    'status' => 'error',
-                    'success' => false,
-                    'error' => $e->getMessage()
-                ];
-            }
+        // Only ever advertise what the canonical sitemap advertises. A pending, archived,
+        // paused or lapsed listing (or a catalog reference) is noindex or 404, so submitting
+        // it would ask search engines to fetch a URL we deliberately keep out of the index.
+        if (! ListingIndexability::isIndexable($ad)) {
+            return;
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Batch submission completed',
-            'results' => $results
-        ]);
-    }
-
-    /**
-     * Get IndexNow key (for verification)
-     */
-    public function getKey()
-    {
-        return response()->json([
-            'key' => $this->indexNowKey,
-            'key_location' => url("/{$this->indexNowKey}.txt")
-        ]);
-    }
-
-    /**
-     * Submit URL to a specific search engine
-     */
-    private function submitToSearchEngine($endpoint, $url)
-    {
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Host' => parse_url($endpoint, PHP_URL_HOST)
-        ])->post($endpoint, [
-            'host' => 'mercasto.com',
-            'key' => $this->indexNowKey,
-            'keyLocation' => url("/{$this->indexNowKey}.txt"),
-            'urlList' => [$url]
-        ]);
-
-        return [
-            'status' => $response->status(),
-            'success' => $response->successful(),
-            'body' => $response->body()
-        ];
-    }
-
-    /**
-     * Auto-submit ad URL when ad is created/updated (called from AdObserver)
-     */
-    public static function notifyAdChange(Ad $ad, string $action = 'update')
-    {
-        // Must be the canonical listing route: `/ad/{id}` is registered neither
-        // in web.php nor in nginx, so submitting it asked IndexNow to crawl a
-        // soft-404 instead of the listing.
+        // Canonical listing route, from the shared policy: `/ad/{id}` is registered neither
+        // in web.php nor in nginx, so submitting it asked IndexNow to crawl a soft-404.
+        // (The URL fix landed with #1135; this change only takes the submission off the
+        // request path, so the two are complementary rather than alternative.)
         $url = SeoIndexability::listingUrl($ad->id);
-        
-        try {
-            $controller = new self();
-            $response = $controller->submitToSearchEngine($controller->bingEndpoint, $url);
-            
-            Log::info('Ad change notified to IndexNow', [
-                'ad_id' => $ad->id,
-                'action' => $action,
-                'url' => $url,
-                'status' => $response['status']
-            ]);
 
-            return $response;
-        } catch (\Exception $e) {
-            Log::error('Failed to notify ad change to IndexNow', [
-                'ad_id' => $ad->id,
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
+        Log::info('Ad change queued for IndexNow', [
+            'ad_id' => $ad->id,
+            'action' => $action,
+            'url' => $url,
+        ]);
+
+        SubmitIndexNowUrl::dispatch($url);
     }
+
 }

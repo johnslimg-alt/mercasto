@@ -6,6 +6,14 @@ return [
     'ad_renewal_price_mxn' => max(1, (float) env('AD_RENEWAL_PRICE_MXN', 49)),
     'ad_renewal_product_code' => 'ad_renewal_7_days',
 
+    // IndexNow (Bing, Yandex, Seznam, Naver, Yep - never Google). Feeds discovery speed only.
+    // The key is public by design and must also be served verbatim at /{key}.txt
+    // (public/{key}.txt); scripts/indexnow-contract.test.mjs keeps the three copies in sync.
+    'indexnow' => [
+        'key' => (string) env('INDEXNOW_KEY', 'a7f5b8c9d2e4f6a1b3c5d7e9f2a4b6c8'),
+        'endpoint' => (string) env('INDEXNOW_ENDPOINT', 'https://api.indexnow.org/indexnow'),
+    ],
+
     // Ads XML sitemap. Chunk size stays under Google's 50,000-URL / 50 MB per-file limits.
     // fail_on_broken_inventory: answer 503 (instead of a misleading empty sitemap) when real,
     // publicly visible listings exist but none of them is indexable.

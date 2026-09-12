@@ -51,6 +51,8 @@ grep -qF 'attribution_channel' "$ATTRIBUTION"
 grep -qF 'attribution_referrer_host' "$ATTRIBUTION"
 grep -qF 'attribution_ai_referral' "$ATTRIBUTION"
 
+# Discovery-speed contract: the IndexNow key must be served and the dead endpoints removed.
+node --test scripts/indexnow-contract.test.mjs
 node --test scripts/ai-referral-attribution.test.mjs
 
 echo "crawler and AI referral policy gate OK"
