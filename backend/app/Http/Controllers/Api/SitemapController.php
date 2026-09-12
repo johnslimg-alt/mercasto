@@ -5,11 +5,41 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Ad;
-use Illuminate\Support\Facades\Cache;
+use App\Support\ListingIndexability;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 class SitemapController extends Controller
 {
+    /**
+     * Google allows 50,000 URLs / 50 MB per sitemap file. Chunk below that so a growing
+     * marketplace never produces a truncated or rejected file.
+     */
+    public const ADS_URLS_PER_CHUNK = 45000;
+
+    private const ADS_MAX_FILE_BYTES = 50000000;
+    private const ADS_CACHE_TTL = 1800;
+
+    /** Mirrors ListingQualityPreflightService: below these minimums a listing is thin. */
+    private const ADS_MIN_TITLE_LENGTH = 3;
+    private const ADS_MIN_DESCRIPTION_LENGTH = 10;
+
+    /** Same legacy placeholder titles the content-quality audit refuses to treat as content. */
+    private const ADS_PLACEHOLDER_TITLES = [
+        'asdf',
+        'demo',
+        'lorem' . ' ipsum',
+        'lorem' . ' ipsum dolor sit amet',
+        'prueba',
+        'qwerty',
+        'test',
+        'testing',
+        'wrefrg',
+    ];
+
     private const MEXICO_STATES = [
         'aguascalientes', 'baja-california', 'baja-california-sur', 'campeche',
         'chiapas', 'chihuahua', 'ciudad-de-mexico', 'coahuila', 'colima',
@@ -52,17 +82,43 @@ class SitemapController extends Controller
 
     public function ads()
     {
-        $content = Cache::remember('sitemap_ads_v4', 1800, function () {
-            return $this->generateAdsSitemap();
-        });
+        return $this->adsChunkResponse(1);
+    }
 
-        return response($content, 200)
-            ->header('Content-Type', 'application/xml');
+    public function adsChunk(int $chunk)
+    {
+        return $this->adsChunkResponse($chunk);
+    }
+
+    private function adsChunkResponse(int $chunk): Response
+    {
+        abort_unless($chunk >= 1 && $chunk <= $this->adsChunkCount(), 404);
+
+        $payload = $this->adsPayload($chunk);
+        $health = $payload['health'];
+
+        // An empty ads sitemap is only acceptable when the marketplace genuinely has no
+        // indexable listing. If real, publicly visible inventory exists and none of it is
+        // indexable the generator is broken: answer 503 instead of publishing a "zero URLs"
+        // sitemap, so crawlers keep the last known good copy and operators get alerted.
+        $failing = $health['level'] === 'error'
+            && (bool) config('marketplace.ads_sitemap.fail_on_broken_inventory', true);
+
+        $response = response($payload['xml'], $failing ? 503 : 200)
+            ->header('Content-Type', 'application/xml')
+            ->header('X-Mercasto-Sitemap-Urls', (string) $payload['urls'])
+            ->header('X-Mercasto-Sitemap-Health', $health['reason']);
+
+        if ($failing) {
+            $response->header('Retry-After', '900');
+        }
+
+        return $response;
     }
 
     public function sitemapIndex()
     {
-        $baseUrl = config('app.url');
+        $baseUrl = rtrim((string) config('app.url'), '/');
         $now = now()->toW3cString();
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
@@ -71,8 +127,19 @@ class SitemapController extends Controller
         $sitemaps = [
             ['loc' => "{$baseUrl}/sitemap-main.xml", 'lastmod' => $now],
             ['loc' => "{$baseUrl}/sitemap-categories.xml", 'lastmod' => $now],
-            ['loc' => "{$baseUrl}/sitemap-ads.xml", 'lastmod' => $now],
         ];
+
+        // Listing inventory is chunked: chunk 1 keeps the historical `/sitemap-ads.xml` name,
+        // later chunks are `/sitemap-ads-{n}.xml`. Sitemap indexes must not nest, so every
+        // chunk is advertised here directly.
+        foreach (range(1, $this->adsChunkCount()) as $chunk) {
+            $sitemaps[] = [
+                'loc' => $chunk === 1
+                    ? "{$baseUrl}/sitemap-ads.xml"
+                    : "{$baseUrl}/sitemap-ads-{$chunk}.xml",
+                'lastmod' => $now,
+            ];
+        }
 
         foreach ($sitemaps as $sitemap) {
             $xml .= "  <sitemap>\n";
@@ -193,35 +260,246 @@ class SitemapController extends Controller
             "</urlset>\n";
     }
 
-    private function generateAdsSitemap()
+    /**
+     * Number of `/sitemap-ads*.xml` chunks the eligible inventory needs.
+     *
+     * Deliberately derived from the SQL-expressible part of the contract only: the per-listing
+     * thin/duplicate curation below can only ever shrink a chunk, never overflow one.
+     */
+    private function adsChunkCount(): int
     {
-        $baseUrl = config('app.url');
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        return Cache::remember('sitemap_ads_chunk_count_v1', self::ADS_CACHE_TTL, function (): int {
+            return max(1, (int) ceil(
+                ListingIndexability::apply(Ad::query())->count() / $this->adsUrlsPerChunk()
+            ));
+        });
+    }
 
-        // Only genuine, publicly available listings belong in the search sitemap.
-        // Catalog references, seller-confirmation-ready approvals and expired rows stay
-        // accessible through the product UI but must not be advertised for indexing.
-        $ads = Ad::query()
-            ->where('is_catalog_filler', false)
-            ->where('status', 'active')
-            ->whereNotNull('expires_at')
-            ->where('expires_at', '>', now())
-            ->orderByDesc('updated_at')
-            ->limit(10000)
-            ->get(['id', 'updated_at']);
+    private function adsUrlsPerChunk(): int
+    {
+        return max(1, (int) config('marketplace.ads_sitemap.urls_per_chunk', self::ADS_URLS_PER_CHUNK));
+    }
 
-        foreach ($ads as $ad) {
-            $xml .= $this->urlEntry(
-                "{$baseUrl}/ads/{$ad->id}",
-                'daily',
-                '0.7',
-                $ad->updated_at->toW3cString()
+    /**
+     * @return array{xml: string, urls: int, eligible: int, chunks: int, excluded: array<string, int>, health: array{level: string, reason: string}}
+     */
+    private function adsPayload(int $chunk): array
+    {
+        $build = function () use ($chunk): array {
+            return $this->buildAdsSitemapChunk($chunk);
+        };
+
+        // Chunk 1 keeps the historical cache key so existing cache-busting call sites keep working.
+        if ($chunk === 1) {
+            return Cache::remember('sitemap_ads_v4', self::ADS_CACHE_TTL, $build);
+        }
+
+        return Cache::remember("sitemap_ads_v4_chunk_{$chunk}", self::ADS_CACHE_TTL, $build);
+    }
+
+    /**
+     * @return array{xml: string, urls: int, eligible: int, chunks: int, excluded: array<string, int>, health: array{level: string, reason: string}}
+     */
+    private function buildAdsSitemapChunk(int $chunk): array
+    {
+        $baseUrl = rtrim((string) config('app.url'), '/');
+        $perChunk = $this->adsUrlsPerChunk();
+        $offset = ($chunk - 1) * $perChunk;
+
+        $excluded = ['thin' => 0, 'placeholder_title' => 0, 'duplicate' => 0];
+        // Fingerprints of the listings kept so far, used to drop older re-posts. Memory is
+        // O(indexable inventory) at roughly 100 bytes per listing (229 real listings today);
+        // a marketplace in the millions should move duplicate detection into SQL.
+        $fingerprints = [];
+        $eligible = 0;
+        $entries = [];
+
+        $query = ListingIndexability::apply(Ad::query())
+            ->orderByDesc('ads.updated_at')
+            ->orderByDesc('ads.id')
+            ->select([
+                'ads.id', 'ads.title', 'ads.description', 'ads.price', 'ads.category',
+                'ads.state', 'ads.city', 'ads.updated_at', 'ads.created_at',
+            ]);
+
+        foreach ($query->cursor() as $ad) {
+            $reason = $this->adsExclusionReason($ad, $fingerprints);
+            if ($reason !== null) {
+                $excluded[$reason]++;
+                continue;
+            }
+
+            if ($eligible >= $offset && count($entries) < $perChunk) {
+                $entries[] = [
+                    'loc' => "{$baseUrl}/ads/{$ad->id}",
+                    'lastmod' => $this->adsLastmod($ad),
+                ];
+            }
+
+            $eligible++;
+        }
+
+        if ($entries === [] && $eligible > 0) {
+            // Eligible inventory exists, yet the chunk is empty: the generator itself is broken.
+            Log::critical('ads_sitemap.eligible_inventory_not_published', [
+                'chunk' => $chunk,
+                'eligible' => $eligible,
+                'excluded' => $excluded,
+            ]);
+
+            throw new RuntimeException(
+                "Ads sitemap chunk {$chunk} produced 0 URLs while {$eligible} eligible listings exist."
             );
         }
 
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        foreach ($entries as $entry) {
+            $xml .= $this->urlEntry($entry['loc'], 'daily', '0.7', $entry['lastmod']);
+        }
         $xml .= "</urlset>\n";
-        return $xml;
+
+        if (strlen($xml) > self::ADS_MAX_FILE_BYTES) {
+            Log::critical('ads_sitemap.chunk_exceeds_byte_limit', [
+                'chunk' => $chunk,
+                'bytes' => strlen($xml),
+                'urls' => count($entries),
+            ]);
+
+            throw new RuntimeException("Ads sitemap chunk {$chunk} exceeds the 50 MB sitemap limit.");
+        }
+
+        return [
+            'xml' => $xml,
+            'urls' => count($entries),
+            'eligible' => $eligible,
+            'chunks' => $this->adsChunkCount(),
+            'excluded' => $excluded,
+            'health' => $this->adsHealth($chunk, count($entries), $eligible, $excluded),
+        ];
+    }
+
+    /**
+     * Sitemap-only curation on top of the shared indexability contract: a sitemap must list
+     * fewer (never more) URLs than the set of indexable pages.
+     *
+     * @param  array<string, bool>  $fingerprints  already-published content fingerprints
+     */
+    private function adsExclusionReason(Ad $ad, array &$fingerprints): ?string
+    {
+        $title = trim(strip_tags((string) $ad->title));
+        $description = trim(strip_tags((string) $ad->description));
+
+        if (mb_strlen($title) < self::ADS_MIN_TITLE_LENGTH
+            || mb_strlen($description) < self::ADS_MIN_DESCRIPTION_LENGTH) {
+            return 'thin';
+        }
+
+        if (in_array(Str::lower(Str::squish($title)), self::ADS_PLACEHOLDER_TITLES, true)) {
+            return 'placeholder_title';
+        }
+
+        // Listings are streamed newest-first, so the first occurrence of a content fingerprint
+        // is the canonical one and older re-posts are dropped as duplicates.
+        $fingerprint = $this->adsContentFingerprint($ad);
+        if ($fingerprint !== '') {
+            if (isset($fingerprints[$fingerprint])) {
+                return 'duplicate';
+            }
+            $fingerprints[$fingerprint] = true;
+        }
+
+        return null;
+    }
+
+    /** Same recipe as `ads:audit-active-content-quality` so both tools mean the same duplicate. */
+    private function adsContentFingerprint(Ad $ad): string
+    {
+        $title = Str::lower(Str::squish(strip_tags((string) $ad->title)));
+        $description = Str::lower(Str::squish(strip_tags((string) $ad->description)));
+
+        if ($title === '' && $description === '') {
+            return '';
+        }
+
+        return hash('sha256', implode('|', [
+            $title,
+            $description,
+            number_format((float) $ad->price, 2, '.', ''),
+            Str::lower(trim((string) $ad->category)),
+            Str::lower(trim((string) $ad->state)),
+            Str::lower(trim((string) $ad->city)),
+        ]));
+    }
+
+    /** Crawlers ignore (and can distrust) future lastmod values, so clamp them to now. */
+    private function adsLastmod(Ad $ad): string
+    {
+        $lastmod = $ad->updated_at?->copy() ?? $ad->created_at?->copy();
+
+        if ($lastmod === null || $lastmod->isFuture()) {
+            return now()->toW3cString();
+        }
+
+        return $lastmod->toW3cString();
+    }
+
+    /**
+     * @param  array<string, int>  $excluded
+     * @return array{level: string, reason: string}
+     */
+    private function adsHealth(int $chunk, int $urls, int $eligible, array $excluded): array
+    {
+        $context = [
+            'chunk' => $chunk,
+            'urls' => $urls,
+            'eligible' => $eligible,
+            'excluded' => $excluded,
+        ];
+
+        if ($urls > 0) {
+            if (array_sum($excluded) > 0) {
+                Log::warning('ads_sitemap.listings_excluded_from_sitemap', $context);
+            }
+
+            return ['level' => 'ok', 'reason' => 'ok'];
+        }
+
+        if ($chunk > 1) {
+            // Curation trimmed this trailing chunk empty: honest, but keep it visible.
+            Log::warning('ads_sitemap.trailing_chunk_empty_after_curation', $context);
+
+            return ['level' => 'warning', 'reason' => 'trailing_chunk_empty'];
+        }
+
+        $visibleReal = Ad::query()
+            ->where('ads.is_catalog_filler', false)
+            ->where('ads.status', 'active')
+            ->count();
+        $realTotal = Ad::query()->where('ads.is_catalog_filler', false)->count();
+
+        $context['visible_real_listings'] = $visibleReal;
+        $context['real_listings'] = $realTotal;
+
+        if ($visibleReal > 0) {
+            // Publicly visible real listings exist but none is indexable: the exact state that
+            // silently emptied sitemap-ads.xml. Never let this pass unnoticed again.
+            Log::error('ads_sitemap.visible_inventory_not_indexable', $context);
+
+            return ['level' => 'error', 'reason' => 'visible_inventory_not_indexable'];
+        }
+
+        if ($realTotal > 0) {
+            // Real listings exist but none is publicly visible (paused/archived/expired):
+            // an empty ads sitemap is correct here, only worth a warning.
+            Log::warning('ads_sitemap.no_visible_inventory', $context);
+
+            return ['level' => 'warning', 'reason' => 'no_visible_inventory'];
+        }
+
+        Log::warning('ads_sitemap.no_listing_inventory', $context);
+
+        return ['level' => 'warning', 'reason' => 'no_listing_inventory'];
     }
 
     private function urlEntry($loc, $changefreq, $priority, $lastmod)

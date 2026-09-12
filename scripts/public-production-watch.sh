@@ -134,6 +134,24 @@ grep -Eiq '<title[^>]*>[^<]{10,160}</title>' "$TMP_DIR/home.html"
 grep -Eiq 'name="description"|property="og:description"' "$TMP_DIR/home.html"
 grep -Eiq 'application/ld\+json|schema.org' "$TMP_DIR/home.html"
 grep -Eiq '<urlset|<sitemapindex|<url>' "$TMP_DIR/sitemap.xml"
+
+# Listing sitemap watch: an empty <urlset> while real inventory exists is the failure mode that
+# hid every listing from search engines for months (see scripts/update-sitemaps.sh). Fetch it,
+# keep it non-fatal for legitimately empty inventory, but never silent.
+ads_status="$(watch_curl -k -sS -o "$TMP_DIR/sitemap-ads.xml" -D "$TMP_DIR/sitemap-ads.headers" \
+  -w '%{http_code}' --connect-timeout "$WATCH_CONNECT_TIMEOUT" --max-time "$WATCH_MAX_TIME" \
+  "${BASE_URL}/sitemap-ads.xml" || true)"
+ads_status="${ads_status:-000}"
+ads_health="$(awk 'BEGIN{IGNORECASE=1} /^x-mercasto-sitemap-health:/ {sub(/^[^:]*:[ ]*/,""); gsub(/\r/,""); print; exit}' "$TMP_DIR/sitemap-ads.headers")"
+echo "${BASE_URL}/sitemap-ads.xml -> $ads_status"
+if [[ "$ads_status" != "200" ]]; then
+  echo "WARN: sitemap-ads.xml returned HTTP ${ads_status} (generator health: ${ads_health:-unknown})" >&2
+elif ! grep -q '<loc>' "$TMP_DIR/sitemap-ads.xml"; then
+  echo "WARN: sitemap-ads.xml advertises zero listings (generator health: ${ads_health:-unknown}); verify real inventory is active before accepting this" >&2
+else
+  echo "sitemap-ads.xml listings: $(grep -c '<loc>' "$TMP_DIR/sitemap-ads.xml")"
+fi
+
 grep -Eiq 'Sitemap:|User-agent:' "$TMP_DIR/robots.txt"
 
 for path in \
