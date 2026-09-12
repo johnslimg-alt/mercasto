@@ -28,7 +28,11 @@
   --mc-dark-background: #0F172A;
   --mc-dark-surface: #111827;
   --mc-dark-raised-surface: #1F2937;
-  --mc-dark-line: #334155;
+  /* WCAG 1.4.11: #334155 measured 1.41:1 against #1E293B and 1.72:1 against
+     #0F172A, so dark card borders/dividers were invisible. #64748B measures
+     3.07:1 on the lightest dark surface in use (#1E293B) and 3.75:1 on the
+     page background (#0F172A). */
+  --mc-dark-line: #64748B;
   --mc-dark-ink: #F8FAFC;
   --mc-dark-muted: #CBD5E1;
   --mc-radius-sm: 8px;
@@ -49,7 +53,7 @@ html.dark .btn-sm.bg-white,
 html.dark .btn-md.bg-white,
 html.dark .btn-lg.bg-white {
   background: #1E293B;
-  border-color: #475569;
+  border-color: #64748B;
   color: #F8FAFC;
 }
 
@@ -331,7 +335,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .site-header {
     background: rgba(15, 23, 42, 0.94);
-    border-color: rgba(51, 65, 85, 0.95);
+    border-color: var(--mc-dark-line);
     box-shadow: 0 1px 22px rgba(0, 0, 0, 0.24);
     color: #F8FAFC;
   }
@@ -387,7 +391,7 @@ html.dark .btn-lg.bg-white:hover {
   html.dark .mobile-language-select,
   html.dark .mobile-tabbar {
     background: rgba(30, 41, 59, 0.86);
-    border-color: rgba(71, 85, 105, 0.9);
+    border-color: rgba(100, 116, 139, 0.9);
     color: #E2E8F0;
   }
 
@@ -437,7 +441,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .header-popover {
     background: #1E293B;
-    border-color: #475569;
+    border-color: #64748B;
     color: #F8FAFC;
   }
 
@@ -449,7 +453,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .header-popover select {
     background: #0F172A;
-    border-color: #475569;
+    border-color: #64748B;
     color: #F8FAFC;
   }
 
@@ -635,7 +639,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .mobile-search-combo {
     background: rgba(15, 23, 42, 0.96) !important;
-    border-color: rgba(51, 65, 85, 0.95) !important;
+    border-color: var(--mc-dark-line) !important;
   }
 
   .mobile-search-combo input {
@@ -720,7 +724,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .mobile-account-button--top {
     background: rgba(15, 23, 42, 0.6) !important;
-    border-color: rgba(51, 65, 85, 0.8) !important;
+    border-color: var(--mc-dark-line) !important;
   }
 
   .osm-embed-shell {
@@ -961,7 +965,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .mobile-location-select-top {
     background: rgba(15, 23, 42, 0.6);
-    border-color: rgba(51, 65, 85, 0.8);
+    border-color: var(--mc-dark-line);
     color: #E2E8F0;
   }
 
@@ -1071,7 +1075,7 @@ html.dark .btn-lg.bg-white:hover {
   }
 
   html.dark .mobile-tabbar-menu {
-    border-color: rgba(51, 65, 85, 0.95);
+    border-color: var(--mc-dark-line);
     background: rgba(15, 23, 42, 0.98);
   }
 
@@ -1123,10 +1127,18 @@ html.dark .btn-lg.bg-white:hover {
     color: #84CC16;
   }
 
+  /* WCAG 1.4.11: these are the only visible content of the theme toggle /
+     language control. #84CC16 measured 1.90:1 on the light chrome (#F9FAFC);
+     #4D7C0F measures 4.78:1 there and #84CC16 stays for dark chrome (9.0:1). */
   .mobile-theme-icon svg,
   .mobile-language-select svg {
-    color: #84CC16;
+    color: #4D7C0F;
     stroke-width: 2.35;
+  }
+
+  html.dark .mobile-theme-icon svg,
+  html.dark .mobile-language-select svg {
+    color: #84CC16;
   }
 
   .job-logo-badge {
@@ -1163,7 +1175,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .mobile-tabbar {
     background: rgba(15, 23, 42, 0.92) !important;
-    border-color: rgba(51, 65, 85, 0.95) !important;
+    border-color: var(--mc-dark-line) !important;
   }
 
   .mobile-tabbar-post {
@@ -1213,7 +1225,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .header-category-bar {
     background: rgba(15, 23, 42, 0.94);
-    border-color: rgba(51, 65, 85, 0.95);
+    border-color: var(--mc-dark-line);
   }
 
   .header-category-link {
@@ -1243,7 +1255,7 @@ html.dark .btn-lg.bg-white:hover {
       radial-gradient(circle at 18% 0%, rgba(132, 204, 22, 0.10), transparent 42%),
       linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(12, 19, 34, 0.98)) !important;
     color: #F8FAFC !important;
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
     box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
@@ -1283,7 +1295,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .job-logo-badge {
     background: rgba(15, 23, 42, 0.78) !important;
-    border-color: rgba(71, 85, 105, 0.9);
+    border-color: rgba(100, 116, 139, 0.9);
     color: #E2E8F0;
   }
 
@@ -1292,7 +1304,7 @@ html.dark .btn-lg.bg-white:hover {
   html.dark .card,
   html.dark .bg-white {
     background-color: #1E293B !important;
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
     color: #F8FAFC !important;
   }
 
@@ -1305,7 +1317,7 @@ html.dark .btn-lg.bg-white:hover {
   html.dark .bg-orange-50,
   html.dark .bg-blue-50 {
     background-color: #162033 !important;
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
   }
 
   .footer-logo span:first-child,
@@ -1318,7 +1330,7 @@ html.dark .btn-lg.bg-white:hover {
   html.dark .border-slate-300,
   html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
   html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
   }
 
   html.dark .text-slate-900,
@@ -1341,7 +1353,7 @@ html.dark .btn-lg.bg-white:hover {
   html.dark select,
   html.dark textarea {
     background-color: #0F172A !important;
-    border-color: #475569 !important;
+    border-color: #64748B !important;
     color: #F8FAFC !important;
   }
 
@@ -1390,14 +1402,14 @@ html.dark .btn-lg.bg-white:hover {
   html.dark .bg-white.rounded-2xl,
   html.dark .bg-white.rounded-3xl {
     background-color: #1E293B !important;
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
     color: #E2E8F0 !important;
   }
 
   html.dark .border-slate-100,
   html.dark .border-slate-200,
   html.dark .border-slate-300 {
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
   }
 
   html.dark .text-slate-900,
@@ -1440,7 +1452,7 @@ html.dark .btn-lg.bg-white:hover {
   html.dark textarea,
   html.dark select {
     background-color: #0F172A !important;
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
     color: #F8FAFC !important;
   }
 
@@ -1465,7 +1477,7 @@ html.dark .btn-lg.bg-white:hover {
   html.dark tr,
   html.dark td,
   html.dark th {
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
   }
 
   @media (max-width: 420px) {
@@ -1589,7 +1601,7 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .leaflet-control-zoom a {
     background-color: #1E293B;
-    border-color: #334155;
+    border-color: var(--mc-dark-line);
     color: #F8FAFC;
   }
 
@@ -1759,12 +1771,12 @@ html.dark .btn-lg.bg-white:hover {
   }
 
   html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.border-slate-100, .border-slate-200, .border-slate-300, .border-gray-100, .border-gray-200, .border-gray-300) {
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
   }
 
   html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(input, textarea, select) {
     background-color: #0F172A !important;
-    border-color: #334155 !important;
+    border-color: var(--mc-dark-line) !important;
     color: #F8FAFC !important;
   }
 
@@ -1925,4 +1937,36 @@ body *::-webkit-scrollbar {
   .header-category-bar {
     display: none;
   }
+}
+
+/**
+ * WCAG 1.4.11 (Non-text Contrast) — dark-mode component boundaries.
+ *
+ * Cards, dividers and controls were drawn with slate-600/700/800 borders, which
+ * measured against the dark surfaces actually rendered:
+ *   #1E293B (slate-800) on #0F172A -> 1.41:1
+ *   #334155 (slate-700) on #0F172A -> 1.72:1
+ *   #475569 (slate-600) on the header chrome (#1C2639) -> 1.85:1
+ * all far below the 3:1 minimum, i.e. the boundary was invisible. Remapping the
+ * three utilities to --mc-dark-line (#64748B) measures 3.07:1 on the lightest
+ * dark surface in use (#1E293B) and 4.24:1 on #020617.
+ *
+ * Deliberately unlayered: unlayered rules outrank Tailwind's @layer utilities,
+ * so this stays one documented source of truth instead of editing ~400 class
+ * usages across the codebase. Translucent variants (dark:border-slate-700/60)
+ * are intentionally left alone — they are hairline separators, not boundaries.
+ */
+html.dark .dark\:border-slate-600,
+html.dark .dark\:border-slate-700,
+html.dark .dark\:border-slate-800,
+html.dark .dark\:divide-slate-600,
+html.dark .dark\:divide-slate-700,
+html.dark .dark\:divide-slate-800 {
+  border-color: var(--mc-dark-line);
+}
+
+html.dark .dark\:divide-slate-600 > :not(:last-child),
+html.dark .dark\:divide-slate-700 > :not(:last-child),
+html.dark .dark\:divide-slate-800 > :not(:last-child) {
+  border-color: var(--mc-dark-line);
 }
