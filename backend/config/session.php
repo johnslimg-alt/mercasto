@@ -167,9 +167,14 @@ return [
     | to the server if the browser has a HTTPS connection. This will keep
     | the cookie from being sent to you when it can't be done securely.
     |
+    | The production template sets SESSION_SECURE_COOKIE=true, and the default
+    | mirrors the `encrypt` option above: when the variable is missing and the
+    | application runs with APP_ENV=production (Laravel's default when unset),
+    | the cookie fails closed as HTTPS-only instead of silently losing Secure.
+    |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV', 'production') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

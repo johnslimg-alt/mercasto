@@ -74,6 +74,70 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
+      - name: Verify fixed-period plan copy in the built artifact
+        run: REQUIRE_BUILT_ARTIFACT=1 bash scripts/fixed-period-plan-copy-gate.sh
+
+  registration-consent-contract:
+    name: Execute registration consent contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, pdo_sqlite, sqlite3, gd, zip, bcmath, pcntl
+          coverage: none
+
+      - name: Install Composer dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Execute registration consent contract
+        run: CONSENT_GATE_REQUIRE_RUNTIME=1 bash scripts/registration-consent-contract-gate.sh
+
+  chat-ui-flow-execution:
+    name: Execute marketplace chat UI flow specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Execute chat UI flow specs against the built frontend
+        run: |
+          set -euo pipefail
+          npx vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/mercasto-chat-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" >/dev/null 2>&1' EXIT
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:4173/; then
+              break
+            fi
+            sleep 1
+          done
+          curl -sf -o /dev/null http://127.0.0.1:4173/
+          CHAT_UI_FLOW_GATE_EXECUTE=1 CHAT_UI_FLOW_BASE_URL=http://127.0.0.1:4173 \
+            bash scripts/chat-ui-flow-gate.sh
+
   frontend-docker-build:
     name: Build frontend Docker image
     runs-on: ubuntu-latest
