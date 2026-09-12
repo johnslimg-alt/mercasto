@@ -1,13 +1,52 @@
 import { FUNNEL_ANALYTICS_VERSION, FUNNEL_EVENTS, listingAnalyticsParams } from './funnelAnalytics.js';
+import { getVendorConsentState, hasVendorConsent } from './trackingConsent.js';
 
 // Cross-platform analytics layer for GA4, Meta Pixel, Microsoft/Bing UET and Clarity.
 // It intentionally does not capture raw email, phone, password, message or textarea values.
+//
+// Privacy contract: no vendor script is fetched and no vendor receives an event
+// until the visitor grants analytics consent through the cookie banner
+// (localStorage.cookie_consent === 'all'). See activateAnalyticsVendors(),
+// revokeAnalyticsVendors() and src/utils/trackingConsent.js.
 
-const ANALYTICS_ENABLED = import.meta.env.VITE_ANALYTICS_ENABLED !== 'false';
-const META_PIXEL_ID = import.meta.env.VITE_META_PIXEL_ID || '';
-const MICROSOFT_UET_TAG_ID = import.meta.env.VITE_MICROSOFT_UET_TAG_ID || '';
-const CLARITY_PROJECT_ID = import.meta.env.VITE_CLARITY_PROJECT_ID || '';
-const ANALYTICS_VERBOSE = import.meta.env.VITE_ANALYTICS_VERBOSE === 'true';
+const ENV = import.meta.env || {};
+const ANALYTICS_ENABLED = ENV.VITE_ANALYTICS_ENABLED !== 'false';
+const META_PIXEL_ID = ENV.VITE_META_PIXEL_ID || '';
+const MICROSOFT_UET_TAG_ID = ENV.VITE_MICROSOFT_UET_TAG_ID || '';
+const CLARITY_PROJECT_ID = ENV.VITE_CLARITY_PROJECT_ID || '';
+const ANALYTICS_VERBOSE = ENV.VITE_ANALYTICS_VERBOSE === 'true';
+const GA4_SCRIPT_SRC = 'https://www.googletagmanager.com/gtag/js';
+
+// Cookies set by the tracking vendors themselves on our origin. Withdrawal
+// removes them so an already loaded vendor cannot keep resolving the visitor
+// through a stored identifier.
+const VENDOR_COOKIE_PATTERNS = [
+  /^_ga($|_)/,
+  /^_gid$/,
+  /^_gcl/,
+  /^_gac_/,
+  /^_fb[pc]$/,
+  /^_tt/,
+  /^_uet/,
+  /^_clck$/,
+  /^_clsk$/,
+  /^(MR|MUID|SM|SRM_B|ANONCHK|CLID)$/i,
+];
+
+const DENIED_CONSENT_STATE = {
+  ad_storage: 'denied',
+  ad_user_data: 'denied',
+  ad_personalization: 'denied',
+  analytics_storage: 'denied',
+};
+
+const GRANTED_CONSENT_STATE = {
+  ad_storage: 'granted',
+  ad_user_data: 'granted',
+  ad_personalization: 'granted',
+  analytics_storage: 'granted',
+};
+
 
 const MAX_PARAM_LENGTH = 140;
 const MAX_PENDING_VENDOR_EVENTS = 100;
@@ -225,6 +264,10 @@ function initMetaPixel() {
   }(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
   /* eslint-enable */
 
+  // Meta's consent API only sends data after an explicit grant. Grant here
+  // (the caller already verified consent) so a later withdrawal can revoke.
+  syncVendorConsent(true);
+
   window.fbq('init', META_PIXEL_ID);
 }
 
@@ -258,8 +301,75 @@ function initClarity() {
   /* eslint-enable */
 }
 
+// Fetches the GA4 library. The index.html snippet only queues the local
+// dataLayer commands, so this is the single place that contacts Google.
+export function loadGa4() {
+  if (!isEnabled() || !hasVendorConsent()) return false;
+  if (window.__mercastoGaLoaded) return true;
+
+  const measurementId = window.__mercastoGaMeasurementId;
+  if (!measurementId) return false;
+
+  window.__mercastoGaLoaded = true;
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = `${GA4_SCRIPT_SRC}?id=${measurementId}`;
+  document.head.appendChild(script);
+
+  return true;
+}
+
+// Consent mode signals for vendors that are already present on the page.
+// Every call is best effort: a vendor that never loaded simply ignores it.
+function syncVendorConsent(granted) {
+  if (!isBrowser()) return;
+
+  try {
+    if (typeof window.fbq === 'function') window.fbq('consent', granted ? 'grant' : 'revoke');
+  } catch {}
+  try {
+    if (window.uetq && typeof window.uetq.push === 'function') {
+      window.uetq.push('consent', granted ? 'grant' : 'revoke');
+    }
+  } catch {}
+  try {
+    if (typeof window.clarity === 'function') window.clarity('consent', Boolean(granted));
+  } catch {}
+  try {
+    if (window.ttq && typeof window.ttq.revokeConsent === 'function' && !granted) {
+      window.ttq.revokeConsent();
+    }
+    if (window.ttq && typeof window.ttq.grantConsent === 'function' && granted) {
+      window.ttq.grantConsent();
+    }
+  } catch {}
+  try {
+    if (typeof window.gtag === 'function') {
+      window.gtag('consent', 'update', granted ? GRANTED_CONSENT_STATE : DENIED_CONSENT_STATE);
+    }
+  } catch {}
+}
+
+// Removes first-party cookies written by the tracking vendors.
+function purgeVendorCookies() {
+  if (!isBrowser() || !document.cookie) return;
+
+  const host = window.location.hostname;
+  const domains = ['', host, `.${host}`];
+
+  document.cookie.split(';').forEach((entry) => {
+    const name = entry.split('=')[0]?.trim();
+    if (!name || !VENDOR_COOKIE_PATTERNS.some((pattern) => pattern.test(name))) return;
+    domains.forEach((domain) => {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/${domain ? `; domain=${domain}` : ''}`;
+    });
+  });
+}
+
 function initAnalyticsVendors() {
   if (!isEnabled() || !vendorActivationAllowed || vendorsReady) return;
+  if (!hasVendorConsent()) return;
   vendorsReady = true;
   initMetaPixel();
   initMicrosoftUet();
@@ -330,6 +440,9 @@ function sendToClarity(eventName, params) {
 }
 
 function deliverVendorEvent(eventName, params) {
+  // Defence in depth: even if an activation flag survived a withdrawal, no
+  // vendor may receive an event without a currently granted consent.
+  if (!hasVendorConsent()) return;
   sendToMeta(eventName, params);
   sendToMicrosoft(eventName, params);
   sendToClarity(eventName, params);
@@ -342,21 +455,47 @@ function queueVendorEvent(eventName, params) {
   }
 }
 
+// Loads every third-party vendor script. Refuses to run without a currently
+// granted consent, so it can never be used as a consent side effect.
 export function activateAnalyticsVendors() {
-  if (!isEnabled() || vendorActivationAllowed) return;
+  if (!isEnabled() || !hasVendorConsent() || vendorActivationAllowed) return false;
+
   vendorActivationAllowed = true;
+  loadGa4();
   initAnalyticsVendors();
+  // Re-granting after a withdrawal must also resume vendors already on the page.
+  syncVendorConsent(true);
 
   const queued = pendingVendorEvents;
   pendingVendorEvents = [];
   queued.forEach(({ eventName, params }) => deliverVendorEvent(eventName, params));
   window.__mercastoAnalyticsVendorsActivated = true;
+  window.__mercastoAnalyticsVendorsRevoked = false;
+  return true;
+}
+
+// Withdrawal: stop every vendor that is already loaded, drop queued payloads
+// and erase the identifiers those vendors stored on our origin.
+export function revokeAnalyticsVendors() {
+  if (!isBrowser()) return false;
+
+  const wasActive = vendorActivationAllowed;
+  vendorActivationAllowed = false;
+  vendorsReady = false;
+  pendingVendorEvents = [];
+
+  syncVendorConsent(false);
+  purgeVendorCookies();
+
+  window.__mercastoAnalyticsVendorsActivated = false;
+  window.__mercastoAnalyticsVendorsRevoked = true;
+  return wasActive;
 }
 
 export function trackEvent(eventName, params = {}) {
   if (!isEnabled()) return;
 
-  if (vendorActivationAllowed) initAnalyticsVendors();
+  const consentState = getVendorConsentState();
   const name = normalizeEventName(eventName);
   const payload = sanitizeParams({
     ...getPageContext(),
@@ -370,15 +509,23 @@ export function trackEvent(eventName, params = {}) {
     console.debug('[Mercasto analytics]', name, payload);
   }
 
-  const gtag = getGtag();
-  if (gtag) gtag('event', name, payload);
+  // The gtag() queue is local until the gtag.js library is fetched, so events
+  // collected while the visitor has not decided yet stay measured. Nothing is
+  // queued once consent was refused, and nothing is sent after a withdrawal.
+  if (consentState !== 'denied') {
+    const gtag = getGtag();
+    if (gtag) gtag('event', name, payload);
+  }
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ event: name, ...payload });
 
-  if (vendorActivationAllowed) {
+  // Vendor activation stays owned by the bootstrap scheduler (first interaction,
+  // consent-aware fallback or a fresh grant). Until then events wait locally and
+  // are replayed with their original ids by activateAnalyticsVendors().
+  if (consentState === 'granted' && vendorActivationAllowed) {
     deliverVendorEvent(name, payload);
-  } else {
+  } else if (consentState !== 'denied') {
     queueVendorEvent(name, payload);
   }
 }

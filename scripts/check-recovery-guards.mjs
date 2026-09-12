@@ -173,10 +173,84 @@ assertContains(
   'heavy analytics vendors have a conservative delayed fallback'
 );
 
+// P0 privacy (2026-09-11): the previous guard pinned the capture-phase
+// `pointerdown -> activateVendorAnalytics` listener, which was itself the
+// defect (it started every vendor before the visitor answered the cookie
+// banner). These guards assert the replacement contract instead: one
+// consent-gated activation entry point, inert pre-consent triggers, and a
+// single gated gtag.js fetch point. Behavioural proof for the same invariant
+// lives in tests/vendor-consent-gating.test.mjs and
+// tests/e2e/consent-gated-vendors.spec.js.
 assertContains(
   'src/main.jsx',
+  'function activateVendorAnalytics',
+  'vendor activation has one entry point instead of a bypassing capture-phase listener'
+);
+
+assertNotContains(
+  'src/main.jsx',
   "window.addEventListener('pointerdown', activateVendorAnalytics",
-  'heavy analytics vendors activate on the first user interaction'
+  'pointerdown must not reach the vendor activation entry point directly: capture-phase listeners cannot bypass consent'
+);
+
+assertContains(
+  'src/main.jsx',
+  'if (!hasVendorConsent()) return false;',
+  'the single vendor activation entry point refuses to run without an explicit consent grant'
+);
+
+assertContains(
+  'src/main.jsx',
+  'if (!hasVendorConsent()) return;',
+  'first-interaction triggers stay inert until consent is granted'
+);
+
+assertContains(
+  'src/main.jsx',
+  'if (hasVendorConsent()) {',
+  'the delayed vendor fallback is armed only when a consent grant is already stored'
+);
+
+assertContains(
+  'src/main.jsx',
+  'subscribeTrackingConsent(',
+  'a fresh consent grant, not an interaction or a timer, is what starts vendors'
+);
+
+assertContains(
+  'src/utils/analytics.js',
+  'export function activateAnalyticsVendors()',
+  'every heavy vendor script has a single activation entry point'
+);
+
+assertContains(
+  'src/utils/analytics.js',
+  'export function loadGa4()',
+  'GA4 loading is owned by the consent-gated loader'
+);
+
+assertContains(
+  'src/utils/analytics.js',
+  'if (!isEnabled() || !hasVendorConsent()) return false;',
+  'the GA4 library is never fetched without an explicit consent grant'
+);
+
+assertContains(
+  'src/utils/analytics.js',
+  'export function revokeAnalyticsVendors()',
+  'withdrawal can stop loaded vendors and purge their identifiers'
+);
+
+assertContains(
+  'src/utils/tiktokPixel.js',
+  'if (!isBrowser() || !hasVendorConsent()) return false;',
+  'the TikTok Pixel also refuses to load without an explicit consent grant'
+);
+
+assertNotContains(
+  'index.html',
+  'googletagmanager.com',
+  'index.html may only queue local dataLayer commands: consent-gated loadGa4() is the single gtag.js fetch point'
 );
 
 assertContains(

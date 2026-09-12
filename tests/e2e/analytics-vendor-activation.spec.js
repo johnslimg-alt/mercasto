@@ -13,6 +13,8 @@ test('analytics vendors wait for interaction and replay queued events', async ({
 
   await page.addInitScript(() => {
     localStorage.setItem('cookiesAccepted', 'true');
+    // Vendors are consent gated: this contract covers the consenting visitor.
+    localStorage.setItem('cookie_consent', 'all');
   });
 
   for (const pattern of VENDOR_PATTERNS) {

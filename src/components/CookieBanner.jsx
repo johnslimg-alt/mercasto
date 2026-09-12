@@ -1,24 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cookie, X } from 'lucide-react';
-import { persistAnalyticsTrackingConsent } from '../utils/trackingConsent';
+import {
+  OPEN_COOKIE_PREFERENCES_EVENT,
+  persistAnalyticsTrackingConsent,
+  readCookieConsent,
+} from '../utils/trackingConsent';
 
 export default function CookieBanner({ t, lang }) {
   const [visible, setVisible] = useState(false);
+  const [decision, setDecision] = useState(() => readCookieConsent());
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Show banner only if no consent has been stored yet
-    const consent = localStorage.getItem('cookie_consent');
-    if (!consent) {
+    let timer;
+
+    // Show the banner only if no consent has been stored yet.
+    if (!readCookieConsent()) {
       // Small delay so it doesn't flash on first paint
-      const timer = setTimeout(() => setVisible(true), 800);
-      return () => clearTimeout(timer);
+      timer = setTimeout(() => setVisible(true), 800);
     }
+
+    // Consent must stay withdrawable: any "cookie settings" entry point can
+    // bring this dialog back, even after a decision was stored.
+    const openPreferences = () => {
+      setDecision(readCookieConsent());
+      setVisible(true);
+    };
+    window.addEventListener(OPEN_COOKIE_PREFERENCES_EVENT, openPreferences);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener(OPEN_COOKIE_PREFERENCES_EVENT, openPreferences);
+    };
   }, []);
 
   const accept = () => {
     localStorage.setItem('cookie_consent', 'all');
+    setDecision('all');
     const notify = () => window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
     const hasAuth = Boolean(localStorage.getItem('auth_token'));
     const privacyAllowsTracking = localStorage.getItem('mercasto_privacy_tracking_consent') !== 'false';
@@ -35,6 +54,7 @@ export default function CookieBanner({ t, lang }) {
 
   const essential = () => {
     localStorage.setItem('cookie_consent', 'essential');
+    setDecision('essential');
     window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
     void persistAnalyticsTrackingConsent(false);
     setVisible(false);
@@ -43,6 +63,11 @@ export default function CookieBanner({ t, lang }) {
   if (!visible) return null;
 
   const dictionary = t || {};
+  const stateLabel = decision === 'all'
+    ? (dictionary.cookies_state_all || 'Tu elección actual: aceptaste todas las cookies.')
+    : decision === 'essential'
+      ? (dictionary.cookies_state_essential || 'Tu elección actual: solo cookies esenciales.')
+      : '';
 
   return (
     <div
@@ -50,6 +75,7 @@ export default function CookieBanner({ t, lang }) {
       role="dialog"
       aria-label={dictionary.cookies_aria_label}
       aria-live="polite"
+      data-testid="cookie-banner"
     >
       <div className="relative max-w-4xl mx-auto bg-[#0F172A] text-white rounded-2xl shadow-2xl border border-white/10 px-5 py-4 pr-12 sm:pr-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <button
@@ -78,6 +104,11 @@ export default function CookieBanner({ t, lang }) {
                 {dictionary.learn_more}
               </button>
             </p>
+            {stateLabel ? (
+              <p className="text-xs text-[#8be0d2] mt-1 leading-relaxed" data-testid="cookie-consent-state">
+                {stateLabel}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -85,12 +116,14 @@ export default function CookieBanner({ t, lang }) {
         <div className="grid grid-cols-2 gap-2 flex-shrink-0 w-full sm:flex sm:w-auto sm:pr-9">
           <button
             onClick={essential}
+            data-testid="cookie-essential"
             className="px-3 sm:px-4 py-2 text-xs font-medium text-slate-300 bg-white/10 hover:bg-white/15 rounded-xl transition-colors border border-white/10"
           >
             {dictionary.cookies_essential}
           </button>
           <button
             onClick={accept}
+            data-testid="cookie-accept-all"
             className="px-3 sm:px-4 py-2 text-xs font-semibold text-white bg-[#0b6f61] hover:bg-[#085147] rounded-xl transition-colors shadow-sm"
           >
             {dictionary.cookies_accept_all}

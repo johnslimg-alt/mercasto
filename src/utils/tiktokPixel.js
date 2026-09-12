@@ -1,3 +1,5 @@
+import { hasVendorConsent } from './trackingConsent.js';
+
 const TIKTOK_PIXEL_ID = 'D9C3HKBC77UBS5FSD7C0';
 
 const TIKTOK_EVENT_MAP = {
@@ -126,7 +128,7 @@ function normalizeExternalId(externalId) {
 }
 
 export async function identifyTikTokUser(user = {}) {
-  if (!isBrowser() || typeof window.ttq?.identify !== 'function') return;
+  if (!isBrowser() || !hasVendorConsent() || typeof window.ttq?.identify !== 'function') return;
 
   const email = normalizeEmail(user.email);
   const phone = normalizePhone(user.phone_number || user.phone || user.telephone);
@@ -234,7 +236,7 @@ async function createEventId(data) {
 }
 
 async function trackTikTokEvent(eventName, data = {}) {
-  if (!isBrowser() || typeof window.ttq?.track !== 'function') return;
+  if (!isBrowser() || !hasVendorConsent() || typeof window.ttq?.track !== 'function') return;
 
   const value = positiveNumber(data.value ?? data.event_value ?? data.price);
   const description = cleanString(data.content_description || data.public_description, 240);
@@ -254,6 +256,7 @@ async function trackTikTokEvent(eventName, data = {}) {
 
 function handleDataLayerItem(item) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+  if (!hasVendorConsent()) return;
   const analyticsEvent = cleanString(item.event, 80).toLowerCase();
   if (!analyticsEvent) return;
 
@@ -324,8 +327,8 @@ function installAuthIdentityBridge() {
 }
 
 export function initTikTokPixel() {
-  if (!isBrowser()) return;
-  if (window.__mercastoTikTokPixelLoaded) return;
+  if (!isBrowser() || !hasVendorConsent()) return false;
+  if (window.__mercastoTikTokPixelLoaded) return true;
 
   window.__mercastoTikTokPixelLoaded = true;
 
@@ -379,4 +382,5 @@ export function initTikTokPixel() {
   window.ttq.page();
   installDataLayerBridge();
   installAuthIdentityBridge();
+  return true;
 }
