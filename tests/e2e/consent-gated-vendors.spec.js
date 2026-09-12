@@ -9,21 +9,41 @@ import { expect, test } from '@playwright/test';
 
 const APP_HOSTS = new Set(['127.0.0.1', 'localhost']);
 
+const APP_ORIGIN = 'https://mercasto.com';
+
+// URL parsing helpers: every host comparison below is an exact hostname match,
+// never a substring test, so a lookalike such as
+// `analytics.tiktok.com.evil.example` can never be counted as vendor traffic.
+const hostOf = (input) => {
+  try {
+    return new URL(String(input), APP_ORIGIN).hostname;
+  } catch {
+    return '';
+  }
+};
+
+const pathOf = (input) => {
+  try {
+    return new URL(String(input), APP_ORIGIN).pathname;
+  } catch {
+    return '';
+  }
+};
+
 // Hosts that are expected third-party traffic for this page but are not
 // tracking vendors: map tiles, and our own API when the bundle bakes in the
 // absolute production host (VITE_API_BASE_URL is not set for CI builds).
-const ALLOWED_THIRD_PARTY = [
-  /^openstreetmap\.org$/,
-  /^[a-z]\.tile\.openstreetmap\.org$/,
-  /^mercasto\.com$/,
-  /^www\.mercasto\.com$/,
-];
+const ALLOWED_THIRD_PARTY_HOST_PATTERN = /^(?:[a-z]\.tile\.|www\.)?openstreetmap\.org$|^(?:www\.)?mercasto\.com$/;
 
+// Exact hosts each vendor is fetched from (the app requests www.clarity.ms,
+// not the bare domain), plus the bare Clarity domain so a lookalike-free
+// denylist still covers both forms.
 const VENDOR_HOSTS = [
   'connect.facebook.net',
   'analytics.tiktok.com',
   'www.googletagmanager.com',
   'bat.bing.com',
+  'www.clarity.ms',
   'clarity.ms',
 ];
 
@@ -40,7 +60,7 @@ const ALWAYS_LOADED_VENDORS = [
 const BUILD_GATED_VENDORS = [
   { name: 'meta-pixel', host: 'connect.facebook.net', loadedFlag: '__mercastoMetaPixelLoaded' },
   { name: 'bing-uet', host: 'bat.bing.com', loadedFlag: '__mercastoUetLoaded' },
-  { name: 'clarity', host: 'clarity.ms', loadedFlag: '__mercastoClarityLoaded' },
+  { name: 'clarity', host: 'www.clarity.ms', loadedFlag: '__mercastoClarityLoaded' },
 ];
 
 const REJECT_LABEL = 'Solo esenciales';
@@ -72,10 +92,9 @@ async function interceptVendorTraffic(page) {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return route.continue();
     if (APP_HOSTS.has(url.hostname)) return route.continue();
 
-    hits.push(`${url.hostname}${url.pathname}`);
-    const vendor = VENDOR_HOSTS.find((host) => url.hostname.endsWith(host));
-    if (vendor) {
-      return route.fulfill({ status: 200, contentType: 'application/javascript', body: `/* ${vendor} stub */` });
+    hits.push(url.href);
+    if (VENDOR_HOSTS.includes(url.hostname)) {
+      return route.fulfill({ status: 200, contentType: 'application/javascript', body: `/* ${url.hostname} stub */` });
     }
     return route.fulfill({ status: 204, contentType: 'application/json', body: '{}' });
   });
@@ -83,10 +102,10 @@ async function interceptVendorTraffic(page) {
   return hits;
 }
 
-const trackingHits = (hits) => hits.filter((hit) => VENDOR_HOSTS.some((host) => hit.includes(host)));
+const trackingHits = (hits) => hits.filter((hit) => VENDOR_HOSTS.includes(hostOf(hit)));
 const unexpectedHits = (hits) => hits.filter((hit) => (
-  !VENDOR_HOSTS.some((host) => hit.includes(host))
-  && !ALLOWED_THIRD_PARTY.some((allowed) => allowed.test(hit.split('/')[0]))
+  !VENDOR_HOSTS.includes(hostOf(hit))
+  && !ALLOWED_THIRD_PARTY_HOST_PATTERN.test(hostOf(hit))
 ));
 
 async function waitForVendor(page, hits, vendor) {
@@ -102,7 +121,7 @@ async function waitForVendor(page, hits, vendor) {
   }
 
   await expect
-    .poll(() => hits.some((hit) => hit.includes(vendor.host)), {
+    .poll(() => hits.some((hit) => hostOf(hit) === vendor.host), {
       message: `${vendor.name} must load once consent is granted`,
       timeout: 20_000,
     })
@@ -203,7 +222,7 @@ test.describe('consent gated tracking vendors', () => {
     expect(pageView.attribution_medium).toBe('cpc');
     expect(pageView.attribution_campaign).toBe('consent_regression');
     expect(pageView.attribution_paid).toBe(true);
-    expect(pageView.page_path).toContain('utm_source=facebook');
+    expect(new URL(pageView.page_path, APP_ORIGIN).searchParams.get('utm_source')).toBe('facebook');
     expect(pageView.route_group).toBe('home');
 
     // Canonical funnel events keep reaching the vendor pixels after a grant.
@@ -259,7 +278,7 @@ test.describe('consent gated tracking vendors', () => {
     ));
     const ga4PageView = ga4Events.find((entry) => entry.name === 'page_view');
     expect(ga4PageView).toBeTruthy();
-    expect(ga4PageView.params.page_path).toContain('utm_source=facebook');
+    expect(new URL(ga4PageView.params.page_path, APP_ORIGIN).searchParams.get('utm_source')).toBe('facebook');
     expect(ga4PageView.params.analytics_contract_version).toBeTruthy();
   });
 
@@ -281,7 +300,7 @@ test.describe('consent gated tracking vendors', () => {
     // Stored consent keeps vendors off the critical path: first interaction wakes them.
     await page.dispatchEvent('body', 'pointerdown', { pointerType: 'mouse', button: 0, bubbles: true });
     await expect
-      .poll(() => hits.some((hit) => hit.includes('analytics.tiktok.com')), { timeout: 20_000 })
+      .poll(() => hits.some((hit) => hostOf(hit) === 'analytics.tiktok.com'), { timeout: 20_000 })
       .toBeTruthy();
 
     // Wait until the always-present vendor queues exist, then make calls observable.
@@ -362,7 +381,7 @@ test.describe('consent gated tracking vendors', () => {
     // Nothing may be delivered to a vendor after the withdrawal.
     const metaBefore = audit.meta.length;
     const tiktokBefore = audit.tiktok.length;
-    const tiktokScriptsBefore = hits.filter((hit) => hit.includes('analytics.tiktok.com')).length;
+    const tiktokScriptsBefore = hits.filter((hit) => hostOf(hit) === 'analytics.tiktok.com').length;
     await page.evaluate(() => {
       window.dataLayer.push({ event: 'favorite_added', listing_id: '4242', category: 'motor' });
       window.dataLayer.push({ event: 'lead_created', listing_id: '4242', category: 'motor' });
@@ -371,8 +390,9 @@ test.describe('consent gated tracking vendors', () => {
     const afterWithdrawal = await page.evaluate(() => window.__consentAudit);
     expect(afterWithdrawal.meta).toHaveLength(metaBefore);
     expect(afterWithdrawal.tiktok).toHaveLength(tiktokBefore);
-    expect(hits.filter((hit) => hit.includes('analytics.tiktok.com'))).toHaveLength(tiktokScriptsBefore);
-    expect(hits.filter((hit) => hit.includes('www.googletagmanager.com'))).toHaveLength(1);
+    // Exactly one TikTok Pixel script and exactly one gtag.js request for the whole page.
+    expect(hits.filter((hit) => hostOf(hit) === 'analytics.tiktok.com')).toHaveLength(tiktokScriptsBefore);
+    expect(hits.filter((hit) => hostOf(hit) === 'www.googletagmanager.com' && pathOf(hit) === '/gtag/js')).toHaveLength(1);
 
     // Re-opening the banner shows the refusal and re-granting resumes the same page.
     await settings.scrollIntoViewIfNeeded();

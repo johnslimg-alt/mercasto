@@ -138,9 +138,38 @@ async function loadAnalyticsModules() {
   return { ...analytics, initTikTokPixel: tiktok.initTikTokPixel };
 }
 
-const vendorRequests = (requests) => requests.filter((src) => (
-  /connect\.facebook\.net|bat\.bing\.com|clarity\.ms|analytics\.tiktok\.com|googletagmanager\.com/.test(src)
-));
+// Exact vendor hosts only. Request src strings may be relative in the fake
+// browser, so they are resolved against this base before the hostname is
+// compared: a lookalike such as `analytics.tiktok.com.evil.example` must never
+// be counted as vendor traffic in a consent test.
+const RESOLVE_BASE = 'https://mercasto.test/';
+
+const VENDOR_SCRIPT_HOSTS = new Set([
+  'connect.facebook.net',
+  'bat.bing.com',
+  'clarity.ms',
+  'www.clarity.ms',
+  'analytics.tiktok.com',
+  'www.googletagmanager.com',
+]);
+
+const hostOf = (input) => {
+  try {
+    return new URL(String(input), RESOLVE_BASE).hostname;
+  } catch {
+    return '';
+  }
+};
+
+const pathOf = (input) => {
+  try {
+    return new URL(String(input), RESOLVE_BASE).pathname;
+  } catch {
+    return '';
+  }
+};
+
+const vendorRequests = (requests) => requests.filter((src) => VENDOR_SCRIPT_HOSTS.has(hostOf(src)));
 
 test('consent state fails closed for undecided, refused and account-level withdrawals', async (t) => {
   const env = installFakeBrowser({ consent: null });
@@ -220,8 +249,14 @@ test('granting consent loads the gated vendors and delivers the funnel events', 
   analytics.initTikTokPixel();
 
   const fetched = vendorRequests(env.requests);
-  assert.ok(fetched.some((src) => src.includes('googletagmanager.com/gtag/js')), 'GA4 library must load');
-  assert.ok(fetched.some((src) => src.includes('analytics.tiktok.com')), 'TikTok Pixel must load');
+  assert.ok(
+    fetched.some((src) => hostOf(src) === 'www.googletagmanager.com' && pathOf(src) === '/gtag/js'),
+    'GA4 library must load',
+  );
+  assert.ok(
+    fetched.some((src) => hostOf(src) === 'analytics.tiktok.com' && pathOf(src) === '/i18n/pixel/events.js'),
+    'TikTok Pixel must load',
+  );
 
   analytics.trackEvent('lead_created', { listing_id: '4242', value: 100 });
 
@@ -235,7 +270,7 @@ test('granting consent loads the gated vendors and delivers the funnel events', 
 
   // Attribution context survives the consent gate.
   const pageView = env.window.dataLayer.filter((item) => item?.event === 'page_view').at(-1);
-  assert.equal(pageView.page_path.includes('utm_source=facebook'), true);
+  assert.equal(new URL(pageView.page_path, RESOLVE_BASE).searchParams.get('utm_source'), 'facebook');
   assert.equal(pageView.analytics_contract_version, '2026-08-04');
 });
 
