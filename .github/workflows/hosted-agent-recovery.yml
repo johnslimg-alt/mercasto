@@ -179,7 +179,20 @@ jobs:
                 | sed -E 's/sk-[A-Za-z0-9_-]{16,}/***REDACTED***/g'
             fi
           done
+          echo "=== hermes-dashboard active ==="
           systemctl is-active hermes-dashboard.service 2>/dev/null || true
+          echo "=== hermes-dashboard status ==="
+          systemctl status hermes-dashboard.service --no-pager -l 2>&1 \
+            | sed -E 's/(api[_-]?key|authorization|bearer|token|secret|password)([=: ]+)[^ ]+/\1\2***REDACTED***/Ig' \
+            | tail -80 || true
+          echo "=== hermes-dashboard journal ==="
+          journalctl -u hermes-dashboard.service -n 120 --no-pager 2>&1 \
+            | sed -E 's/(api[_-]?key|authorization|bearer|token|secret|password)([=: ]+)[^ ]+/\1\2***REDACTED***/Ig' \
+            | tail -120 || true
+          echo "=== hermes dashboard --status ==="
+          HOME=/root /usr/local/bin/hermes dashboard --status 2>&1 | tail -80 || true
+          echo "=== listener 9119 ==="
+          ss -ltnp 2>/dev/null | grep ':9119' || true
           REMOTE
 
       - name: Remove SSH key
