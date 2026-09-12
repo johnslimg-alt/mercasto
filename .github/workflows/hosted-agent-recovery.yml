@@ -199,6 +199,12 @@ jobs:
           else
             echo "missing:/etc/mercasto-edge/harness.conf"
           fi
+          echo "=== reef edge auth directives ==="
+          if [ -s /etc/mercasto-edge/reef-crm.conf ]; then
+            grep -E '^[[:space:]]*auth_basic(_user_file)?[[:space:]]' /etc/mercasto-edge/reef-crm.conf | tail -20 || true
+          else
+            echo "missing:/etc/mercasto-edge/reef-crm.conf"
+          fi
           echo "=== edge mounts ==="
           docker inspect mercasto_frontend_container --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}' 2>/dev/null \
             | grep -E 'mercasto-edge|letsencrypt|nginx|cert' \
