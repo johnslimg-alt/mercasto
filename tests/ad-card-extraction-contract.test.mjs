@@ -13,7 +13,8 @@ test('App delegates listing-card rendering to the reusable AdCard', () => {
 
 test('AdCard preserves current listing-card behaviors', () => {
   const card = read('src/components/common/AdCard.jsx');
-  assert.match(card, /Boolean\(ad\.is_catalog_filler\)/);
+  assert.match(card, /import \{ isCatalogReference \} from '\.\.\/\.\.\/utils\/catalogInventory'/);
+  assert.match(card, /const isCatalogFiller = isCatalogReference\(ad\)/);
   assert.match(card, /options\.priority \? 'eager' : 'lazy'/);
   assert.match(card, /localizedText\(ad\.title, lang\)/);
   assert.match(card, /handleToggleFavorite\(e, ad\.id\)/);

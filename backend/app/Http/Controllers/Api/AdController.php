@@ -26,6 +26,7 @@ use App\Mail\NewAdInCategory;
 use App\Models\User;
 use App\Services\AdModerationGuidanceService;
 use App\Services\ListingQualityPreflightService;
+use App\Support\CatalogInventoryRanking;
 use App\Support\PrivacyFingerprint;
 use App\Support\TrustedE2eAccount;
 use Illuminate\Support\Facades\Mail;
@@ -260,6 +261,13 @@ class AdController extends Controller
 
     /**
      * Получение списка всех активных объявлений
+     *
+     * UNROUTED LEGACY PATH — do not treat this method as the public catalog.
+     * `routes/api.php` serves GET /ads through AdIndexController@index. This method
+     * is kept only because the controller is a shared, contract-checked file; it
+     * ranks through App\Support\CatalogInventoryRanking so it cannot silently
+     * diverge from the live path the way it did before the catalog-ranking fix
+     * (see scripts/check-recovery-guards.mjs and PR #1131).
      */
     public function index(Request $request)
     {
@@ -404,8 +412,9 @@ class AdController extends Controller
 
         // Настоящие пользовательские объявления всегда выше витринных ссылок каталога.
         // Для витрины конкретного продавца сохраняем его собственную сортировку без вмешательства.
+        // Политика ранжирования общая с публичным каталогом: App\Support\CatalogInventoryRanking.
         if (! $request->filled('user_id')) {
-            $query->orderBy('ads.is_catalog_filler', 'asc');
+            CatalogInventoryRanking::realInventoryFirst($query);
         }
 
         // Сортировка (Спецификация: по дате, цене, популярности)

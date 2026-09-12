@@ -1,3 +1,5 @@
+import { isCatalogReference } from './catalogInventory.js';
+
 export function hasCompleteReactivationDetails(ad) {
   const price = Number(ad?.price);
   return Number.isFinite(price)
@@ -21,7 +23,7 @@ export function isSellerConfirmationPending(ad) {
   const republishedAt = ad?.republished_at ? new Date(ad.republished_at).getTime() : null;
   return ad?.status === 'archived'
     && ad?.ai_moderation_status === 'approved'
-    && !ad?.is_catalog_filler
+    && !isCatalogReference(ad)
     && !ad?.expires_at
     && (!republishedAt || (Number.isFinite(moderatedAt) && moderatedAt > republishedAt));
 }
@@ -35,7 +37,7 @@ export function isAdCreditPromotionEligible(ad, nowMs = Date.now()) {
   const hasActivePromotion = (ad?.boost_expires_at && new Date(ad.boost_expires_at).getTime() > nowMs)
     || (ad?.promoted === 'destacado' && !ad?.boost_expires_at);
   return ad?.status === 'active'
-    && !ad?.is_catalog_filler
+    && !isCatalogReference(ad)
     && Boolean(ad?.expires_at)
     && new Date(ad.expires_at).getTime() > nowMs
     && !hasActivePromotion;

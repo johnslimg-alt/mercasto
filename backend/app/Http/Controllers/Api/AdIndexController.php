@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Ad;
 use App\Support\AdQueryFilters;
+use App\Support\CatalogInventoryRanking;
 use App\Support\SqlLikePattern;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -27,6 +28,12 @@ class AdIndexController extends Controller
         }
 
         $query = Ad::with('user:'.self::PUBLIC_AD_USER_COLUMNS);
+
+        // Catalog ranking policy (see App\Support\CatalogInventoryRanking): real seller
+        // inventory always outranks editorial catalog references, and references are
+        // bounded padding. Applied first so it outranks promotions and sort modes.
+        CatalogInventoryRanking::realInventoryFirst($query);
+        CatalogInventoryRanking::boundFillerPages($query, $page);
 
         if ($request->filled('lat') && $request->filled('lng') && $request->filled('radius')) {
             $lat = (float) $request->lat;
@@ -182,6 +189,10 @@ class AdIndexController extends Controller
         // move between pages and produce duplicates or omissions.
         $query->orderByDesc('ads.id');
 
+        // Bounded padding: at most CatalogInventoryRanking::MAX_FILLERS_PER_PAGE
+        // catalog references leave this endpoint on any single page.
+        $paginatePage = fn () => CatalogInventoryRanking::capPageFillers($query->paginate(16))->toArray();
+
         $hasFilters = $request->anyFilled([
             'lat',
             'lng',
@@ -203,12 +214,10 @@ class AdIndexController extends Controller
         if (! $hasFilters && $page <= 10) {
             $cacheKey = "ads_index_page_{$page}";
 
-            return response()->json(Cache::remember($cacheKey, 60, function () use ($query) {
-                return $query->paginate(16)->toArray();
-            }));
+            return response()->json(Cache::remember($cacheKey, 60, $paginatePage));
         }
 
-        return response()->json($query->paginate(16));
+        return response()->json($paginatePage());
     }
 
     private function caseInsensitiveContainsExpression(string $column): string
@@ -223,6 +232,11 @@ class AdIndexController extends Controller
     /**
      * Featured / Destacados endpoint — up to 8 promoted ads, randomised, cached 2 minutes.
      * Used by the premium «Destacados» block on the home feed.
+     *
+     * Catalog references are excluded: this is a premium placement surface, so
+     * editorial placeholders must never be presented as featured listings. When no
+     * real promoted inventory exists the block is served empty and the frontend
+     * hides it (see HomeScreen featuredLoading/featuredAds.length guard).
      */
     public function featured()
     {
@@ -231,6 +245,7 @@ class AdIndexController extends Controller
         $ads = Cache::remember($cacheKey, 120, function () {
             return Ad::with('user:'.self::PUBLIC_AD_USER_COLUMNS)
                 ->where('status', 'active')
+                ->where(CatalogInventoryRanking::FILLER_COLUMN, false)
                 ->where('promoted', 'destacado')
                 ->where(function ($query) {
                     $query->whereNull('boost_expires_at')

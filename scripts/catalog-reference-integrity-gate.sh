@@ -5,7 +5,16 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 echo "== Catalog reference integrity gate =="
-grep -qF "if (ad.is_catalog_filler) return;" src/App.jsx
+# Catalog-reference handling must key on the explicit marker helper: a real listing
+# can never lose view/impression tracking to an unexpected payload shape.
+grep -qF "if (isCatalogReference(ad)) return;" src/App.jsx
+grep -qF "import { isCatalogReference } from './utils/catalogInventory';" src/App.jsx
+if grep -qF "if (ad.is_catalog_filler) return;" src/App.jsx; then
+  echo "view tracking must use the explicit reference marker instead of truthiness" >&2
+  exit 1
+fi
+grep -qF "const CATALOG_REFERENCE_MARKERS = new Set([true, 1, '1', 'true']);" src/utils/catalogInventory.js
+grep -qF "const isCatalogFiller = isCatalogReference(ad);" src/components/common/AdCard.jsx
 grep -qF "ref={isCatalogFiller ? null : observeRef}" src/components/common/AdCard.jsx
 grep -qF "observeAdImpression?.(node, ad.id);" src/components/common/AdCard.jsx
 grep -qF "detailCopy.catalogTitle" src/components/common/AdCard.jsx

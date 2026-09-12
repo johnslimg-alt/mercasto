@@ -6,6 +6,7 @@ import { localizedText } from '../../utils/localize';
 import { formatNumber } from '../../utils/localeFormat';
 import { getTranslations } from '../../utils/translations';
 import { getAdDetailCopy } from '../../utils/adDetailCopy';
+import { isCatalogReference } from '../../utils/catalogInventory';
 
 const AdRatingStars = memo(({ ad, compact = false }) => {
   const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
@@ -52,7 +53,9 @@ const AdCard = memo(({
   const isUrgente = ad.promoted === 'urgente';
   const isHighlighted = ad.promoted === 'highlight';
   const isPro = ad.user?.role === 'business';
-  const isCatalogFiller = Boolean(ad.is_catalog_filler);
+  // Strict marker: only an explicit placeholder flag disables impression tracking.
+  // Anything ambiguous stays a real listing so a real ad never loses tracking.
+  const isCatalogFiller = isCatalogReference(ad);
   const isFav = favoriteIds.includes(ad.id);
   const imageWidth = Number.isFinite(options.imageWidth) ? options.imageWidth : 520;
   const safeImage = sizedImage(options.displayImageUrl || getImageUrl(ad.image_url, ad.image), imageWidth);
