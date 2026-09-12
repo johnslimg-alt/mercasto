@@ -72,6 +72,7 @@ const serverOperatorCommands = [
   'RUN:logs_backend',
   'RUN:deploy_main:MERCASTO',
   'RUN:hermes_install:MERCASTO',
+  'RUN:hermes_publish:MERCASTO',
   'RUN:restart_frontend:MERCASTO',
   'RUN:restart_stack:MERCASTO',
   'RUN:align_media_caps:MERCASTO',
