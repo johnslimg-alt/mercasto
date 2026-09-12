@@ -142,10 +142,15 @@ test.describe('marketplace internal chat', () => {
     await composer.fill('Sigue disponible?');
     await page.getByRole('button', { name: 'Enviar mensaje' }).click();
 
+    // Exact equality is deliberate: the chat POST body must carry the listing
+    // conversation fields and the visitor's OpenAI measurement consent, and
+    // nothing else. The visitor in this spec has answered no cookie banner, so
+    // the consent flag must be false.
     await expect.poll(() => sentPayload).toEqual({
       receiver_id: seller.id,
       ad_id: 42,
       content: 'Sigue disponible?',
+      openai_measurement_consent: false,
     });
     await expect(page).toHaveURL(/\/mensajes\?conversation=77$/);
     await expect(page.getByText('Sigue disponible?').last()).toBeVisible();

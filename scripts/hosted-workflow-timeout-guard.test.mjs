@@ -30,6 +30,8 @@ const expectedTimeouts = new Map([
   ['repository-gates', 15],
   ['compose-config', 10],
   ['frontend-build', 15],
+  ['registration-consent-contract', 20],
+  ['chat-ui-flow-execution', 20],
   ['frontend-docker-build', 20],
   ['backend-docker-build', 20],
 ]);

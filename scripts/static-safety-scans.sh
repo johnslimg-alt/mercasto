@@ -51,6 +51,7 @@ bash scripts/edit-ad-contract-gate.sh
 bash scripts/paid-renewal-contract-gate.sh
 bash scripts/cache-policy-scan.sh
 bash scripts/session-config-scan.sh
+bash scripts/session-config-scan.test.sh
 node --test scripts/session-cookie-smoke.test.mjs
 node --test scripts/production-session-security-smoke.test.mjs
 node --test scripts/security-header-smoke.test.mjs
@@ -86,6 +87,7 @@ bash scripts/schema-drift-contract-gate.sh
 bash scripts/postgres-observability-contract-gate.sh
 bash scripts/payment-retention-scan.sh
 bash scripts/fixed-period-plan-copy-gate.sh
+bash scripts/fixed-period-plan-copy-gate.test.sh
 bash scripts/privacy-retention-contract-gate.sh
 bash scripts/payment-payload-privacy-gate.sh
 bash scripts/payment-webhook-idempotency-scan.sh
@@ -96,6 +98,7 @@ bash scripts/xml-upload-security-gate.sh
 bash scripts/search-alert-flow-gate.sh
 bash scripts/chat-api-security-gate.sh
 bash scripts/chat-ui-flow-gate.sh
+bash scripts/chat-ui-flow-gate.test.sh
 bash scripts/listing-lifecycle-gate.sh
 bash scripts/ad-activation-lifecycle-gate.sh
 bash scripts/moderation-pipeline-gate.sh
@@ -115,6 +118,7 @@ bash scripts/dashboard-locale-format-contract-gate.sh
 bash scripts/post-edit-localization-contract-gate.sh
 bash scripts/catalog-saved-search-state-gate.sh
 bash scripts/catalog-map-state-gate.sh
+bash scripts/catalog-map-state-gate.test.sh
 node --test tests/map-marker-filters.test.mjs
 bash scripts/map-shell-localization-contract-gate.sh
 node scripts/report-reason-localization-contract.mjs
@@ -126,6 +130,7 @@ bash scripts/web-push-vapid-gate.sh
 bash scripts/supply-readiness-gate.sh
 bash scripts/location-search-gate.sh
 bash scripts/registration-consent-contract-gate.sh
+bash scripts/registration-consent-contract-gate.test.sh
 bash scripts/funnel-analytics-contract-gate.sh
 node --test scripts/buyer-nudge-contract-gate.test.mjs
 bash scripts/mobile-app-association-gate.sh
