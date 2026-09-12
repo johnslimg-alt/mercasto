@@ -146,12 +146,10 @@ fi
 assert_fixed_period_copy "$SHIPPED_SRC" "shipped /reembolsos document (public/ -> image verbatim)"
 
 ARTIFACT_MODE=""
-ARTIFACT_PATH=""
 CLEANUP_SERVED_DOCUMENT=""
 
 if [ "${REQUIRE_BUILT_ARTIFACT:-0}" = "1" ]; then
   ARTIFACT_MODE="built"
-  ARTIFACT_PATH="$SHIPPED_DIST"
   ARTIFACT_LABEL="freshly built $SHIPPED_DIST (byte-identical to $SHIPPED_SRC)"
   assert_built_artifact
   echo "Validated built artifact: $ARTIFACT_LABEL"
@@ -170,7 +168,6 @@ else
 
   if (( served_status == 0 )) && [ -n "$served_document" ]; then
     ARTIFACT_MODE="served"
-    ARTIFACT_PATH="$served_document"
     if [ ! -f "$served_document" ]; then
       echo "FAIL: the served /reembolsos document could not be read: $served_document" >&2
       echo "      FRONTEND_SERVED_DOCUMENT pointed at a path that does not exist" >&2
@@ -193,7 +190,6 @@ else
     fi
   elif [ -f "$SHIPPED_DIST" ]; then
     ARTIFACT_MODE="built"
-    ARTIFACT_PATH="$SHIPPED_DIST"
     ARTIFACT_LABEL="local build $SHIPPED_DIST (byte-identical to $SHIPPED_SRC)"
     assert_built_artifact
     echo "Validated built artifact: $ARTIFACT_LABEL"
