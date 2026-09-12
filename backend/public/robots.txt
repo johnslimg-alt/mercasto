@@ -8,6 +8,14 @@ User-agent: Claude-SearchBot
 User-agent: Claude-User
 User-agent: PerplexityBot
 Allow: /
+# Rendered ad detail pages hydrate from these read-only public endpoints. Crawlers honour
+# robots.txt for subresources, so without these Allow lines a blocked XHR leaves the
+# renderer with an error card ("No pudimos cargar esta página") and the generic site title
+# instead of the listing (verified with a headless render on 2026-09-12). robots.txt matches
+# the longest path, so Disallow: /api/ still blocks every other API route (auth, admin,
+# payments, internal).
+Allow: /api/ads
+Allow: /api/categories
 Disallow: /api/
 Disallow: /admin
 Disallow: /dashboard
@@ -31,6 +39,8 @@ Disallow: /
 # Default policy for other crawlers.
 User-agent: *
 Allow: /
+Allow: /api/ads
+Allow: /api/categories
 Disallow: /api/
 Disallow: /admin
 Disallow: /dashboard

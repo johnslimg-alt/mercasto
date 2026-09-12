@@ -2686,6 +2686,8 @@ class AdController extends Controller
 
         // Bust caches
         Cache::forget('sitemap_xml');
+        // Bulk visibility changes go through the query builder, so AdObserver never fires.
+        SitemapController::forgetAdsCache();
         Cache::forget('google_merchant_xml');
         for ($i = 1; $i <= 10; $i++) {
             Cache::forget("ads_index_page_{$i}");

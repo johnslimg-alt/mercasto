@@ -261,6 +261,28 @@ class SitemapController extends Controller
     }
 
     /**
+     * Drop every cached artifact of the canonical ads sitemap.
+     *
+     * The sitemap is cached for 30 minutes, so without this any code path that changes which
+     * listings are publicly visible (publish, pause, archive, expire, seller re-confirmation,
+     * moderation reconciliation, deletion) keeps advertising the previous inventory. Call it
+     * from model-event paths through AdObserver and explicitly from query-builder bulk updates,
+     * which do not fire model events.
+     */
+    public static function forgetAdsCache(): void
+    {
+        $chunks = max(1, (int) Cache::get('sitemap_ads_chunk_count_v1', 1));
+
+        Cache::forget('sitemap_ads_v4');
+        Cache::forget('sitemap_ads_chunk_count_v1');
+
+        // Chunks 2..n, plus one spare so a growing inventory never leaves a stale tail chunk.
+        for ($chunk = 2; $chunk <= $chunks + 1; $chunk++) {
+            Cache::forget("sitemap_ads_v4_chunk_{$chunk}");
+        }
+    }
+
+    /**
      * Number of `/sitemap-ads*.xml` chunks the eligible inventory needs.
      *
      * Deliberately derived from the SQL-expressible part of the contract only: the per-listing

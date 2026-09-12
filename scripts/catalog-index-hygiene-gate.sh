@@ -15,6 +15,7 @@ CLIENT_POLICY="src/utils/seoIndexability.js"
 APP="src/App.jsx"
 SERVER_TEST="backend/tests/Feature/SeoShellControllerTest.php"
 SITEMAP_TEST="backend/tests/Feature/SitemapIndexHygieneTest.php"
+SITEMAP_CACHE_TEST="backend/tests/Feature/AdsSitemapCacheInvalidationTest.php"
 
 echo "== Catalog index hygiene gate =="
 
@@ -44,6 +45,20 @@ grep -qF -- "header('Retry-After', '900')" "$SITEMAP"
 grep -qF -- 'ADS_URLS_PER_CHUNK = 45000' "$SITEMAP"
 grep -qF -- "Route::get('/sitemap-ads-{chunk}.xml'" "$ROUTES"
 grep -qF -- 'ads(?:-\d+)?' "$NGINX"
+# Publishing must invalidate the cached ads sitemap (30 minute TTL) on every path:
+# model saves through AdObserver, and the query-builder bulk paths that skip model events.
+grep -qF -- 'public static function forgetAdsCache(): void' "$SITEMAP"
+grep -qF -- 'SitemapController::forgetAdsCache();' backend/app/Observers/AdObserver.php
+grep -qF -- 'SitemapController::forgetAdsCache();' backend/app/Console/Commands/ReconcileModerationVisibility.php
+grep -qF -- 'SitemapController::forgetAdsCache();' backend/app/Http/Controllers/Api/AdController.php
+grep -qF -- 'test_reconciliation_bulk_update_publishes_without_waiting_for_the_ttl' "$SITEMAP_CACHE_TEST"
+
+# Edge indexability: www folds into the apex and the /anuncio/{id} alias folds into /ads/{id}
+# with a real 301 (both were live duplicate URLs serving 200).
+grep -qF -- 'if ($host = www.mercasto.com) {' "$NGINX"
+grep -qF -- 'return 301 https://mercasto.com$request_uri;' "$NGINX"
+grep -qF -- 'location ~ ^/anuncio/([0-9]+)/?$ {' "$NGINX"
+grep -qF -- 'return 301 https://mercasto.com/ads/$1$is_args$args;' "$NGINX"
 # The cron entry that used to fail with "not found" must keep its target in the repository.
 test -x "$SITEMAP_JOB"
 grep -qF -- 'X-Mercasto-Sitemap-Health' "$SITEMAP_JOB"
@@ -124,5 +139,6 @@ grep -qF -- 'test_ad_sitemap_fails_loudly_when_visible_real_listings_are_not_ind
 grep -qF -- 'test_ad_sitemap_warns_but_stays_valid_when_no_listing_is_visible' "$SITEMAP_TEST"
 grep -qF -- 'test_ad_sitemap_chunks_inventory_and_the_index_advertises_every_chunk' "$SITEMAP_TEST"
 grep -qF -- 'test_ad_sitemap_excludes_thin_placeholder_and_duplicated_listings' "$SITEMAP_TEST"
+grep -qF -- 'test_model_status_change_publishes_the_listing_without_waiting_for_the_ttl' "$SITEMAP_CACHE_TEST"
 
 echo "Catalog index hygiene gate OK"

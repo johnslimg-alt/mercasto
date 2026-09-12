@@ -31,6 +31,15 @@ for private_path in /api/ /admin /dashboard /post /login /register /horizon /san
   grep -qF "Disallow: $private_path" "$ROBOTS"
 done
 
+# Rendered ad detail pages hydrate from these read-only public endpoints; every other /api/
+# route stays disallowed (robots.txt resolves by longest matching path).
+for hydrated in /api/ads /api/categories; do
+  grep -qF "Allow: $hydrated" "$ROBOTS"
+  grep -qF "Allow: $hydrated" "$BACKEND_ROBOTS"
+done
+[ "$(grep -c 'Allow: /api/ads' "$ROBOTS")" -ge 1 ] || { echo "ads API must be allow-listed for renderers" >&2; exit 1; }
+[ "$(grep -c '^Disallow: /api/$' "$ROBOTS")" -eq 2 ] || { echo "both crawler groups must keep Disallow: /api/" >&2; exit 1; }
+
 test ! -e public/llms.txt
 test ! -e backend/public/llms.txt
 grep -qF 'location = /llms.txt { return 404; }' default.conf
