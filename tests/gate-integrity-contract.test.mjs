@@ -667,3 +667,86 @@ test('a fully specified waiver binds to its violation and is accepted', () => {
     assert.match(output, /Waived \(owned and bound to one violation\)/);
   });
 });
+
+// --- Finding: negative-assertion targets in trigger coverage (P2) ---------
+
+test('negative control: a negative-only asserted target must still be covered by a trigger', () => {
+  const base = {
+    'public/subject.js': "console.log('subject');\n",
+    [GUARD_PATH]: [
+      "import { readFileSync } from 'node:fs';",
+      'function assertNotContains(path, needle) {',
+      "  if (readFileSync(path, 'utf8').includes(needle)) throw new Error('unexpected');",
+      '}',
+      "assertNotContains('public/subject.js', 'bad-marker');",
+      '',
+    ].join('\n'),
+  };
+
+  // Control: the workflow fires for public/** -> the target is observable.
+  withRepo(
+    { ...base, '.github/workflows/guard.yml': workflowYaml({ paths: ['scripts/**', 'public/**'] }) },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a covered negative target must pass:\n${output}`);
+    }
+  );
+
+  // Negative-only targets used to be dropped, so this went unnoticed.
+  withRepo(
+    { ...base, '.github/workflows/guard.yml': workflowYaml({ paths: ['scripts/**'] }) },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'an uncovered negative-only target must fail');
+      assert.match(output, /gate-not-triggered/);
+      assert.match(output, /public\/subject\.js/);
+    }
+  );
+});
+
+// --- Finding: PHP comments must not seed reachability (P2) ---------------
+
+test('negative control: a docblock callable pair does not make a method reachable', () => {
+  const controllerBody = [
+    '    /**',
+    "     * Example: [FooController::class, 'legacy']",
+    '     */',
+    '    public function legacy()',
+    '    {',
+    "        $query->orderBy('foo.dead', 'asc');",
+    '    }',
+  ];
+
+  // The only reference is inside a comment -> legacy() is still unreachable.
+  withRepo(
+    {
+      [CONTROLLER_PATH]: controllerWith(controllerBody),
+      [ROUTES_PATH]: "<?php\n",
+      'scripts/comment-gate.mjs': guardAsserting("orderBy('foo.dead', 'asc')"),
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a comment must not make a method reachable');
+      assert.match(output, /dead-code-assertion/);
+      assert.match(output, /FooController@legacy\(\)/);
+    }
+  );
+
+  // Control: the same pair in real code (not a comment) does make it reachable.
+  withRepo(
+    {
+      [CONTROLLER_PATH]: controllerWith([
+        '    public function legacy()',
+        '    {',
+        "        $query->orderBy('foo.dead', 'asc');",
+        '    }',
+        '    public function dispatch()',
+        '    {',
+        "        $pair = [FooController::class, 'legacy'];",
+        '    }',
+      ]),
+      [ROUTES_PATH]: "<?php\nRoute::get('/foo/{id}', [FooController::class, 'dispatch']);\n",
+      'scripts/comment-ok-gate.mjs': guardAsserting("orderBy('foo.dead', 'asc')"),
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a real callable pair must keep legacy reachable:\n${output}`);
+    }
+  );
+});

@@ -207,6 +207,30 @@ function extractAssertions(gatePath, source) {
   return found;
 }
 
+/**
+ * Every repository file a gate ASSERTS about, positive or negative.
+ *
+ * Used for trigger coverage only. `extractAssertions()` deliberately returns
+ * positive assertions alone, because dead-code analysis is about assertions that
+ * dead code could satisfy -- an absence assertion cannot be satisfied by dead
+ * code. Trigger coverage is a different question: if a workflow does not run when
+ * a file the guard makes claims about changes, the guard cannot observe a
+ * regression there, and that is equally true for a file the guard asserts must
+ * NOT contain something. Negative-only targets used to be dropped entirely, so
+ * removing their `paths:` entry went unnoticed.
+ */
+function extractAssertedTargets(source) {
+  const targets = new Set();
+  const constants = jsConstants(source);
+  const call = new RegExp(String.raw`assert(?:Contains|Order|NotContains)\(\s*${ASSERT_ARG}`, 'g');
+  let match;
+  while ((match = call.exec(source)) !== null) {
+    const target = resolveArgGroups(match, 1, constants);
+    if (target !== null) targets.add(target);
+  }
+  return targets;
+}
+
 function gateFiles() {
   const dir = join(ROOT, 'scripts');
   return readdirSync(dir)
@@ -289,6 +313,65 @@ const RESOURCE_ACTIONS = {
 };
 
 /**
+ * Removes PHP comments (including docblocks) while leaving string literals intact.
+ *
+ * Reachability seeds are collected with source regexes, so a docblock that
+ * documents an example -- `Example: [FooController::class, 'legacy']` -- would
+ * otherwise register a real callable pair and mark an unreachable method as
+ * reachable. A comment that can mask dead code is the same defect as a gate that
+ * guards unreachable code: the tool would be lying in exactly the way it exists
+ * to prevent. Strings are copied verbatim so a `//` inside a literal is not
+ * mistaken for a comment.
+ *
+ * `#[Attribute]` is preserved: `#` only starts a comment when not followed by `[`.
+ * Heredoc/nowdoc bodies are not parsed; a callable pair written inside one would
+ * still be counted, which is the conservative (non-masking) direction.
+ */
+function stripPhpComments(source) {
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (char === "'" || char === '"') {
+      const quote = char;
+      out += char;
+      i += 1;
+      while (i < source.length) {
+        if (source[i] === '\\') {
+          out += source[i] + (source[i + 1] ?? '');
+          i += 2;
+          continue;
+        }
+        out += source[i];
+        const done = source[i] === quote;
+        i += 1;
+        if (done) break;
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      const end = source.indexOf('*/', i + 2);
+      i = end === -1 ? source.length : end + 2;
+      out += ' ';
+      continue;
+    }
+
+    if ((char === '/' && next === '/') || (char === '#' && next !== '[')) {
+      const end = source.indexOf('\n', i);
+      i = end === -1 ? source.length : end;
+      continue;
+    }
+
+    out += char;
+    i += 1;
+  }
+  return out;
+}
+
+/**
  * Which controller methods can production actually reach?
  *
  * "Not routed" is NOT the same as "dead": controllers legitimately expose
@@ -322,7 +405,9 @@ function reachableMethods() {
   };
 
   for (const file of backendPhpFiles()) {
-    const source = readRepoFile(file);
+    // Comments are stripped before any seed or edge is collected: a docblock
+    // example must never make an unreachable method look reachable.
+    const source = stripPhpComments(readRepoFile(file));
     if (file.startsWith(`${ROUTE_DIR}/`)) routeFiles.add(file);
 
     for (const match of source.matchAll(/\[\s*([A-Za-z_][\w]*)::class\s*,\s*['"]([^'"]+)['"]\s*\]/g)) {
@@ -636,10 +721,11 @@ function checkGateTriggerCoverage() {
   const guardSource = readRepoFile(GUARD);
   const scripts = npmScripts();
 
-  // Every repository file the guard reads, source or not: root files and
-  // workflow files count too, otherwise dropping their trigger goes unnoticed.
+  // Every repository file the guard reads or makes a claim about, source or not,
+  // positive or negative: root files and workflow files count too, otherwise
+  // dropping their trigger goes unnoticed.
   const targets = new Set();
-  for (const { target } of extractAssertions(GUARD, guardSource)) {
+  for (const target of extractAssertedTargets(guardSource)) {
     if (isRepoTarget(target)) targets.add(target);
   }
   for (const match of guardSource.matchAll(/(?:read|readFileSync)\(\s*'([^']+)'/g)) {

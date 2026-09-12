@@ -189,12 +189,33 @@ class CatalogQueryInvariantsTest extends TestCase
         $other = $this->listing(['title' => 'Departamento en Mérida']);
         $other->forceFill(['location' => 'Mérida, Yucatán'])->saveQuietly();
 
-        $response = $this->getJson('/api/ads?location=' . urlencode('Boca del Río'));
+        $response = $this->getJson('/api/ads?location=' . urlencode('boca del río'));
 
         $response->assertOk();
         $ids = array_column($response->json('data'), 'id');
-        $this->assertContains($match->id, $ids, 'a listing whose location matches the text filter must be returned');
+        $this->assertContains($match->id, $ids, 'location matching must be case-insensitive');
         $this->assertNotContains($other->id, $ids, 'a listing elsewhere must not match the location text filter');
+    }
+
+    public function test_todo_mexico_alias_does_not_narrow_by_location(): void
+    {
+        Http::preventStrayRequests();
+
+        $veracruz = $this->listing(['title' => 'Casa en Veracruz']);
+        $veracruz->forceFill(['location' => 'Xalapa, Veracruz'])->saveQuietly();
+        $yucatan = $this->listing(['title' => 'Casa en Yucatán']);
+        $yucatan->forceFill(['location' => 'Mérida, Yucatán'])->saveQuietly();
+
+        // "todo méxico" is the all-country alias: it must NOT narrow results.
+        $this->getJson('/api/ads?location=' . urlencode('todo méxico'))
+            ->assertOk()
+            ->assertJsonPath('total', 2);
+
+        // Control on the same dataset: a real city DOES narrow.
+        $this->getJson('/api/ads?location=' . urlencode('Xalapa'))
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $veracruz->id);
     }
 
     public function test_has_coords_filter_excludes_listings_without_coordinates(): void
@@ -235,6 +256,29 @@ class CatalogQueryInvariantsTest extends TestCase
         $this->assertContains($near->id, $ids, 'a listing at the search origin must be inside the radius');
         $this->assertNotContains($far->id, $ids, 'a listing ~100km away must be outside a 25km radius');
         $this->assertNotContains($unknown->id, $ids, 'a listing without coordinates cannot be inside any radius');
+    }
+
+    public function test_radius_results_are_ordered_nearest_first(): void
+    {
+        Http::preventStrayRequests();
+
+        // Both rows sit inside a 60 km radius of the Veracruz port but at clearly
+        // different distances, so the response order exposes the distance ordering
+        // rather than merely which rows survived the filter.
+        $closest = $this->listing(['title' => 'A 3 km']);
+        $closest->forceFill(['latitude' => 19.2000, 'longitude' => -96.1342])->saveQuietly();
+        $farther = $this->listing(['title' => 'A 40 km']);
+        $farther->forceFill(['latitude' => 19.5300, 'longitude' => -96.1342])->saveQuietly();
+
+        $response = $this->getJson('/api/ads?lat=19.1738&lng=-96.1342&radius=60');
+
+        $response->assertOk();
+        $ids = array_map('intval', array_column($response->json('data'), 'id'));
+        $this->assertSame(
+            [$closest->id, $farther->id],
+            $ids,
+            'radius results must be ordered by ascending distance from the search origin'
+        );
     }
 
     public function test_offset_pagination_has_a_stable_total_order(): void
