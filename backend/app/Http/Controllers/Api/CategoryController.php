@@ -67,6 +67,8 @@ class CategoryController extends Controller
         // Защита от Data Orphanization: если slug изменился, каскадно обновляем все объявления
         if ($oldSlug !== $request->slug) {
             \Illuminate\Support\Facades\DB::table('ads')->where('category', $oldSlug)->update(['category' => $request->slug]);
+            // `category` feeds the sitemap's duplicate fingerprint, and DB::table() fires no events.
+            SitemapController::forgetAdsCache();
         }
 
         Cache::forget('categories_all');

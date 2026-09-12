@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\Api\SitemapController;
 use App\Models\Ad;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -67,6 +68,8 @@ class ExpireAds extends Command
         }
 
         Cache::forget('sitemap_xml');
+        // Expiry flips status through DB::table(), so AdObserver never fires.
+        SitemapController::forgetAdsCache();
         Cache::forget('google_merchant_xml');
         Cache::forget('ads_featured_block');
         for ($page = 1; $page <= 10; $page++) {

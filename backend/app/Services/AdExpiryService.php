@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\Api\SitemapController;
 use App\Models\Ad;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -115,6 +116,8 @@ class AdExpiryService
     private function bustCaches(): void
     {
         Cache::forget('sitemap_xml');
+        // Expiry flips status through DB::table(), so AdObserver never fires.
+        SitemapController::forgetAdsCache();
         Cache::forget('google_merchant_xml');
         for ($i = 1; $i <= 10; $i++) {
             Cache::forget("ads_index_page_{$i}");

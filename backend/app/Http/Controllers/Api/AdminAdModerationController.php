@@ -510,6 +510,8 @@ class AdminAdModerationController extends Controller
     private function clearPublicCaches(): void
     {
         Cache::forget('sitemap_xml');
+        // Moderation decisions publish with saveQuietly(), so AdObserver never fires.
+        SitemapController::forgetAdsCache();
         Cache::forget('google_merchant_xml');
         Cache::forget('ads_featured_block');
         for ($page = 1; $page <= 10; $page++) {

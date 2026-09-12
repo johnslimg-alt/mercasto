@@ -1460,6 +1460,9 @@ class AdController extends Controller
         // Вставляем остатки
         if (count($batch) > 0) {
             Ad::insert($batch);
+            // Ad::insert() fires no model events; today the imported rows are pending, but the
+            // sitemap must not depend on that staying true.
+            SitemapController::forgetAdsCache();
         }
 
         // Сбрасываем кэш, чтобы массово загруженные объявления сразу появились на сайте и в SEO-фидах
@@ -2686,6 +2689,8 @@ class AdController extends Controller
 
         // Bust caches
         Cache::forget('sitemap_xml');
+        // Bulk visibility changes go through the query builder, so AdObserver never fires.
+        SitemapController::forgetAdsCache();
         Cache::forget('google_merchant_xml');
         for ($i = 1; $i <= 10; $i++) {
             Cache::forget("ads_index_page_{$i}");

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Events\NewNotification;
+use App\Http\Controllers\Api\SitemapController;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
@@ -629,6 +630,8 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
     private function clearPublicCaches(): void
     {
         Cache::forget('sitemap_xml');
+        // AI moderation publishes with saveQuietly(), so AdObserver never fires.
+        SitemapController::forgetAdsCache();
         Cache::forget('google_merchant_xml');
         Cache::forget('ads_featured_block');
         for ($page = 1; $page <= 10; $page++) {

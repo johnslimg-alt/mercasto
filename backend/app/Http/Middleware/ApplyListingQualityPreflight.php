@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\Api\SitemapController;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
@@ -139,6 +140,9 @@ class ApplyListingQualityPreflight
                     'ai_moderation_confidence' => null,
                     'ai_moderated_at' => null,
                 ])->saveQuietly();
+
+                // saveQuietly() bypasses AdObserver, and the listing just left the sitemap.
+        SitemapController::forgetAdsCache();
 
                 $cycle = AdModerationDecision::create([
                     'ad_id' => $ad->id,

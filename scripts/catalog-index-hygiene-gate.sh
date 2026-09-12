@@ -15,10 +15,16 @@ CLIENT_POLICY="src/utils/seoIndexability.js"
 APP="src/App.jsx"
 SERVER_TEST="backend/tests/Feature/SeoShellControllerTest.php"
 SITEMAP_TEST="backend/tests/Feature/SitemapIndexHygieneTest.php"
+SITEMAP_CACHE_TEST="backend/tests/Feature/AdsSitemapCacheInvalidationTest.php"
 
 echo "== Catalog index hygiene gate =="
 
-grep -qF -- "Cache::remember('sitemap_ads_v4'" "$SITEMAP"
+grep -qF -- "private const ADS_CACHE_PREFIX = 'sitemap_ads_v4';" "$SITEMAP"
+grep -qF -- "private const ADS_GENERATION_KEY = 'sitemap_ads_generation_v1';" "$SITEMAP"
+grep -qF -- 'self::adsCacheKey(' "$SITEMAP"
+# Invalidation must be a durable generation bump so no chunk key has to be enumerated.
+grep -qF -- 'Cache::add(self::ADS_GENERATION_KEY, 2, null)' "$SITEMAP"
+grep -qF -- 'Cache::increment(self::ADS_GENERATION_KEY);' "$SITEMAP"
 # The indexability predicate lives in exactly one place so the sitemap and the SEO shell cannot
 # drift apart (their hand-copied filters emptied /sitemap-ads.xml in Aug 2026).
 grep -qF -- "->where('ads.is_catalog_filler', false)" "$SITEMAP_SUPPORT"
@@ -44,6 +50,55 @@ grep -qF -- "header('Retry-After', '900')" "$SITEMAP"
 grep -qF -- 'ADS_URLS_PER_CHUNK = 45000' "$SITEMAP"
 grep -qF -- "Route::get('/sitemap-ads-{chunk}.xml'" "$ROUTES"
 grep -qF -- 'ads(?:-\d+)?' "$NGINX"
+# Publishing must invalidate the cached ads sitemap (30 minute TTL) on every path:
+# model saves through AdObserver, and the query-builder bulk paths that skip model events.
+grep -qF -- 'public static function forgetAdsCache(): void' "$SITEMAP"
+grep -qF -- 'private const SITEMAP_MEMBERSHIP_FIELDS = [' backend/app/Observers/AdObserver.php
+for membership_field in status expires_at is_catalog_filler title description price category state city; do
+  grep -qF -- "'$membership_field'," backend/app/Observers/AdObserver.php || {
+    echo "AdObserver must track the sitemap curation field: $membership_field" >&2
+    exit 1
+  }
+done
+grep -qF -- 'SitemapController::forgetAdsCache();' backend/app/Observers/AdObserver.php
+grep -qF -- 'SitemapController::forgetAdsCache();' backend/app/Console/Commands/ReconcileModerationVisibility.php
+grep -qF -- 'SitemapController::forgetAdsCache();' backend/app/Http/Controllers/Api/AdController.php
+# Event-bypassing writers enumerated by the #1159 review: saveQuietly(), DB::table() and
+# Ad::insert() paths that mutate status/expires_at/is_catalog_filler without model events.
+for bypass_writer in \
+  backend/app/Http/Controllers/Api/AdminAdModerationController.php \
+  backend/app/Jobs/ModerateAdWithAI.php \
+  backend/app/Services/AdRenewalService.php \
+  backend/app/Services/AdExpiryService.php \
+  backend/app/Console/Commands/ExpireAds.php \
+  backend/app/Http/Middleware/ApplyListingQualityPreflight.php \
+  backend/app/Console/Commands/ModeratePendingAds.php \
+  backend/app/Console/Commands/RequeueLegacyModeration.php \
+  backend/app/Http/Controllers/Api/CategoryController.php; do
+  grep -qF -- 'SitemapController::forgetAdsCache();' "$bypass_writer" || {
+    echo "event-bypassing writer must invalidate the ads sitemap: $bypass_writer" >&2
+    exit 1
+  }
+  # The call must resolve: either the file imports the controller or it lives in its namespace.
+  case "$bypass_writer" in
+    backend/app/Http/Controllers/Api/*) ;;
+    *) grep -qF -- 'use App\Http\Controllers\Api\SitemapController;' "$bypass_writer" || {
+         echo "missing SitemapController import in: $bypass_writer" >&2
+         exit 1
+       } ;;
+  esac
+done
+grep -qF -- 'test_reconciliation_bulk_update_publishes_without_waiting_for_the_ttl' "$SITEMAP_CACHE_TEST"
+
+# Edge indexability: www folds into the apex and the /anuncio/{id} alias folds into /ads/{id}
+# with a real 301 (both were live duplicate URLs serving 200).
+# www folds into the apex for safe methods only, so a redirect can never downgrade a mutation.
+grep -qF -- 'map "$host:$request_method" $mercasto_fold_www {' "$NGINX"
+grep -qF -- '"~*^www\.mercasto\.com:(GET|HEAD)$" 1;' "$NGINX"
+grep -qF -- 'if ($mercasto_fold_www) {' "$NGINX"
+grep -qF -- 'return 301 https://mercasto.com$request_uri;' "$NGINX"
+grep -qF -- 'location ~ ^/anuncio/([0-9]+)/?$ {' "$NGINX"
+grep -qF -- 'return 301 https://mercasto.com/ads/$1$is_args$args;' "$NGINX"
 # The cron entry that used to fail with "not found" must keep its target in the repository.
 test -x "$SITEMAP_JOB"
 grep -qF -- 'X-Mercasto-Sitemap-Health' "$SITEMAP_JOB"
@@ -124,5 +179,8 @@ grep -qF -- 'test_ad_sitemap_fails_loudly_when_visible_real_listings_are_not_ind
 grep -qF -- 'test_ad_sitemap_warns_but_stays_valid_when_no_listing_is_visible' "$SITEMAP_TEST"
 grep -qF -- 'test_ad_sitemap_chunks_inventory_and_the_index_advertises_every_chunk' "$SITEMAP_TEST"
 grep -qF -- 'test_ad_sitemap_excludes_thin_placeholder_and_duplicated_listings' "$SITEMAP_TEST"
+grep -qF -- 'test_model_status_change_publishes_the_listing_without_waiting_for_the_ttl' "$SITEMAP_CACHE_TEST"
+grep -qF -- 'test_a_cached_chunk_is_not_served_stale_after_its_count_key_expires' "$SITEMAP_CACHE_TEST"
+grep -qF -- 'test_content_edit_that_changes_membership_invalidates_the_sitemap' "$SITEMAP_CACHE_TEST"
 
 echo "Catalog index hygiene gate OK"

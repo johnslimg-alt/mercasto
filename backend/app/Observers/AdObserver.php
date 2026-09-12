@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Http\Controllers\Api\IndexNowController;
+use App\Http\Controllers\Api\SitemapController;
 use App\Jobs\GenerateAdEmbedding;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
@@ -22,10 +23,23 @@ class AdObserver
         'admin_manual_review',
     ];
 
+    /**
+     * Attributes that decide whether a listing may appear in the canonical ads sitemap: the
+     * visibility contract (status, expires_at, is_catalog_filler) plus every field the sitemap
+     * curation reads - the thin-content check uses title and description, and the duplicate
+     * fingerprint (same recipe as ads:audit-active-content-quality) also uses price, category,
+     * state and city. Editing one of these can add or remove a listing without touching status.
+     */
+    private const SITEMAP_MEMBERSHIP_FIELDS = [
+        'status', 'expires_at', 'is_catalog_filler',
+        'title', 'description', 'price', 'category', 'state', 'city',
+    ];
+
     public function created(Ad $ad): void
     {
         Log::info('Ad created, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'create');
+        $this->forgetSitemapCaches();
         $this->queueEmbedding($ad);
 
         if ($ad->status === 'pending') {
@@ -84,24 +98,41 @@ class AdObserver
         if ($submittedAgain || ($contentChanged && $isModerationItem)) {
             $this->queueForModeration($ad, false);
         }
+
+        if ($ad->wasChanged(self::SITEMAP_MEMBERSHIP_FIELDS)) {
+            $this->forgetSitemapCaches();
+        }
     }
 
     public function deleted(Ad $ad): void
     {
         Log::info('Ad deleted, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'delete');
+        $this->forgetSitemapCaches();
     }
 
     public function restored(Ad $ad): void
     {
         Log::info('Ad restored, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'update');
+        $this->forgetSitemapCaches();
     }
 
     public function forceDeleted(Ad $ad): void
     {
         Log::info('Ad force deleted, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'delete');
+        $this->forgetSitemapCaches();
+    }
+
+    /**
+     * The canonical ads sitemap is cached for 30 minutes; a publish/pause/archive must not
+     * wait for that TTL. Bulk query-builder updates bypass model events, so those call sites
+     * (AdController::bulkAction, ads:reconcile-moderation-visibility) invoke the same helper.
+     */
+    private function forgetSitemapCaches(): void
+    {
+        SitemapController::forgetAdsCache();
     }
 
     private function queueEmbedding(Ad $ad): void

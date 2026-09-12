@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\Api\SitemapController;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use Illuminate\Console\Command;
@@ -207,6 +208,9 @@ class ReconcileModerationVisibility extends Command
     private function clearPublicCaches(): void
     {
         Cache::forget('sitemap_xml');
+        // Activation goes through a conditional query-builder update, so AdObserver never fires
+        // and the canonical ads sitemap would keep its cached inventory for up to 30 minutes.
+        SitemapController::forgetAdsCache();
         Cache::forget('google_merchant_xml');
         Cache::forget('ads_featured_block');
         for ($page = 1; $page <= 10; $page++) {

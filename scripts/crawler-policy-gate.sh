@@ -31,6 +31,23 @@ for private_path in /api/ /admin /dashboard /post /login /register /horizon /san
   grep -qF "Disallow: $private_path" "$ROBOTS"
 done
 
+# Rendered ad detail pages hydrate from these read-only public endpoints. The allow rules are
+# exact-or-subtree (`$` anchors, `/api/ads/` for the subtree) so a bare prefix cannot re-permit
+# hypothetical siblings such as /api/ads-archive; every write target keeps a longer Disallow.
+for allowed in 'Allow: /api/ads$' 'Allow: /api/ads/' 'Allow: /api/categories$'; do
+  grep -qF "$allowed" "$ROBOTS"
+  grep -qF "$allowed" "$BACKEND_ROBOTS"
+done
+for disallowed in 'Disallow: /api/ads/impressions' 'Disallow: /api/ads/*/view' 'Disallow: /api/categories/*'; do
+  grep -qF "$disallowed" "$ROBOTS"
+  grep -qF "$disallowed" "$BACKEND_ROBOTS"
+done
+[ "$(grep -c '^Disallow: /api/$' "$ROBOTS")" -eq 2 ] || { echo "both crawler groups must keep Disallow: /api/" >&2; exit 1; }
+# Method-free robots.txt cannot separate writes from reads by itself: prove against the real route
+# table that every non-GET route under the widened prefixes is still disallowed and that the
+# hydration reads resolve to Allow.
+node --test scripts/robots-write-path-contract.test.mjs
+
 test ! -e public/llms.txt
 test ! -e backend/public/llms.txt
 grep -qF 'location = /llms.txt { return 404; }' default.conf

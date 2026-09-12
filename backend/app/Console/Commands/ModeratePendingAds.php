@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\Api\SitemapController;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
@@ -74,6 +75,9 @@ class ModeratePendingAds extends Command
                 'moderation_submitted_at' => $ad->moderation_submitted_at ?: $ad->created_at ?: now(),
                 'ai_moderation_status' => 'queued',
             ])->saveQuietly();
+
+            // saveQuietly() bypasses AdObserver: a visible listing may have just been hidden.
+        SitemapController::forgetAdsCache();
 
             if (! $cycle) {
                 $cycle = AdModerationDecision::create([
