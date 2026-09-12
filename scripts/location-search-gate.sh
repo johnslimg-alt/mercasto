@@ -94,6 +94,9 @@ for catalog_invariant in \
   test_condition_filter_returns_only_matching_listings \
   test_city_filter_returns_only_listings_in_that_city \
   test_state_filter_returns_only_listings_in_that_state \
+  test_location_filter_matches_the_combined_location_label \
+  test_has_coords_filter_excludes_listings_without_coordinates \
+  test_radius_filter_drops_listings_outside_the_radius_and_without_coordinates \
   test_attribute_filter_is_applied_through_the_json_attributes_column \
   test_offset_pagination_has_a_stable_total_order
 do

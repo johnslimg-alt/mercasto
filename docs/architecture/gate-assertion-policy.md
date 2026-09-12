@@ -89,28 +89,66 @@ When a text assertion really is the only option, make it robust:
 ## The enforcing check
 
 `scripts/gate-integrity-check.mjs` runs in `npm run check:gate-integrity`, in
-`npm run gate:prod`, and as a step in `.github/workflows/recovery-guard.yml`. It fails CI
-on two things:
+`npm run gate:prod`, and as a step in `.github/workflows/recovery-guard.yml` (which also
+runs its contract tests). It fails CI on three things:
 
 | Check | Fails when |
 | --- | --- |
-| `dead-code-assertion` | A gate asserts a literal whose every occurrence lives in a controller method that no route, callable reference, container resolution or in-class caller reaches. |
-| `gate-not-triggered` | A file asserted by `check-recovery-guards.mjs` is covered by no workflow that runs it — i.e. the guard cannot observe a regression there. |
+| `dead-code-assertion` | A gate asserts a literal whose every occurrence lives in a controller method that no route, callable reference, container resolution or reachable same-class caller reaches. |
+| `gate-not-triggered` | A file asserted by `check-recovery-guards.mjs` is covered by no workflow that **executes** it — i.e. the guard cannot observe a regression there. |
+| `invalid-waiver` | A waiver omits `owner`, `reason`, `gate` or `target`, or names an unknown check. |
 
-A method counts as reachable if a route reaches it (including `apiResource` /
-`Route::controller`), or it appears as `C::class, 'm'` / `'C@m'`, or it is called from
-inside its own class (`$this->m(`), or it is resolved via `app(C::class)->m(`. Only when
-none of those hold is an assertion guarding code that cannot run.
+Precision matters in three places, and each is pinned by a negative control:
+
+- **Reachability is transitive and receiver-scoped.** Seeds are routes, callable pairs
+  (`C::class, 'm'`, `'C@m'`) and container resolutions (`app(C::class)->m(`). The only
+  intra-class edges are `$this->m(`, `self::m(` and `static::m(` **inside a reachable
+  method**. A helper called only from unreachable code stays unreachable, and
+  `$query->index()` is not a call to the controller's own `index()`.
+- **Route declarations expose only their actions.** `apiResource`/`resource` contribute
+  their conventional action set (honouring `only`/`except`); `Route::controller(C::class)`
+  contributes only the actions its group explicitly declares. Neither marks a whole class
+  reachable, so an undeclared method cannot hide behind a resource route.
+- **Production reachability ignores `backend/tests`.** A PHPUnit reference is not a
+  production call site.
+
+Trigger coverage is deliberately broader than dead-code detection: it considers **every
+repository file the guard reads**, including root files (`index.html`) and workflow files
+(`.github/workflows/emergency-*.yml`), because dropping their trigger entry would otherwise
+go unnoticed. A workflow counts only if a `run:` command actually executes the guard —
+a path listed under `paths:`, or a mention inside a shell comment, is not execution, and
+`npm run` indirection is resolved through `package.json`. A workflow filtered only by
+`paths-ignore` runs everywhere except the ignored patterns, so its deny list is honoured
+rather than discarded.
 
 ### Waivers
 
 Known violations owned by another in-flight PR go in
-`scripts/gate-integrity-waivers.json`. Every waiver **must** name an owner and a reason.
-Waivers are self-expiring: once the owning PR lands and the violation disappears, the
-check reports `stale-waiver` and fails CI until the entry is deleted. A waiver can
-therefore never rot into a permanent silent suppression.
+`scripts/gate-integrity-waivers.json`. Every waiver **must** name an `owner`, a `reason`, a
+`gate` and a `target` — enough to bind it to one concrete violation. A broad
+`{"check": "..."}` entry is rejected as `invalid-waiver`, because it could suppress
+whichever matching violation appeared first and stay non-stale as one violation replaced
+another. Waivers are self-expiring: once the owning PR lands and the violation disappears,
+the check reports `stale-waiver` and fails CI until the entry is deleted.
 
 Do not add a waiver to make a real violation disappear. Fix the gate.
+
+### Known limits — deliberately not closed
+
+Documented rather than hidden. A green `check:gate-integrity` does **not** mean every gate
+verifies behaviour.
+
+| Limit | Why it is not closed |
+| --- | --- |
+| Only `assertContains`/`assertOrder` and `grep -q*F`-family lines are parsed. | A gate that builds assertions dynamically — `xargs grep`, `grep -f patterns`, string concatenation, a bespoke wrapper — is not audited. Closing this needs a real parser per language, not a bigger regex. |
+| CHECK A reasons about **controllers only**. | A literal pinned to unreachable code in a service, job, command, model, or an orphaned component is not detected. This is a real case in this repository: `fixed-period-plan-copy-gate.sh` asserts the orphaned `ReembolsosScreen.jsx` while the shipped page violates the rule. Extending reachability to every class is a substantially larger model. |
+| Assertion **literals** held in a variable resolve only for simple `const`/`VAR=` bindings. | Computed or concatenated literals are not resolved. |
+| Glob targets (e.g. `backend/database/migrations/*payments*`) are skipped. | A glob has no single subject to reason about; deciding whether a gate over a glob is dead requires different logic. |
+| Frontend reachability is not modelled. | An asserted `.jsx`/`.js` file that no entry point imports passes. |
+| Custom assertion helpers are not parsed. | `assertFirstOrderingKey(...)`-style helpers in `check-recovery-guards.mjs` are outside the two recognised shapes. |
+
+The **policy** above, not this checker, is the primary control. The checker is a backstop
+for the incident-1 shape and the unrun-gate mechanism, and it reports what it can prove.
 
 ### Negative controls
 

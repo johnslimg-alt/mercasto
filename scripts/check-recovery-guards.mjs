@@ -426,7 +426,6 @@ assertContains(
 const CATALOG_ROUTE = 'backend/routes/api.php';
 const CATALOG_CONTROLLER = 'backend/app/Http/Controllers/Api/AdIndexController.php';
 const CATALOG_RANKING = 'backend/app/Support/CatalogInventoryRanking.php';
-const LEGACY_CATALOG_CONTROLLER = 'backend/app/Http/Controllers/Api/AdController.php';
 
 assertContains(
   CATALOG_ROUTE,
@@ -459,12 +458,13 @@ assertFirstOrderingKey(
   'real user listings rank ahead of catalog references before promotions and sort modes'
 );
 
-assertContains(
-  LEGACY_CATALOG_CONTROLLER,
-  'CatalogInventoryRanking::realInventoryFirst($query);',
-  'the unrouted legacy listing path ranks through the same shared policy instead of diverging silently'
-);
-
+// AdController::index() is unrouted, so an assertion pinning
+// `CatalogInventoryRanking::realInventoryFirst($query);` inside it could never
+// fail for a behavioural reason -- `scripts/gate-integrity-check.mjs` correctly
+// reports that as a dead-code assertion. The divergence risk it meant to cover
+// ("the legacy copy silently re-implements ranking") is covered more broadly by
+// assertNoInlineCatalogRanking below, which fails if ANY php file under
+// backend/app orders catalog listings inline, legacy copy included.
 assertNoInlineCatalogRanking('backend/app');
 
 assertContains(

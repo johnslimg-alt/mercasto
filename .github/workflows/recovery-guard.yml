@@ -13,18 +13,24 @@ on:
       # grow new backend subjects at any time -- PR #1131 added an assertion on
       # backend/tests/Feature/CatalogRealInventoryRankingTest.php, which a
       # narrower list silently failed to trigger on.
+      #
+      # `scripts/**` for the same reason in the other direction: check:gate-integrity
+      # audits every gate script, so a change to ANY gate (for example
+      # scripts/location-search-gate.sh) must re-run the integrity checker.
+      # Listing gate scripts one by one is how a gate-only PR could reintroduce a
+      # dead-code assertion with CI still green.
+      #
       # scripts/gate-integrity-check.mjs fails CI if this list stops covering
       # everything the guard reads.
       - 'index.html'
       - 'src/**'
       - 'public/**'
       - 'backend/**'
+      - 'scripts/**'
+      - 'tests/gate-integrity-contract.test.mjs'
       - '.github/workflows/emergency-container-frontend-patch.yml'
       - '.github/workflows/emergency-ssh-frontend-deploy.yml'
       - '.github/workflows/recovery-guard.yml'
-      - 'scripts/check-recovery-guards.mjs'
-      - 'scripts/gate-integrity-check.mjs'
-      - 'scripts/gate-integrity-waivers.json'
       - 'package.json'
 
 permissions:
@@ -43,3 +49,9 @@ jobs:
         run: npm run check:recovery
       - name: Run gate integrity checks
         run: npm run check:gate-integrity
+      # The negative controls prove the checker can actually fail. Running the
+      # checker alone against a healthy repository cannot catch a change that
+      # makes one of its checks always pass, so the contract tests must run
+      # wherever the checker itself is in scope.
+      - name: Run gate integrity contract tests
+        run: node --test tests/gate-integrity-contract.test.mjs

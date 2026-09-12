@@ -26,10 +26,10 @@
  * This script makes two of those failure modes mechanically impossible:
  *
  *   CHECK A -- dead-code assertions (incidents 1 and 4).
- *     A gate may not assert source text inside a controller method that no route
- *     reaches. Such an assertion can never protect production behaviour.
+ *     A gate may not assert source text inside a controller method that nothing
+ *     in production can reach. Such an assertion can never protect behaviour.
  *
- *   CHECK B -- unrun gates (the mechanism behind incident 1 and 3).
+ *   CHECK B -- unrun gates (the mechanism behind incidents 1 and 3).
  *     If a workflow runs a gate under a `paths:` filter (or an in-shell changed-
  *     file regex), that filter must fire for every repository file the gate
  *     reads. A guard that does not run when its subject changes is not a guard.
@@ -39,9 +39,20 @@
  *   node scripts/gate-integrity-check.mjs --json     # machine-readable report
  *
  * Exits non-zero on any unwaived violation. Waivers live in
- * `scripts/gate-integrity-waivers.json` and MUST name an owning PR; a waiver
- * that no longer matches a real violation is itself an error, so waivers expire
- * by themselves once the owning PR lands.
+ * `scripts/gate-integrity-waivers.json` and MUST name an owner, a reason and the
+ * concrete gate+target they bind to; a waiver that no longer matches a real
+ * violation is itself an error, so waivers expire by themselves.
+ *
+ * Known limits, deliberately not closed (see docs/architecture/gate-assertion-policy.md):
+ *   - Only `assertContains`/`assertOrder`/`assertNotContains`-style JS calls and
+ *     `grep -q*F`-family shell lines are parsed. A gate that builds an assertion
+ *     dynamically (`xargs grep`, `grep -f patterns`, string concatenation, a
+ *     custom wrapper beyond the shapes below) is not audited.
+ *   - CHECK A reasons about controllers only. A literal pinned to unreachable
+ *     code in a service, job, command, model or orphaned component is not
+ *     detected.
+ *   - Assertion *literals* held in a variable are resolved for simple
+ *     `const`/`VAR=` assignments only.
  */
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -59,7 +70,9 @@ const JSON_OUTPUT = process.argv.includes('--json');
 const violations = [];
 const notes = [];
 
-const rel = (p) => relative(ROOT, p).split('\\').join('/');
+const GUARD = 'scripts/check-recovery-guards.mjs';
+const WAIVER_FILE = 'scripts/gate-integrity-waivers.json';
+const KNOWN_CHECKS = new Set(['dead-code-assertion', 'gate-not-triggered']);
 
 function readRepoFile(path) {
   return readFileSync(join(ROOT, path), 'utf8');
@@ -70,15 +83,40 @@ function readRepoFile(path) {
  * ------------------------------------------------------------------ */
 
 /**
- * Reads the `VAR="path"` assignments a shell gate uses to point at source
- * files, so `grep -qF -- "literal" "$VAR"` can be resolved to a real path.
+ * Reads the path assignments a shell gate uses to point at source files, so
+ * `grep -qF -- "literal" "$VAR"` resolves to a real path.
+ *
+ * Handles both quote styles (`VAR="p"`, `VAR='p'`) and rooted values
+ * (`ADS="$ROOT/backend/x.php"`). A prefix whose value came from a command
+ * substitution -- `ROOT_DIR="$(cd ... && pwd)"` -- denotes the repository root,
+ * so it is stripped and the remainder is treated as repo-relative.
  */
 function shellVariables(source) {
-  const vars = new Map();
+  const raw = new Map();
   for (const line of source.split('\n')) {
-    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"?([^"\s]+)"?\s*$/.exec(line);
-    if (match) vars.set(match[1], match[2]);
+    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (!match) continue;
+    let value = match[2];
+    const quoted = /^(['"])([\s\S]*)\1$/.exec(value);
+    if (quoted) value = quoted[2];
+    raw.set(match[1], value);
   }
+
+  const resolveValue = (value, depth = 0) => {
+    if (depth > 5 || typeof value !== 'string') return value;
+    const ref = /^\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?([\s\S]*)$/.exec(value);
+    if (!ref) return value;
+    const base = raw.get(ref[1]);
+    const rest = ref[2];
+    if (base === undefined || base.includes('$(') || base.includes('`')) {
+      // Unknown or dynamic prefix: treat it as the repo root.
+      return rest.replace(/^\/+/, '');
+    }
+    return resolveValue(base + rest, depth + 1);
+  };
+
+  const vars = new Map();
+  for (const [key, value] of raw) vars.set(key, resolveValue(value));
   return vars;
 }
 
@@ -86,33 +124,68 @@ function unescapeJsLiteral(literal) {
   return literal.replace(/\\(['"\\])/g, '$1').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
 }
 
+/** Simple `const NAME = 'literal'` bindings in a JS gate, so constant targets resolve. */
+function jsConstants(source) {
+  const map = new Map();
+  for (const match of source.matchAll(
+    /^\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(['"])((?:\\.|(?!\2)[\s\S])*?)\2\s*;?\s*$/gm
+  )) {
+    map.set(match[1], unescapeJsLiteral(match[3]));
+  }
+  return map;
+}
+
+/**
+ * Resolves an assertion argument that is either a quoted literal or a simple
+ * identifier bound to one. Returns null when it cannot be resolved.
+ *
+ * Quoted arguments may contain commas and parentheses -- assertion literals such
+ * as `CatalogInventoryRanking::realInventoryFirst($query);` do -- so the pattern
+ * matches whole quoted strings rather than stopping at the first delimiter.
+ */
+const ASSERT_ARG = String.raw`(?:'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)"|([A-Za-z_$][\w$]*))`;
+
+function resolveArgGroups(match, base, constants) {
+  for (let i = base; i < base + 3; i += 1) {
+    if (match[i] === undefined) continue;
+    const raw = match[i];
+    if (i === base + 2) return constants.get(raw) ?? null;
+    return unescapeJsLiteral(raw);
+  }
+  return null;
+}
+
 /**
  * Extracts positive source-text assertions from one gate.
  *
- * Supported shapes (the two that cover virtually every gate in this repo):
- *   JS : assertContains('path', 'literal', 'reason') / assertOrder('path', 'a', 'b', ...)
+ * Supported shapes:
+ *   JS : assertContains(pathOrConst, literalOrConst, reason)
+ *        assertOrder(pathOrConst, first, second, reason)
  *   SH : grep -qF -- "literal" "$VAR"   /   grep -qF -- "literal" path/to/file
  *
- * Negative assertions (`assertNotContains`, the `if grep -qF ... exit 1` guards)
- * are intentionally ignored: this check is about assertions that can be
- * satisfied by dead code, and absence assertions cannot be.
+ * Negative assertions (`assertNotContains`, `if grep -qF ...; then exit 1`) are
+ * intentionally ignored: this check is about assertions that can be satisfied by
+ * dead code, and absence assertions cannot be.
  */
 function extractAssertions(gatePath, source) {
   const found = [];
   const isShell = gatePath.endsWith('.sh');
 
   if (!isShell) {
-    const call = /assert(Contains|Order)\(\s*(['"])((?:\\.|(?!\2).)*)\2\s*,\s*(['"])((?:\\.|(?!\4).)*)\4/g;
+    const constants = jsConstants(source);
+    const call = new RegExp(String.raw`assert(Contains|Order)\(\s*${ASSERT_ARG}\s*,\s*${ASSERT_ARG}`, 'g');
     let match;
     while ((match = call.exec(source)) !== null) {
-      const kind = match[1];
-      const target = unescapeJsLiteral(match[3]);
-      found.push({ target, literal: unescapeJsLiteral(match[5]) });
-      if (kind === 'Order') {
+      const target = resolveArgGroups(match, 2, constants);
+      const literal = resolveArgGroups(match, 5, constants);
+      if (target === null || literal === null) continue;
+      found.push({ target, literal });
+      if (match[1] === 'Order') {
         // assertOrder(target, first, second, reason): capture the second needle too.
         const rest = source.slice(call.lastIndex);
-        const second = /^\s*,\s*(['"])((?:\\.|(?!\1).)*)\1/.exec(rest);
-        if (second) found.push({ target, literal: unescapeJsLiteral(second[2]) });
+        const second = new RegExp(String.raw`^\s*,\s*${ASSERT_ARG}`).exec(rest);
+        const secondLiteral = second ? resolveArgGroups(second, 1, constants) : null;
+        if (secondLiteral !== null) found.push({ target, literal: secondLiteral });
       }
     }
     return found;
@@ -127,7 +200,7 @@ function extractAssertions(gatePath, source) {
       ?? /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+(\S+)/.exec(line);
     if (!grep) continue;
     let target = grep[3].replace(/^["']|["']$/g, '');
-    if (target.startsWith('$')) target = vars.get(target.slice(1)) ?? '';
+    if (target.startsWith('$')) target = vars.get(target.slice(1).replace(/[{}]/g, '')) ?? '';
     if (!target) continue;
     found.push({ target, literal: unescapeJsLiteral(grep[2]) });
   }
@@ -143,7 +216,7 @@ function gateFiles() {
 }
 
 /**
- * A gate target is a repository source file this check can reason about.
+ * A repository file a check can reason about, used for CHECK A targets.
  * Prose/HTML/data targets are ignored.
  */
 function isSourceTarget(target) {
@@ -152,14 +225,34 @@ function isSourceTarget(target) {
   return /\.(php|jsx?|tsx?|mjs|cjs|vue|html|css|json|ya?ml)$/.test(target);
 }
 
+/**
+ * Every repository file a gate can read, used for CHECK B trigger coverage.
+ *
+ * Deliberately broader than isSourceTarget: the guard also asserts root files
+ * (`index.html`) and workflow files (`.github/workflows/emergency-*.yml`), and a
+ * narrow source-only filter silently dropped those from coverage -- removing the
+ * corresponding trigger entry would then go unnoticed.
+ */
+function isRepoTarget(target) {
+  if (typeof target !== 'string' || target === '') return false;
+  if (target.includes('*') || /\s/.test(target)) return false;
+  if (target.startsWith('/') || target.startsWith('$') || target.includes('..')) return false;
+  if (!/\.(php|jsx?|tsx?|mjs|cjs|vue|html|css|json|ya?ml|md|sh|py|conf|txt|xml|env)$/.test(target)) return false;
+  return target.includes('/') || /^(index\.html|package\.json|package-lock\.json)$/.test(target);
+}
+
 /* ------------------------------------------------------------------ *
- * CHECK A -- assertions on unrouted (dead) controller code
+ * CHECK A -- assertions on unreachable (dead) controller code
  * ------------------------------------------------------------------ */
 
 const ROUTE_DIR = 'backend/routes';
-const BACKEND_DIRS = ['backend/app', 'backend/routes', 'backend/tests', 'backend/database', 'backend/config'];
 
-/** Every .php file under the backend tree, once, so reachability scans stay cheap. */
+// Production reachability only. `backend/tests` is deliberately excluded: a
+// PHPUnit reference to a controller method is not a production call site, and
+// counting it would let a gate pin a method that no route, command, job or
+// runtime service can invoke.
+const BACKEND_DIRS = ['backend/app', 'backend/routes', 'backend/database', 'backend/config'];
+
 let backendFilesCache = null;
 function backendPhpFiles() {
   if (backendFilesCache) return backendFilesCache;
@@ -177,42 +270,66 @@ function backendPhpFiles() {
   return files;
 }
 
+/** Splits a PHP class file into method-name -> body text. */
+function methodBodies(source) {
+  const bodies = new Map();
+  const starts = [...source.matchAll(/\n\s*(?:public|protected|private|static|\s)*function\s+([A-Za-z_]\w*)\s*\(/g)];
+  for (let i = 0; i < starts.length; i += 1) {
+    const from = starts[i].index;
+    const to = i + 1 < starts.length ? starts[i + 1].index : source.length;
+    bodies.set(starts[i][1], source.slice(from, to));
+  }
+  return bodies;
+}
+
+/** Conventional action sets, so a resource route is not treated as "every method". */
+const RESOURCE_ACTIONS = {
+  resource: ['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'],
+  apiResource: ['index', 'store', 'show', 'update', 'destroy'],
+};
+
 /**
- * Which controller methods does the application actually reach?
+ * Which controller methods can production actually reach?
  *
  * "Not routed" is NOT the same as "dead": controllers legitimately expose
- * helpers that only their own sibling methods, an artisan command, a scheduled
- * job or `app(X::class)->m()` call. Calling those dead would produce a checker
- * nobody trusts, so reachability is modelled explicitly:
+ * helpers reached only from a routed sibling, an artisan command, a job or
+ * `app(X::class)->m()`. Calling those dead would produce a checker nobody
+ * trusts. Reachability is therefore seeded from genuinely external entry points
+ * and closed transitively over *intra-class* calls:
  *
- *   (a) a route reaches it -- including resource/controller routes that expose
- *       every public method;
- *   (b) it is referenced as a callable pair anywhere (`C::class, 'm'`, `'C@m'`);
- *   (c) it is called from inside its own class (`$this->m(`), which covers
- *       helpers invoked by routed sibling methods;
- *   (d) it is resolved through the container (`app(C::class)->m(`).
+ *   seed  (a) a route reaches it -- explicit `[C::class, 'm']`, `'C@m'`, and the
+ *             conventional actions of a resource route (honouring only/except);
+ *             `Route::controller(C::class)` groups contribute only the actions
+ *             they explicitly declare, never the whole class;
+ *         (b) `C::class, 'm'` appears as a callable pair (commands, jobs, providers);
+ *         (c) `app(C::class)->m(` / `resolve(C::class)->m(`;
+ *   edge  (d) `$this->m(`, `self::m(`, `static::m(` **inside another reachable
+ *             method of the same class**.
  *
- * Only when none of those hold is a method genuinely unreachable, and an
- * assertion pinned to it is guarding code that can never run in production.
+ * Only calls on `$this`/`self`/`static` create edges. An unrelated receiver
+ * (`$query->index()`) is not a call to the controller's own `index()`.
  */
 function reachableMethods() {
   const routed = new Set();
   const callablePairs = new Set();
-  const inClassCalls = new Set();
   const containerCalls = new Set();
-  const wholeController = new Set();
+  const edges = new Map(); // "C@from" -> Set("C@to")
+  const routeFiles = new Set();
+
+  const addEdge = (from, to) => {
+    if (!edges.has(from)) edges.set(from, new Set());
+    edges.get(from).add(to);
+  };
 
   for (const file of backendPhpFiles()) {
     const source = readRepoFile(file);
+    if (file.startsWith(`${ROUTE_DIR}/`)) routeFiles.add(file);
 
     for (const match of source.matchAll(/\[\s*([A-Za-z_][\w]*)::class\s*,\s*['"]([^'"]+)['"]\s*\]/g)) {
       callablePairs.add(`${match[1]}@${match[2]}`);
     }
     for (const match of source.matchAll(/,\s*([A-Za-z_][\w]*)::class\s*[,)]/g)) {
       callablePairs.add(`${match[1]}@__invoke`);
-    }
-    for (const match of source.matchAll(/(?:apiResource|apiResources|resource|resources|controller)\([^;]{0,200}?([A-Za-z_][\w]*)::class/g)) {
-      wholeController.add(match[1]);
     }
     for (const match of source.matchAll(/['"]([A-Za-z_][\w]*)@([A-Za-z_][\w]*)['"]/g)) {
       callablePairs.add(`${match[1]}@${match[2]}`);
@@ -222,25 +339,55 @@ function reachableMethods() {
     }
 
     const className = /class\s+([A-Za-z_]\w*)/.exec(source)?.[1];
-    if (className) {
-      for (const match of source.matchAll(/->\s*([A-Za-z_]\w*)\s*\(/g)) {
-        inClassCalls.add(`${className}@${match[1]}`);
-      }
-      for (const match of source.matchAll(/::\s*([A-Za-z_]\w*)\s*\(/g)) {
-        inClassCalls.add(`${className}@${match[1]}`);
+    if (!className) continue;
+    for (const [method, body] of methodBodies(source)) {
+      for (const call of body.matchAll(/(?:\$this\s*->|self\s*::|static\s*::)\s*([A-Za-z_]\w*)\s*\(/g)) {
+        addEdge(`${className}@${method}`, `${className}@${call[1]}`);
       }
     }
   }
 
-  // Resource routes make every public method of the controller reachable.
-  const has = (controller, method) =>
-    wholeController.has(controller) ||
-    routed.has(`${controller}@${method}`) ||
-    callablePairs.has(`${controller}@${method}`) ||
-    containerCalls.has(`${controller}@${method}`) ||
-    inClassCalls.has(`${controller}@${method}`);
+  // Routes: explicit pairs already collected above; add resource actions and
+  // Route::controller group actions, which are narrower than "whole class".
+  for (const file of routeFiles) {
+    const source = readRepoFile(file);
+    for (const match of source.matchAll(
+      /\b(apiResource|apiResources|resource|resources)\(\s*[^,)]*,\s*([A-Za-z_][\w]*)::class([\s\S]{0,200})/g
+    )) {
+      const kind = match[1].startsWith('api') ? 'apiResource' : 'resource';
+      let actions = RESOURCE_ACTIONS[kind];
+      const chain = match[3] ?? '';
+      const only = /->only\(\s*\[([^\]]*)\]/.exec(chain);
+      const except = /->except\(\s*\[([^\]]*)\]/.exec(chain);
+      const parseList = (text) => [...text.matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1]);
+      if (only) actions = parseList(only[1]).filter((a) => actions.includes(a));
+      else if (except) actions = actions.filter((a) => !parseList(except[1]).includes(a));
+      for (const action of actions) routed.add(`${match[2]}@${action}`);
+    }
 
-  return { has };
+    // Route::controller(C::class) exposes ONLY the actions its group declares.
+    for (const group of source.matchAll(/Route::controller\(\s*([A-Za-z_][\w]*)::class\s*\)([\s\S]{0,600})/g)) {
+      const controller = group[1];
+      for (const action of group[2].matchAll(/Route::\w+\(\s*['"][^'"]*['"]\s*,\s*['"]([A-Za-z_]\w*)['"]/g)) {
+        routed.add(`${controller}@${action[1]}`);
+      }
+    }
+  }
+
+  // Transitive closure over intra-class edges, starting from external seeds.
+  const seeds = new Set([...routed, ...callablePairs, ...containerCalls]);
+  const closure = new Set(seeds);
+  const queue = [...seeds];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    for (const next of edges.get(current) ?? []) {
+      if (closure.has(next)) continue;
+      closure.add(next);
+      queue.push(next);
+    }
+  }
+
+  return { has: (controller, method) => closure.has(`${controller}@${method}`) };
 }
 
 /** Finds the method enclosing a byte offset inside a PHP class file. */
@@ -251,11 +398,50 @@ function enclosingMethod(source, offset) {
   return matches[matches.length - 1][1];
 }
 
+/**
+ * Waiver schema validation.
+ *
+ * A waiver must bind to ONE concrete violation: it needs an owner, a reason, a
+ * known check, and both the gate and the target it applies to. Without those, a
+ * broad `{check}` entry could suppress whichever matching violation appeared
+ * first and stay non-stale as one violation replaced another -- defeating the
+ * ownership and self-expiration guarantees.
+ */
+function validateWaivers(waivers) {
+  const problems = [];
+  if (!Array.isArray(waivers)) {
+    return ['waivers file must contain a "waivers" array'];
+  }
+  waivers.forEach((waiver, index) => {
+    const where = `waivers[${index}]`;
+    if (waiver === null || typeof waiver !== 'object' || Array.isArray(waiver)) {
+      problems.push(`${where} must be an object`);
+      return;
+    }
+    if (!KNOWN_CHECKS.has(waiver.check)) {
+      problems.push(`${where}.check must be one of ${[...KNOWN_CHECKS].join(', ')} (got ${JSON.stringify(waiver.check)})`);
+    }
+    for (const field of ['owner', 'reason', 'gate', 'target']) {
+      const value = waiver[field];
+      if (typeof value !== 'string' || value.trim() === '') {
+        problems.push(`${where}.${field} is required and must be a non-empty string`);
+      }
+    }
+  });
+  return problems;
+}
+
 function loadWaivers() {
-  const path = join(ROOT, 'scripts/gate-integrity-waivers.json');
-  if (!existsSync(path)) return { waivers: [], file: null };
-  const parsed = JSON.parse(readFileSync(path, 'utf8'));
-  return { waivers: parsed.waivers ?? [], file: 'scripts/gate-integrity-waivers.json' };
+  const path = join(ROOT, WAIVER_FILE);
+  if (!existsSync(path)) return { waivers: [], problems: [], file: WAIVER_FILE };
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    return { waivers: [], problems: [`${WAIVER_FILE} is not valid JSON: ${error.message}`], file: WAIVER_FILE };
+  }
+  const waivers = Array.isArray(parsed?.waivers) ? parsed.waivers : [];
+  return { waivers, problems: validateWaivers(parsed?.waivers), file: WAIVER_FILE };
 }
 
 function checkDeadCodeAssertions() {
@@ -274,9 +460,7 @@ function checkDeadCodeAssertions() {
       // A literal can appear several times in one controller. The assertion is
       // only dead when EVERY occurrence sits in unreachable code: a single live
       // occurrence still constrains production behaviour, even if the author
-      // aimed at a different method. (The converse -- one dead occurrence plus a
-      // live one that silently satisfies the gate -- is a masking problem that
-      // belongs to the audit, not to this check.)
+      // aimed at a different method.
       const occurrences = [];
       let cursor = subject.indexOf(literal);
       while (cursor >= 0) {
@@ -300,7 +484,7 @@ function checkDeadCodeAssertions() {
         target,
         literal,
         method,
-        detail: `${controller}@${method}() has no route, no callable reference and no in-class caller (checked ${methods.length} occurrence${methods.length === 1 ? '' : 's'}), so this assertion guards unreachable code`,
+        detail: `${controller}@${method}() is not reachable from any route, callable reference, container resolution or reachable same-class caller (checked ${methods.length} occurrence${methods.length === 1 ? '' : 's'}), so this assertion guards unreachable code`,
       });
     }
   }
@@ -318,7 +502,6 @@ function globToRegExp(glob) {
     const char = glob[i];
     if (char === '*') {
       if (glob[i + 1] === '*') {
-        // `**/` spans directories; a trailing `**` spans everything below.
         if (glob[i + 2] === '/') { out += '(?:.*/)?'; i += 2; } else { out += '.*'; i += 1; }
       } else {
         out += '[^/]*';
@@ -340,7 +523,7 @@ function workflowFilters(path) {
   for (const line of lines) {
     // Comment-only lines are skipped BEFORE the dedent check: a `#` comment inside
     // a paths block is indented like a list item, and treating it as a dedent
-    // silently emptied the list (which made this check pass everything).
+    // silently emptied the list.
     if (/^\s*#/.test(line)) continue;
     const key = /^(\s*)(paths|paths-ignore):\s*$/.exec(line);
     if (key) {
@@ -355,15 +538,93 @@ function workflowFilters(path) {
   return result;
 }
 
-/** Workflow -> the npm gate scripts it runs. */
-function workflowsRunningGate(gateScript) {
+/** Every npm script body, so `npm run x` indirection can be resolved. */
+function npmScripts() {
+  try {
+    return JSON.parse(readRepoFile('package.json')).scripts ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/** Expands a script body to the text it actually executes, following nested `npm run`. */
+function expandScript(name, scripts, seen = new Set()) {
+  if (seen.has(name)) return '';
+  seen.add(name);
+  const body = scripts[name];
+  if (typeof body !== 'string') return '';
+  let text = body;
+  for (const match of body.matchAll(/npm\s+run\s+(--silent\s+)?([A-Za-z0-9:_.-]+)/g)) {
+    text += `\n${expandScript(match[2], scripts, seen)}`;
+  }
+  return text;
+}
+
+/**
+ * Removes a shell comment from a command line.
+ *
+ * A `#` starts a comment only when unquoted and at the start of a word, so
+ * `node scripts/check-recovery-guards.mjs` inside a trailing comment must not be
+ * mistaken for an executed command -- that would let a workflow "run" a gate it
+ * only mentions.
+ */
+function stripShellComment(line) {
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === "'" && !inDouble) inSingle = !inSingle;
+    else if (char === '"' && !inSingle) inDouble = !inDouble;
+    else if (char === '#' && !inSingle && !inDouble && (i === 0 || /\s/.test(line[i - 1]))) {
+      return line.slice(0, i);
+    }
+  }
+  return line;
+}
+
+/**
+ * The shell text a workflow actually EXECUTES.
+ *
+ * Searching the whole YAML for a gate path is wrong: a workflow that merely
+ * lists the path in `paths:` or mentions it in a comment would be classified as
+ * running the gate, so deleting the real `run:` step would go unnoticed. This
+ * extracts `run:` blocks (inline and block scalars), strips shell comments, and
+ * resolves `npm run` indirection through package.json.
+ */
+function workflowExecutedText(path, scripts) {
+  const lines = readRepoFile(path).split('\n');
+  const commands = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const match = /^(\s*)(?:-\s*)?run:\s*(.*)$/.exec(lines[i]);
+    if (!match) continue;
+    const indent = match[1].length;
+    const inline = match[2].trim().replace(/^['"]|['"]$/g, '');
+    if (inline !== '' && !/^[|>]/.test(inline)) {
+      commands.push(inline);
+      continue;
+    }
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const line = lines[j];
+      if (line.trim() === '') continue;
+      if (line.match(/^\s*/)[0].length <= indent) break;
+      commands.push(line.trim());
+    }
+  }
+  let text = commands.map(stripShellComment).join('\n');
+  for (const match of text.matchAll(/npm\s+run\s+(--silent\s+)?([A-Za-z0-9:_.-]+)/g)) {
+    text += `\n${expandScript(match[2], scripts)}`;
+  }
+  return text;
+}
+
+/** Workflows that actually execute a gate, resolved through npm script indirection. */
+function workflowsRunningGate(gateScript, scripts) {
   const dir = join(ROOT, '.github/workflows');
   const result = [];
   for (const name of readdirSync(dir)) {
     if (!/\.ya?ml$/.test(name)) continue;
     const path = `.github/workflows/${name}`;
-    const source = readRepoFile(path).replace(/\\\r?\n\s*/g, ' ');
-    if (!source.includes(gateScript)) continue;
+    if (!workflowExecutedText(path, scripts).includes(gateScript)) continue;
     result.push(path);
   }
   return result;
@@ -371,46 +632,53 @@ function workflowsRunningGate(gateScript) {
 
 function checkGateTriggerCoverage() {
   const hits = [];
-  const GUARD = 'scripts/check-recovery-guards.mjs';
   if (!existsSync(join(ROOT, GUARD))) return hits;
   const guardSource = readRepoFile(GUARD);
+  const scripts = npmScripts();
 
+  // Every repository file the guard reads, source or not: root files and
+  // workflow files count too, otherwise dropping their trigger goes unnoticed.
   const targets = new Set();
   for (const { target } of extractAssertions(GUARD, guardSource)) {
-    if (isSourceTarget(target)) targets.add(target);
+    if (isRepoTarget(target)) targets.add(target);
   }
-  // Files the guard reads via helper calls rather than assertContains arguments.
   for (const match of guardSource.matchAll(/(?:read|readFileSync)\(\s*'([^']+)'/g)) {
-    if (isSourceTarget(match[1])) targets.add(match[1]);
+    if (isRepoTarget(match[1])) targets.add(match[1]);
   }
 
   // A gate is adequately triggered when AT LEAST ONE workflow that runs it fires
   // for the changed file. Requiring every workflow to cover every asserted file
   // would drag the 30-minute frontend browser pipeline into backend-only PRs for
   // no safety gain, so coverage is unioned across the workflows instead.
-  const workflows = workflowsRunningGate(GUARD);
+  const workflows = workflowsRunningGate(GUARD, scripts);
   const coverage = workflows.map((workflow) => {
     const filter = workflowFilters(workflow);
-    if (!filter.found || filter.paths.length === 0) return { workflow, always: true, allow: [], deny: [] };
-    return {
-      workflow,
-      always: false,
-      allow: filter.paths.map(globToRegExp),
-      deny: filter.pathsIgnore.map(globToRegExp),
-    };
+    const deny = filter.pathsIgnore.map(globToRegExp);
+    if (!filter.found) return { workflow, always: true, allow: [], deny };
+    if (filter.paths.length > 0) {
+      return { workflow, always: false, allow: filter.paths.map(globToRegExp), deny };
+    }
+    // `paths-ignore` only: the workflow runs on everything EXCEPT the ignored
+    // patterns. Treating this as "no filter" discarded the deny list, so a change
+    // confined to an ignored file looked fully covered.
+    return { workflow, always: true, allow: [], deny };
   });
 
   for (const workflow of workflows) {
     const filter = workflowFilters(workflow);
-    if (!filter.found || filter.paths.length === 0) {
-      notes.push(`${workflow} runs ${GUARD} without a paths filter (always runs) -- OK`);
+    if (!filter.found) {
+      notes.push(`${workflow} runs ${GUARD} with no paths filter (always runs) -- OK`);
+    } else if (filter.paths.length === 0 && filter.pathsIgnore.length > 0) {
+      notes.push(
+        `${workflow} runs ${GUARD} with paths-ignore only; denied patterns are honoured (${filter.pathsIgnore.length})`
+      );
     }
   }
 
   for (const target of [...targets].sort()) {
     const covered = coverage.some((entry) => {
-      if (entry.always) return true;
       if (entry.deny.some((re) => re.test(target))) return false;
+      if (entry.always) return true;
       return entry.allow.some((re) => re.test(target));
     });
     if (covered) continue;
@@ -436,8 +704,8 @@ function applyWaivers(hits, waivers) {
     const index = waivers.findIndex((waiver, i) => {
       if (used.has(i)) return false;
       if (waiver.check !== hit.check) return false;
-      if (waiver.gate && waiver.gate !== hit.gate) return false;
-      if (waiver.target && waiver.target !== hit.target) return false;
+      if (waiver.gate !== hit.gate) return false;
+      if (waiver.target !== hit.target) return false;
       if (waiver.literalContains && !hit.literal?.includes(waiver.literalContains)) return false;
       return true;
     });
@@ -452,14 +720,18 @@ function applyWaivers(hits, waivers) {
  * Main
  * ------------------------------------------------------------------ */
 
-const { waivers, file: waiverFile } = loadWaivers();
+const { waivers, problems: waiverProblems, file: waiverFile } = loadWaivers();
+for (const problem of waiverProblems) {
+  violations.push({ check: 'invalid-waiver', detail: `${problem} in ${waiverFile}` });
+}
+
 const allHits = [...checkDeadCodeAssertions(), ...checkGateTriggerCoverage()];
 const { surviving, stale } = applyWaivers(allHits, waivers);
 
 for (const waiver of stale) {
   violations.push({
     check: 'stale-waiver',
-    detail: `waiver for ${waiver.gate ?? waiver.check}${waiver.target ? ` -> ${waiver.target}` : ''} matches no current violation; remove it from ${waiverFile} (owner ${waiver.owner ?? 'unknown'})`,
+    detail: `waiver for ${waiver.gate} -> ${waiver.target} matches no current violation; remove it from ${waiverFile} (owner ${waiver.owner})`,
   });
 }
 violations.push(...surviving);
@@ -469,9 +741,11 @@ if (JSON_OUTPUT) {
 } else {
   console.log('== Gate integrity check ==');
   console.log(`Gates inspected: ${gateFiles().length}`);
-  console.log(`Source-text assertions resolved: ${gateFiles().reduce((n, g) => n + extractAssertions(g, readRepoFile(g)).length, 0)}`);
+  console.log(
+    `Source-text assertions resolved: ${gateFiles().reduce((n, g) => n + extractAssertions(g, readRepoFile(g)).length, 0)}`
+  );
   if (allHits.filter((h) => h.waived).length) {
-    console.log('\nWaived (owned by another PR):');
+    console.log('\nWaived (owned and bound to one violation):');
     for (const hit of allHits.filter((h) => h.waived)) {
       console.log(`  [waived: ${hit.waived.owner}] ${hit.detail}`);
     }
