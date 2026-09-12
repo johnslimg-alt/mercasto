@@ -1,0 +1,56 @@
+name: Backup Restore Verification
+
+# Proves the newest backup artifact can actually be RESTORED, which the
+# freshness gate deliberately does not attempt.
+#
+# This runs on a schedule, never on pull_request: a Docker restore has no place
+# in a PR check. It is a separate workflow from Backup Freshness Evidence so a
+# restore-side failure cannot blur the freshness signal, and so the existing
+# freshness assertions stay exactly as they are.
+#
+# Measured 2026-09-12: 5,507,429-byte dump (33,742,787 bytes uncompressed,
+# 62 MB restored) restores clean in ~3s wall clock. Daily cadence is therefore
+# affordable and gives the same 24h detection latency as the freshness gate.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 7 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-restore-verification
+  cancel-in-progress: false
+
+jobs:
+  backup-restore-verify:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - name: Run backup freshness smoke
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          # /var/www/mercasto is intentionally root-owned; the self-hosted runner uses passwordless sudo for git refreshes.
+          sudo -n git fetch origin main --prune
+          sudo -n git reset --hard origin/main
+          REQUIRE_BACKUP_FRESHNESS=1 bash scripts/backup-freshness-smoke.sh
+
+      - name: Run backup restore verification
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          REQUIRE_RESTORE_VERIFICATION=1 bash scripts/backup-restore-verify.sh
+
+      - name: Ensure verifier container is gone
+        if: always()
+        run: |
+          set -euo pipefail
+          docker rm -f -v mercasto_restore_verify >/dev/null 2>&1 || true
+          if docker inspect mercasto_restore_verify >/dev/null 2>&1; then
+            echo "FAIL: restore verifier container survived the job" >&2
+            exit 1
+          fi
+          echo "restore verifier container absent"
