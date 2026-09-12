@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 const CHECKER = join(dirname(fileURLToPath(import.meta.url)), '..', 'scripts', 'check-lockfile-fidelity.mjs');
 
 /** Builds a scratch tree from a package spec, optionally with installed packages. */
-function scratch({ lock, installed, writeLock = true, lockRaw = null } = {}) {
+function scratch({ lock, installed, writeLock = true, lockRaw = null, nodeModulesIsFile = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'lockfile-fidelity-'));
 
   if (writeLock) {
@@ -29,7 +29,9 @@ function scratch({ lock, installed, writeLock = true, lockRaw = null } = {}) {
     );
   }
 
-  if (installed) {
+  if (nodeModulesIsFile) {
+    writeFileSync(join(root, 'node_modules'), 'not a directory\n');
+  } else if (installed) {
     mkdirSync(join(root, 'node_modules'), { recursive: true });
     for (const [name, version] of Object.entries(installed)) {
       const dir = join(root, 'node_modules', name);
@@ -150,6 +152,8 @@ test('negative control: "cannot determine" is a failure, not a pass', () => {
   const v1Lock = scratch({ lockRaw: JSON.stringify({ lockfileVersion: 1, dependencies: {} }), installed: { alpha: '1.0.0' } });
   // manifest present but unreadable.
   const badManifest = scratch({ lock: lockWith({ alpha: { version: '1.0.0' } }), installed: { alpha: null } });
+  // node_modules exists but is a file, not a directory.
+  const modulesIsFile = scratch({ lock: lockWith({ alpha: { version: '1.0.0' } }), nodeModulesIsFile: true });
 
   try {
     for (const [label, root, expected] of [
@@ -158,13 +162,14 @@ test('negative control: "cannot determine" is a failure, not a pass', () => {
       ['lockfile not JSON', badLock, /unreadable or not valid JSON/],
       ['lockfileVersion 1', v1Lock, /unsupported lockfile format/],
       ['manifest unreadable', badManifest, /unreadable\s+: 1/],
+      ['node_modules is a file', modulesIsFile, /node_modules is not a directory/],
     ]) {
       const { status, stderr } = runChecker(root);
       assert.notEqual(status, 0, `${label} must fail closed`);
       assert.match(stderr, expected, `${label} should explain the reason`);
     }
   } finally {
-    for (const root of [noModules, noLock, badLock, v1Lock, badManifest]) {
+    for (const root of [noModules, noLock, badLock, v1Lock, badManifest, modulesIsFile]) {
       rmSync(root, { recursive: true, force: true });
     }
   }

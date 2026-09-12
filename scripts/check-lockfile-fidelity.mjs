@@ -43,7 +43,7 @@
  *   64 usage error
  */
 
-import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const EXIT_OK = 0;
@@ -100,13 +100,29 @@ function fail(options, reason, detail) {
   return EXIT_UNFAITHFUL;
 }
 
-/** Reads package.json for one installed package, or reports why it could not. */
+/**
+ * Reads package.json for one installed package, or reports why it could not.
+ *
+ * Deliberately a single read attempt rather than exists/stat-then-read: the
+ * check-then-use sequence is a TOCTOU race (CodeQL flagged it) and the extra
+ * syscalls buy nothing. A missing package comes back as ENOENT/EISDIR/ENOTDIR;
+ * anything else (unparseable manifest, permissions) is "unreadable", which the
+ * caller treats as a failure rather than a pass.
+ */
 function readInstalledVersion(nodeModulesDir, name) {
   const manifest = join(nodeModulesDir, name, 'package.json');
-  if (!existsSync(manifest)) return { state: 'missing', path: manifest };
+  let raw;
   try {
-    if (!statSync(manifest).isFile()) return { state: 'missing', path: manifest };
-    const parsed = JSON.parse(readFileSync(manifest, 'utf8'));
+    raw = readFileSync(manifest, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'EISDIR' || error.code === 'ENOTDIR') {
+      return { state: 'missing', path: manifest };
+    }
+    return { state: 'unreadable', path: manifest, reason: error.message };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
     if (typeof parsed.version !== 'string' || parsed.version === '') {
       return { state: 'unreadable', path: manifest, reason: 'no version field' };
     }
@@ -129,13 +145,19 @@ function main() {
   options.dir = resolve(options.dir);
 
   const lockPath = join(options.dir, 'package-lock.json');
-  if (!existsSync(lockPath)) {
-    return fail(options, 'package-lock.json is missing', lockPath);
+  let lockRaw;
+  try {
+    lockRaw = readFileSync(lockPath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'EISDIR' || error.code === 'ENOTDIR') {
+      return fail(options, 'package-lock.json is missing', lockPath);
+    }
+    return fail(options, 'package-lock.json is unreadable or not valid JSON', error.message);
   }
 
   let lock;
   try {
-    lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+    lock = JSON.parse(lockRaw);
   } catch (error) {
     return fail(options, 'package-lock.json is unreadable or not valid JSON', error.message);
   }
@@ -148,20 +170,24 @@ function main() {
     );
   }
 
+  // One readdir attempt rather than exists/stat-then-readdir, for the same
+  // check-then-use reason as readInstalledVersion. ENOENT means absent, ENOTDIR
+  // means it is not a directory, and anything else is "cannot determine".
   const nodeModulesDir = join(options.dir, 'node_modules');
-  if (!existsSync(nodeModulesDir)) {
-    return fail(options, 'node_modules is absent', nodeModulesDir);
-  }
-  if (!statSync(nodeModulesDir).isDirectory()) {
-    return fail(options, 'node_modules is not a directory', nodeModulesDir);
-  }
+  let nodeModulesEntries;
   try {
-    const probe = readdirSync(nodeModulesDir);
-    if (probe.length === 0) {
-      return fail(options, 'node_modules is empty', nodeModulesDir);
-    }
+    nodeModulesEntries = readdirSync(nodeModulesDir);
   } catch (error) {
+    if (error.code === 'ENOENT') {
+      return fail(options, 'node_modules is absent', nodeModulesDir);
+    }
+    if (error.code === 'ENOTDIR') {
+      return fail(options, 'node_modules is not a directory', nodeModulesDir);
+    }
     return fail(options, 'node_modules is unreadable', error.message);
+  }
+  if (nodeModulesEntries.length === 0) {
+    return fail(options, 'node_modules is empty', nodeModulesDir);
   }
 
   // Only true top-level entries: "node_modules/<name>" or "node_modules/@scope/<name>".
