@@ -24,7 +24,9 @@ import { test, expect } from '@playwright/test';
  *   - decorative icons and tinted decorative borders (e.g. `bg-[#84CC16]/10`
  *     pills, `border-white/10` hairlines): 1.4.11 does not apply to them;
  *   - inactive/disabled controls (`[disabled]`, `[aria-disabled="true"]`): 1.4.3
- *     explicitly excludes inactive components, so they are skipped, not passed;
+ *     and 1.4.11 both exclude inactive components, so their text, icons and
+ *     boundaries are skipped, not passed — and the skip is asserted, not silent
+ *     (a disabled `select` at `opacity-50` composites to 1.75:1 and is exempt);
  *   - hover / focus / active colours (a resting-state audit cannot see them);
  *   - `background-image`/gradient surfaces: the composite background colour is
  *     used and the entry is flagged `bgFromImage`. This is an approximation, not
@@ -233,7 +235,9 @@ const MEASURE = ({ routes, brandColors }) => {
       // borders (border-white/10 dividers, /20 decorative pills) are excluded:
       // 1.4.11 does not apply to decorative hairlines.
       const isBoundary = width > 0 && borderColor && borderColor.a === 1 && (isCard || isControl);
-      if (isBoundary) {
+      if (isBoundary && inactive(el)) {
+        result.skippedInactive.push({ selector: cssPath(el), text: '', reason: 'inactive component boundary (1.4.11 exempt)' });
+      } else if (isBoundary) {
         const inside = effectiveBackground(el);
         const outside = effectiveBackground(el, true);
         const borderAlpha = (borderColor.a ?? 1) * cumulativeOpacity(el);
@@ -333,11 +337,14 @@ async function assertTheme(page, dark) {
 }
 
 async function settle(page) {
-  await expect(page.getByTestId('mobile-header-search').or(page.locator('header')).first()).toBeVisible();
+  // Generous explicit timeouts: the shell can be slow to hydrate on a loaded CI
+  // runner, and measuring a half-hydrated tree is what made this flaky.
+  await expect(page.getByTestId('mobile-header-search').or(page.locator('header')).first()).toBeVisible({ timeout: 20_000 });
   // Every route renders the shell footer; waiting for it avoids measuring a
   // half-hydrated tree (the boundary scan needs the cards/toolbars mounted).
-  await expect(page.locator('footer')).toBeVisible();
-  await page.waitForTimeout(200);
+  await expect(page.locator('footer')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('footer ul li').first()).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(250);
   await page.evaluate(async () => {
     const step = Math.round(window.innerHeight * 0.8);
     for (let y = 0; y <= Math.min(document.documentElement.scrollHeight, 9000); y += step) {
@@ -392,6 +399,11 @@ for (const theme of ['light', 'dark']) {
             failures,
             `${route}: dark-mode boundaries below 3:1\n${describe(failures)}`,
           ).toEqual([]);
+          // Skips are asserted, never silent: every entry must name a genuine
+          // inactive component (1.4.11 exempts those).
+          for (const skipped of result.skippedInactive) {
+            expect(skipped.reason, 'skipped boundary must be an inactive component').toContain('inactive');
+          }
         } finally {
           await routePage.close();
         }
