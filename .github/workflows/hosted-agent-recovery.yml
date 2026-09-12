@@ -134,8 +134,8 @@ jobs:
       - name: Validate SSH secrets
         shell: bash
         env:
-          SERVER_HOST: \${{ secrets.SERVER_HOST }}
-          SERVER_SSH_KEY: \${{ secrets.SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
           set -euo pipefail
           test -n "$SERVER_HOST"
@@ -144,8 +144,8 @@ jobs:
       - name: Install SSH key
         shell: bash
         env:
-          SERVER_HOST: \${{ secrets.SERVER_HOST }}
-          SERVER_SSH_KEY: \${{ secrets.SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
           set -euo pipefail
           install -d -m 0700 ~/.ssh
@@ -156,7 +156,7 @@ jobs:
       - name: Execute guarded Hermes publish
         shell: bash
         env:
-          SERVER_HOST: \${{ secrets.SERVER_HOST }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/hermes_publish_key "root@$SERVER_HOST" \
@@ -171,10 +171,10 @@ jobs:
         if: always()
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
-          REPO: \${{ github.repository }}
-          RUN_URL: \${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}
-          JOB_STATUS: \${{ job.status }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
         run: |
           set -euo pipefail
           body="$(printf 'HERMES_PUBLISH_SSH_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' \
