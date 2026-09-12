@@ -1,0 +1,47 @@
+name: RDC One-Shot Diagnose
+
+on:
+  push:
+    branches:
+      - ops/rdc-diagnose-once
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 10
+    steps:
+      - name: Diagnose RDC service
+        shell: bash
+        run: |
+          set +e
+          {
+            echo "RDC_DIAGNOSTIC_RESULT"
+            echo "host=$(hostname)"
+            systemctl show remote-desktop-commander.service --no-pager \
+              -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStartTimestamp
+            echo "=== journal ==="
+            journalctl -u remote-desktop-commander.service -n 120 --no-pager 2>/dev/null \
+              | sed -E 's/(token|authorization|credential|secret|password)([=: ]+)[^ ]+/\1\2***REDACTED***/Ig' \
+              | sed -E 's#https?://[^ ]+#<URL_REDACTED>#g; s/[A-Za-z0-9_=-]{32,}/***REDACTED***/g' \
+              | tail -100
+          } | tee /tmp/rdc-diagnostic.txt
+
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            let body = 'RDC_DIAGNOSTIC_RESULT\n(no output)';
+            try { body = fs.readFileSync('/tmp/rdc-diagnostic.txt','utf8').trim(); } catch (e) {}
+            if (body.length > 60000) body = body.slice(-60000);
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body
+            });
