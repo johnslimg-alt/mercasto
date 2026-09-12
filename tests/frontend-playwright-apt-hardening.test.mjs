@@ -60,6 +60,7 @@ test('frontend quality scope covers every workflow that depends on Playwright ap
     'legal-readiness.yml',
     'public-ui-visual-evidence.yml',
     'authenticated-cabinet-qa.yml',
+    'production-checks.yml',
   ];
   const pushBlock = frontend.slice(frontend.indexOf('  push:'), frontend.indexOf('  pull_request:'));
   const scopeBlock = frontend.slice(frontend.indexOf('files="$(git diff'), frontend.indexOf('  static:'));
