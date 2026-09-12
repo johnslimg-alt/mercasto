@@ -1,0 +1,99 @@
+name: Probe journey flake capture
+
+# TEMPORARY diagnostic workflow (branch-only, never merged).
+# Reproduces the seller-registration-redirect flake under real CI conditions with
+# trace + screenshot + instrumented timeline capture, then uploads the evidence.
+
+on:
+  push:
+    branches:
+      - probe/journey-flake-capture-20260912
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: Capture seller registration flake
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Stabilize Playwright apt sources
+        run: bash scripts/stabilize-playwright-apt.sh
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start preview server
+        run: |
+          ./node_modules/.bin/vite preview --host 127.0.0.1 --port 4180 --strictPort >/tmp/probe-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 2 http://127.0.0.1:4180/ >/dev/null 2>&1; then echo "preview ready"; exit 0; fi
+            sleep 1
+          done
+          cat /tmp/probe-preview.log; exit 1
+
+      - name: Exact journey shard repro (desktop + mobile, retries=0)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          BASE_URL=http://127.0.0.1:4180 CI=1 npx playwright test \
+            tests/e2e/header-search.spec.js tests/e2e/protected-route-stability.spec.js \
+            tests/e2e/publish-draft-recovery.spec.js tests/e2e/search-autocomplete-race.spec.js \
+            tests/e2e/home-categories.spec.js tests/e2e/home-auto-quick-filters.spec.js \
+            tests/e2e/catalog-route-performance.spec.js tests/e2e/category-seo-quality.spec.js \
+            tests/e2e/seller-registration-redirect.spec.js tests/e2e/publish-first-value.spec.js \
+            tests/e2e/first-response-return.spec.js tests/e2e/seo-index-hygiene.spec.js \
+            tests/e2e/listing-autofill.spec.js \
+            --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=0 --reporter=list \
+            2>&1 | tee /tmp/probe-shard.log
+
+      - name: Repeated desktop spec with full trace
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          BASE_URL=http://127.0.0.1:4180 CI=1 npx playwright test \
+            tests/e2e/seller-registration-redirect.spec.js \
+            --project=chromium-desktop --workers=1 --retries=0 --repeat-each=25 \
+            --trace=on --screenshot=on --reporter=list 2>&1 | tee /tmp/probe-repeat.log
+
+      - name: Instrumented fate probe (20 iterations)
+        continue-on-error: true
+        run: |
+          for i in $(seq 1 20); do
+            echo "##### PROBE ITERATION $i #####"
+            node probe-modal-fate.mjs http://127.0.0.1:4180 desktop 1 0 2>&1 || echo "PROBE ITERATION $i exited non-zero"
+          done | tee /tmp/probe-timeline.log
+
+      - name: Summarize findings
+        if: always()
+        run: |
+          echo "=== shard failures ==="
+          grep -nE "✘|failed|passed" /tmp/probe-shard.log 2>/dev/null | tail -20 || true
+          echo "=== repeat failures ==="
+          grep -nE "✘|failed|passed" /tmp/probe-repeat.log 2>/dev/null | tail -20 || true
+          echo "=== probe verdicts ==="
+          grep -cE "poll: tries=" /tmp/probe-timeline.log 2>/dev/null || true
+          grep -nE "lastVal=false|lastErr=|aborted|REACT_WROTE_CHECKED|removeChild" /tmp/probe-timeline.log 2>/dev/null | head -40 || true
+
+      - name: Upload failure evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: journey-flake-evidence
+          path: |
+            test-results/**
+            /tmp/probe-shard.log
+            /tmp/probe-repeat.log
+            /tmp/probe-timeline.log
+          if-no-files-found: warn
+          retention-days: 14
