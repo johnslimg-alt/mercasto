@@ -14,6 +14,7 @@ MIDDLEWARE="backend/app/Http/Middleware/EnforcePaidAdRenewal.php"
 MODEL="backend/app/Models/Ad.php"
 ADMIN_CONTROLLER="backend/app/Http/Controllers/Api/AdminAdModerationController.php"
 RECONCILE="backend/app/Console/Commands/ReconcileModerationVisibility.php"
+DUPLICATE_SERVICE="backend/app/Services/ListingDuplicateDetector.php"
 UI="src/components/screens/MyAdsScreen.jsx"
 
 if grep -qF 'dispatch(function () use ($ad)' "$CONTROLLER"; then
@@ -111,6 +112,21 @@ if [[ ! -f "$RECONCILE" ]]; then
   exit 1
 fi
 grep -qF -- "->where('ai_moderation_status', Ad::MODERATION_APPROVED)" "$RECONCILE"
+# Duplicate detection must be invoked by the pipeline itself, not merely exist in a
+# test: the detector is a resolved dependency of the job, it runs on every
+# submission before any provider call, and its evidence is recorded on the
+# moderation decision. It must SURFACE a suspicion for a human and never judge.
+if [[ ! -f "$DUPLICATE_SERVICE" ]]; then
+  echo "Listing duplicate detector is missing" >&2
+  exit 1
+fi
+grep -qF 'ListingDuplicateDetector $duplicates,' "$JOB"
+grep -qF '$this->duplicateSignal = $duplicates->detect($ad);' "$JOB"
+grep -qF "'duplicate' => \$this->duplicateSignal," "$JOB"
+if grep -qE "'rejected'|\"rejected\"" "$DUPLICATE_SERVICE"; then
+  echo "Duplicate detector must surface, not judge: no rejection decision allowed" >&2
+  exit 1
+fi
 grep -qF "data_get(\$decision->metadata, 'activation_mode') !== 'seller_confirmation_required'" "$MODEL"
 grep -qF "(\$ad->ai_moderation_status ?? null) === 'approved'" "$MIDDLEWARE"
 grep -qF "confirm-reactivation-ad-" "$UI"

@@ -264,8 +264,29 @@ class AdminAdModerationController extends Controller
             fn (array $decision) => $this->presentDecisionHistory($decision),
             $full ? $decisions : array_slice($decisions, 0, 5),
         );
+        // Duplicate evidence recorded at moderation time, surfaced so an operator can
+        // act on it. Derived from the already-loaded decision history, so it costs no
+        // extra query.
+        $payload['suspected_duplicate'] = $this->presentDuplicate($decisions);
 
         return $payload;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $decisions
+     * @return array<string, mixed>|null
+     */
+    private function presentDuplicate(array $decisions): ?array
+    {
+        foreach ($decisions as $decision) {
+            $duplicate = is_array($decision) ? ($decision['metadata']['duplicate'] ?? null) : null;
+
+            if (is_array($duplicate) && ($duplicate['is_duplicate'] ?? false) === true) {
+                return $duplicate;
+            }
+        }
+
+        return null;
     }
 
     private function presentAiAssist(Ad $ad, array $decisions): array
