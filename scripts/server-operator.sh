@@ -601,8 +601,8 @@ systemctl daemon-reload
 systemctl enable --now hermes-edge-bridge.service
 sleep 1
 systemctl is-active --quiet hermes-edge-bridge.service
-curl -fsS --max-time 5 "http://$BRIDGE_GATEWAY:$BRIDGE_PORT/api/status" >/tmp/hermes-bridge-status.json
-docker exec mercasto_frontend_container wget -qO- "http://$BRIDGE_GATEWAY:$BRIDGE_PORT/api/status" >/tmp/hermes-edge-status.json
+curl -fsS --max-time 5 -H "Host: 127.0.0.1:$DASH_PORT" "http://$BRIDGE_GATEWAY:$BRIDGE_PORT/api/status" >/tmp/hermes-bridge-status.json
+docker exec mercasto_frontend_container wget -qO- --header="Host: 127.0.0.1:$DASH_PORT" "http://$BRIDGE_GATEWAY:$BRIDGE_PORT/api/status" >/tmp/hermes-edge-status.json
 
 EDGE_CONF=/etc/mercasto-edge/harness.conf
 CA_SRC=/var/www/mercasto/ops/hermes/hermes-client-ca.crt
@@ -711,8 +711,8 @@ server {{
     location / {{
         proxy_pass http://{gateway}:{port};
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header Origin $http_origin;
+        proxy_set_header Host 127.0.0.1:9119;
+        proxy_set_header Origin http://127.0.0.1:9119;
         proxy_set_header X-Forwarded-Host hermes.flyaicrm.com;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
