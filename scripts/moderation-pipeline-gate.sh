@@ -14,6 +14,8 @@ MIDDLEWARE="backend/app/Http/Middleware/EnforcePaidAdRenewal.php"
 MODEL="backend/app/Models/Ad.php"
 ADMIN_CONTROLLER="backend/app/Http/Controllers/Api/AdminAdModerationController.php"
 RECONCILE="backend/app/Console/Commands/ReconcileModerationVisibility.php"
+DUPLICATE_SERVICE="backend/app/Services/ListingDuplicateDetector.php"
+RESOLVE_DUPLICATES="backend/app/Console/Commands/ResolveDuplicateSubmissions.php"
 UI="src/components/screens/MyAdsScreen.jsx"
 
 if grep -qF 'dispatch(function () use ($ad)' "$CONTROLLER"; then
@@ -111,6 +113,56 @@ if [[ ! -f "$RECONCILE" ]]; then
   exit 1
 fi
 grep -qF -- "->where('ai_moderation_status', Ad::MODERATION_APPROVED)" "$RECONCILE"
+# Duplicate detection must be invoked by the pipeline itself, not merely exist in a
+# test: the detector is a resolved dependency of the job, it runs on every
+# submission before any provider call, and its evidence is recorded on the
+# moderation decision. It must SURFACE a suspicion for a human and never judge.
+if [[ ! -f "$DUPLICATE_SERVICE" ]]; then
+  echo "Listing duplicate detector is missing" >&2
+  exit 1
+fi
+grep -qF 'ListingDuplicateDetector $duplicates,' "$JOB"
+grep -qF '$this->duplicateSignal = $duplicates->detect($ad);' "$JOB"
+grep -qF "'duplicate' => \$this->duplicateSignal," "$JOB"
+if grep -qE "'rejected'|\"rejected\"" "$DUPLICATE_SERVICE"; then
+  echo "Duplicate detector must surface, not judge: no rejection decision allowed" >&2
+  exit 1
+fi
+# The operator-facing resolution command must reuse that same detector instead of
+# defining a second one, must keep the policy a flag rather than a hardcoded opinion,
+# and must never touch an already-public ad.
+if [[ ! -f "$RESOLVE_DUPLICATES" ]]; then
+  echo "Duplicate resolution command is missing" >&2
+  exit 1
+fi
+grep -qF 'ListingDuplicateDetector $detector' "$RESOLVE_DUPLICATES"
+grep -qF '$detector->fingerprint(' "$RESOLVE_DUPLICATES"
+grep -qF '$detector->reasonForId(' "$RESOLVE_DUPLICATES"
+grep -qF '{--action=manual_review :' "$RESOLVE_DUPLICATES"
+grep -qF '{--keep=earliest :' "$RESOLVE_DUPLICATES"
+grep -qF '{--apply :' "$RESOLVE_DUPLICATES"
+grep -qF -- "->where('status', '!=', 'active')" "$RESOLVE_DUPLICATES"
+# The keeper is re-read and fingerprint-checked under a lock inside the same
+# transaction, so a row can never be resolved against an original that was deleted or
+# edited after the work list was built.
+grep -qF "Ad::query()->lockForUpdate()->find(\$item['keeper'])" "$RESOLVE_DUPLICATES"
+# A duplicate routed to manual review must also be archived: the admin queue only lists
+# pending or archived unfinished ads, and AdRenewalService::fulfill() refuses to
+# reactivate statuses outside active/expired/paused/inactive, so an archived row cannot
+# be paid back into publication while it is still under review.
+grep -qF "'status' => 'archived'," "$RESOLVE_DUPLICATES"
+# The command's decision becomes the newest one, so it must carry the SAME structured
+# duplicate signal the detector writes, or the admin payload would immediately clear
+# suspected_duplicate for the very rows the command just routed to review.
+grep -qF "'duplicate' => \$detector->evidenceFor(" "$RESOLVE_DUPLICATES"
+grep -qF 'public const MATCHED_ON' "$DUPLICATE_SERVICE"
+# A truncated candidate window proves nothing, so a negative result must fail closed
+# instead of being treated as unique.
+grep -qF '$duplicates->isInconclusive($this->duplicateSignal) => $duplicates->truncatedReason(),' "$JOB"
+if grep -qE "hash\(|mb_strtolower|number_format\(" "$RESOLVE_DUPLICATES"; then
+  echo "Duplicate resolution must reuse ListingDuplicateDetector, not re-implement its key" >&2
+  exit 1
+fi
 grep -qF "data_get(\$decision->metadata, 'activation_mode') !== 'seller_confirmation_required'" "$MODEL"
 grep -qF "(\$ad->ai_moderation_status ?? null) === 'approved'" "$MIDDLEWARE"
 grep -qF "confirm-reactivation-ad-" "$UI"

@@ -7,6 +7,7 @@ use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
 use App\Services\AiModerationGatewayClient;
+use App\Services\ListingDuplicateDetector;
 use App\Services\ListingPolicyMatrixService;
 use App\Services\ListingPolicySignalService;
 use Illuminate\Bus\Queueable;
@@ -37,6 +38,19 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
 
     public ?int $moderationCycleId = null;
 
+    /**
+     * Duplicate-detection evidence for this submission, recorded on every
+     * moderation decision so the suspicion is auditable and countable.
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $duplicateSignal = null;
+
+    /**
+     * Reason fragment surfaced to admins when the submission looks duplicated.
+     */
+    private ?string $duplicateReason = null;
+
     public function __construct(
         public int $adId,
         public bool $activateOnApproval = true,
@@ -65,6 +79,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
         AiModerationGatewayClient $aiGateway,
         ListingPolicySignalService $policySignals,
         ListingPolicyMatrixService $policyMatrix,
+        ListingDuplicateDetector $duplicates,
     ): void {
         if ($this->job && $this->job->getQueue() !== 'ai-moderation') {
             Queue::connection($this->job->getConnectionName())
@@ -107,6 +122,19 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 'authoritative_action' => null,
             ],
         ];
+
+        // Duplicate detection runs on every submission, before any provider call and
+        // before the kill-switch return, so the evidence is recorded on every
+        // moderation path. It only SURFACES a suspicion: the submission is routed to
+        // human review and is never auto-rejected.
+        $this->duplicateSignal = $duplicates->detect($ad);
+        $this->duplicateReason = match (true) {
+            (bool) ($this->duplicateSignal['is_duplicate'] ?? false) => $duplicates->reasonFor($this->duplicateSignal),
+            // Fail closed: a truncated scan proves nothing, so a negative result must
+            // never be treated as "unique" and auto-published.
+            $duplicates->isInconclusive($this->duplicateSignal) => $duplicates->truncatedReason(),
+            default => null,
+        };
 
         $ad->forceFill([
             'status' => 'archived',
@@ -242,6 +270,14 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 $reason = 'La IA propone '.$proposedDecision.', pero el modo assist-only exige decisión humana. '.$reason;
             }
 
+            // A suspected duplicate is never auto-rejected, and never auto-published
+            // either: it is routed to human review so an operator decides the
+            // duplicate policy. This is applied last so it cannot be overridden.
+            if ($this->duplicateReason !== null) {
+                $decision = 'manual_review';
+                $reason = $this->duplicateReason.' '.$reason;
+            }
+
             // Approval outcomes are resolved by the model so that "approved" can
             // never be persisted together with a hidden status. An approval that
             // must not publish yet becomes `reactivation_pending` instead.
@@ -328,6 +364,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                         'human_authoritative' => true,
                         'authoritative_action' => null,
                     ],
+                    'duplicate' => $this->duplicateSignal,
                     'activation_mode' => $assistOnly
                         ? 'human_confirmation_required'
                         : ($this->activateOnApproval ? 'automatic' : 'seller_confirmation_required'),
@@ -476,6 +513,12 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // A suspected duplicate must stay visible in the admin queue on every
+        // manual-review path, including provider failure and the kill switch.
+        if ($this->duplicateReason !== null) {
+            $reason = $this->duplicateReason.' '.$reason;
+        }
+
         $ad->forceFill([
             'status' => 'archived',
             'ai_moderation_status' => $aiStatus,
@@ -506,6 +549,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 'metadata' => array_merge([
                     'technical_status' => $aiStatus,
                     'activation_mode' => 'human_confirmation_required',
+                    'duplicate' => $this->duplicateSignal,
                 ], $metadata),
             ]);
         }

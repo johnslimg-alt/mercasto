@@ -264,8 +264,48 @@ class AdminAdModerationController extends Controller
             fn (array $decision) => $this->presentDecisionHistory($decision),
             $full ? $decisions : array_slice($decisions, 0, 5),
         );
+        // Duplicate evidence recorded at moderation time, surfaced so an operator can
+        // act on it. Derived from the already-loaded decision history, so it costs no
+        // extra query.
+        $payload['suspected_duplicate'] = $this->presentDuplicate($decisions);
 
         return $payload;
+    }
+
+    /**
+     * Duplicate evidence for the CURRENT moderation cycle only.
+     *
+     * Scanning the whole history would keep showing a duplicate marker from an
+     * earlier cycle after the original had been removed or changed, and after a
+     * human had already acted on it. So only the most recent decision can surface a
+     * suspicion: a newer cycle decision, or a human decision, supersedes it and the
+     * marker disappears until moderation re-evaluates the ad.
+     *
+     * Decisions are compared by id, which stays deterministic when several decisions
+     * share a timestamp.
+     *
+     * @param  array<int, array<string, mixed>>  $decisions
+     * @return array<string, mixed>|null
+     */
+    private function presentDuplicate(array $decisions): ?array
+    {
+        $latest = null;
+
+        foreach ($decisions as $decision) {
+            if (! is_array($decision)) {
+                continue;
+            }
+
+            if ($latest === null || (int) ($decision['id'] ?? 0) > (int) ($latest['id'] ?? 0)) {
+                $latest = $decision;
+            }
+        }
+
+        $duplicate = $latest['metadata']['duplicate'] ?? null;
+
+        return is_array($duplicate) && ($duplicate['is_duplicate'] ?? false) === true
+            ? $duplicate
+            : null;
     }
 
     private function presentAiAssist(Ad $ad, array $decisions): array
