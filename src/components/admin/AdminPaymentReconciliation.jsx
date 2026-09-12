@@ -15,9 +15,13 @@ const COPY = Object.freeze({
     empty: 'No hay pagos que coincidan con el filtro.',
     records: 'Registros',
     paidAmount: 'Cobrado',
+    verifiedCash: 'Verificado',
+    claimedUnverified: 'Sin verificar',
+    internalBalance: 'Saldo interno',
     unmatchedListings: 'Sin anuncio asociado',
     refunds: 'Reembolsos',
     refundsNotTracked: 'Sin registro: Clip todavía no persiste reembolsos.',
+    refundsTracked: 'Registrados',
     filterStatus: 'Estado',
     filterAll: 'Todos',
     payment: 'Pago',
@@ -46,9 +50,13 @@ const COPY = Object.freeze({
     empty: 'No payments match the filter.',
     records: 'Records',
     paidAmount: 'Collected',
+    verifiedCash: 'Verified',
+    claimedUnverified: 'Unverified',
+    internalBalance: 'Internal balance',
     unmatchedListings: 'Without a listing',
     refunds: 'Refunds',
     refundsNotTracked: 'Not tracked: Clip refunds are not persisted yet.',
+    refundsTracked: 'Tracked',
     filterStatus: 'Status',
     filterAll: 'All',
     payment: 'Payment',
@@ -77,9 +85,13 @@ const COPY = Object.freeze({
     empty: 'Нет платежей по выбранному фильтру.',
     records: 'Записей',
     paidAmount: 'Оплачено',
+    verifiedCash: 'Подтверждено',
+    claimedUnverified: 'Без подтверждения',
+    internalBalance: 'Внутренний баланс',
     unmatchedListings: 'Без объявления',
     refunds: 'Возвраты',
     refundsNotTracked: 'Не учитываются: Clip-возвраты пока не сохраняются.',
+    refundsTracked: 'Учтены',
     filterStatus: 'Статус',
     filterAll: 'Все',
     payment: 'Платёж',
@@ -203,6 +215,22 @@ export default function AdminPaymentReconciliation({ token, lang = 'es' }) {
     return entries;
   }, [summary]);
 
+  // Reported money is not collected money: the headline paid total is shown
+  // next to the verified / claimed / internal split the API now returns.
+  const fundingSplitNote = useMemo(() => {
+    if (summary?.verified_cash_amount === undefined) {
+      return null;
+    }
+
+    return [
+      `${copy.verifiedCash}: ${formatMXN(summary.verified_cash_amount || 0, lang)}`,
+      `${copy.claimedUnverified}: ${formatMXN(summary.claimed_unverified_amount || 0, lang)}`,
+      `${copy.internalBalance}: ${formatMXN(summary.internal_balance_amount || 0, lang)}`,
+    ].join(' · ');
+  }, [summary, copy, lang]);
+
+  const refundsTracked = summary?.refund_tracking === 'tracked';
+
   const onFilterChange = event => {
     const value = event.target.value;
     setStatus(value);
@@ -257,7 +285,7 @@ export default function AdminPaymentReconciliation({ token, lang = 'es' }) {
           icon={Wallet}
           label={copy.paidAmount}
           value={formatMXN(summary?.paid_amount || 0, lang)}
-          note={summary?.currency || 'MXN'}
+          note={fundingSplitNote || summary?.currency || 'MXN'}
         />
         <SummaryCard
           icon={ShieldAlert}
@@ -268,8 +296,13 @@ export default function AdminPaymentReconciliation({ token, lang = 'es' }) {
         <SummaryCard
           icon={BadgeCheck}
           label={copy.refunds}
-          value={copy.refundsNotTracked}
-          tone="slate"
+          value={refundsTracked
+            ? formatMXN(summary?.refunded_amount || 0, lang)
+            : copy.refundsNotTracked}
+          note={refundsTracked
+            ? `${copy.refundsTracked}: ${formatNumber(summary?.refund_records || 0, lang)}`
+            : null}
+          tone={refundsTracked ? 'lime' : 'slate'}
         />
       </div>
 
