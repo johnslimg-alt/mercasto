@@ -66,13 +66,18 @@ jobs:
             --project=chromium-desktop --workers=1 --retries=0 --repeat-each=25 \
             --trace=on --screenshot=on --reporter=list 2>&1 | tee /tmp/probe-repeat.log
 
-      - name: Instrumented fate probe (20 iterations)
+      - name: Instrumented fate probe (10 iterations)
         continue-on-error: true
         run: |
-          for i in $(seq 1 20); do
+          for i in $(seq 1 10); do
             echo "##### PROBE ITERATION $i #####"
             node probe-modal-fate.mjs http://127.0.0.1:4180 desktop 1 0 2>&1 || echo "PROBE ITERATION $i exited non-zero"
           done | tee /tmp/probe-timeline.log
+
+      - name: Focus-race probe (40 iterations)
+        continue-on-error: true
+        run: |
+          node probe-focus-race.mjs http://127.0.0.1:4180 40 2>&1 | tee /tmp/probe-focus.log
 
       - name: Summarize findings
         if: always()
@@ -84,6 +89,10 @@ jobs:
           echo "=== probe verdicts ==="
           grep -cE "poll: tries=" /tmp/probe-timeline.log 2>/dev/null || true
           grep -nE "lastVal=false|lastErr=|aborted|REACT_WROTE_CHECKED|removeChild" /tmp/probe-timeline.log 2>/dev/null | head -40 || true
+          echo "=== focus-race verdicts ==="
+          grep -E "SUMMARY:|CORRUPTED|ERROR:" /tmp/probe-focus.log 2>/dev/null | head -30 || true
+          echo "=== focus-race detail (corrupted iterations) ==="
+          grep -E "CORRUPTED|FOCUS_CALL|VALUE_WRITE" /tmp/probe-focus.log 2>/dev/null | head -60 || true
 
       - name: Upload failure evidence
         if: always()
@@ -95,5 +104,6 @@ jobs:
             /tmp/probe-shard.log
             /tmp/probe-repeat.log
             /tmp/probe-timeline.log
+            /tmp/probe-focus.log
           if-no-files-found: warn
           retention-days: 14
