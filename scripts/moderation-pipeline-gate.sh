@@ -15,6 +15,7 @@ MODEL="backend/app/Models/Ad.php"
 ADMIN_CONTROLLER="backend/app/Http/Controllers/Api/AdminAdModerationController.php"
 RECONCILE="backend/app/Console/Commands/ReconcileModerationVisibility.php"
 DUPLICATE_SERVICE="backend/app/Services/ListingDuplicateDetector.php"
+RESOLVE_DUPLICATES="backend/app/Console/Commands/ResolveDuplicateSubmissions.php"
 UI="src/components/screens/MyAdsScreen.jsx"
 
 if grep -qF 'dispatch(function () use ($ad)' "$CONTROLLER"; then
@@ -125,6 +126,24 @@ grep -qF '$this->duplicateSignal = $duplicates->detect($ad);' "$JOB"
 grep -qF "'duplicate' => \$this->duplicateSignal," "$JOB"
 if grep -qE "'rejected'|\"rejected\"" "$DUPLICATE_SERVICE"; then
   echo "Duplicate detector must surface, not judge: no rejection decision allowed" >&2
+  exit 1
+fi
+# The operator-facing resolution command must reuse that same detector instead of
+# defining a second one, must keep the policy a flag rather than a hardcoded opinion,
+# and must never touch an already-public ad.
+if [[ ! -f "$RESOLVE_DUPLICATES" ]]; then
+  echo "Duplicate resolution command is missing" >&2
+  exit 1
+fi
+grep -qF 'ListingDuplicateDetector $detector' "$RESOLVE_DUPLICATES"
+grep -qF '$detector->fingerprint(' "$RESOLVE_DUPLICATES"
+grep -qF '$detector->reasonForId(' "$RESOLVE_DUPLICATES"
+grep -qF '{--action=manual_review :' "$RESOLVE_DUPLICATES"
+grep -qF '{--keep=earliest :' "$RESOLVE_DUPLICATES"
+grep -qF '{--apply :' "$RESOLVE_DUPLICATES"
+grep -qF -- "->where('status', '!=', 'active')" "$RESOLVE_DUPLICATES"
+if grep -qE "hash\(|mb_strtolower|number_format\(" "$RESOLVE_DUPLICATES"; then
+  echo "Duplicate resolution must reuse ListingDuplicateDetector, not re-implement its key" >&2
   exit 1
 fi
 grep -qF "data_get(\$decision->metadata, 'activation_mode') !== 'seller_confirmation_required'" "$MODEL"

@@ -132,10 +132,20 @@ class ListingDuplicateDetector
      */
     public function reasonFor(array $signal): string
     {
+        return $this->reasonForId((int) $signal['duplicate_of_ad_id']);
+    }
+
+    /**
+     * Same marker format, addressed to the kept original. Shared so the moderation
+     * pipeline and the duplicate-resolution command cannot drift apart, and so the
+     * existing admin UI renders both without any change.
+     */
+    public function reasonForId(int $originalAdId): string
+    {
         return sprintf(
             '%s del anuncio #%d ya enviado por el mismo vendedor. Se requiere revisión humana para decidir la política de duplicados.',
             self::REASON_MARKER,
-            (int) $signal['duplicate_of_ad_id'],
+            $originalAdId,
         );
     }
 }
