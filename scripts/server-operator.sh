@@ -461,7 +461,11 @@ config["fallback_providers"] = [
     {
         "provider": "openrouter",
         "model": "z-ai/glm-5.3-flash:free",
-    }
+    },
+    {
+        "provider": "openrouter",
+        "model": "openrouter/free",
+    },
 ]
 
 fd, tmp = tempfile.mkstemp(dir=str(config_path.parent), prefix=".config.", text=True)
@@ -477,7 +481,8 @@ finally:
         os.unlink(tmp)
 
 print("hermes_primary=deepseek/deepseek-v4-flash")
-print("hermes_fallback=openrouter/z-ai/glm-5.3-flash:free")
+print("hermes_fallback_1=openrouter/z-ai/glm-5.3-flash:free")
+print("hermes_fallback_2=openrouter/openrouter/free")
 PY
 
 cd /usr/local/lib/hermes-agent
@@ -491,13 +496,32 @@ timeout 180s /usr/local/bin/hermes chat -Q \
 grep -q 'HERMES_DEEPSEEK_OK' /tmp/hermes-deepseek-smoke
 echo "HERMES_DEEPSEEK_SMOKE=ok"
 
+set +e
 timeout 180s /usr/local/bin/hermes chat -Q \
   --provider openrouter \
   --model z-ai/glm-5.3-flash:free \
   -q 'Reply with exactly: HERMES_GLM_OK' \
   >/tmp/hermes-glm-smoke 2>&1
-grep -q 'HERMES_GLM_OK' /tmp/hermes-glm-smoke
-echo "HERMES_GLM_SMOKE=ok"
+GLM_RC=$?
+set -e
+
+if [ "$GLM_RC" -eq 0 ] && grep -q 'HERMES_GLM_OK' /tmp/hermes-glm-smoke; then
+  echo "HERMES_GLM_FREE_SMOKE=ok"
+elif grep -qi 'model is unavailable for free' /tmp/hermes-glm-smoke; then
+  echo "HERMES_GLM_FREE_SMOKE=temporarily_unavailable"
+else
+  echo "Unexpected GLM Free smoke failure" >&2
+  tail -40 /tmp/hermes-glm-smoke >&2
+  exit 55
+fi
+
+timeout 180s /usr/local/bin/hermes chat -Q \
+  --provider openrouter \
+  --model openrouter/free \
+  -q 'Reply with exactly: HERMES_FREE_ROUTER_OK' \
+  >/tmp/hermes-free-router-smoke 2>&1
+grep -q 'HERMES_FREE_ROUTER_OK' /tmp/hermes-free-router-smoke
+echo "HERMES_OPENROUTER_FREE_SMOKE=ok"
 
 cat >/etc/systemd/system/hermes-dashboard.service <<'EOF'
 [Unit]
@@ -673,6 +697,7 @@ echo "HERMES_PUBLISH_OK"
 rm -f /tmp/hermes-web-sync.log \
   /tmp/hermes-deepseek-smoke \
   /tmp/hermes-glm-smoke \
+  /tmp/hermes-free-router-smoke \
   /tmp/hermes-dashboard-status.json
 ROOT
     ;;
