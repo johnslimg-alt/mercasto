@@ -1,0 +1,109 @@
+name: DSH GLM Free Selfhosted Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/dsh-openrouter-probe-pr.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 8
+    steps:
+      - name: Verify this is the VPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          hostname
+          test -f /root/.dsh/settings.yaml
+          test -f /root/.dsh/.credentials.yaml
+
+      - name: Smoke OpenRouter GLM Free through DSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          S=/root/.dsh/settings.yaml
+          B=/root/.dsh/backups/model-rotation
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          install -d -m 0700 "$B"
+          cp -a "$S" "$B/settings.yaml.before-selfhosted-glm-smoke.$STAMP"
+          chmod 0600 "$B/settings.yaml.before-selfhosted-glm-smoke.$STAMP"
+
+          cat >/tmp/dsh-openrouter-smoke.patch.yml <<'YAML'
+          - id: llm-pi-ai
+            config:
+              providers:
+                openrouter:
+                  displayName: OpenRouter
+                  apiKeyEnv: OPENROUTER_API_KEY
+                  api: openai-completions
+                  baseURL: https://openrouter.ai/api/v1
+                  models:
+                    - id: z-ai/glm-5.3-flash:free
+                      name: GLM 5.3 Flash Free
+                      contextWindow: 1048576
+                      maxTokens: 131072
+                      input: [text, image, video]
+          YAML
+
+          set_default() {
+            python3 - "$S" "$1" "$2" <<'PY'
+          import os,re,sys,tempfile
+          from pathlib import Path
+          p=Path(sys.argv[1]); provider=sys.argv[2]; model=sys.argv[3]
+          text=p.read_text()
+          block=f"agent-default-model:\n  provider: {provider}\n  model: {model}\n"
+          lines=text.splitlines(keepends=True); start=None
+          for i,line in enumerate(lines):
+              if re.match(r"^agent-default-model:\s*(?:#.*)?$",line.rstrip("\n")):
+                  start=i; break
+          if start is None:
+              new=text.rstrip()+"\n\n"+block
+          else:
+              end=len(lines)
+              for i in range(start+1,len(lines)):
+                  if re.match(r"^[A-Za-z0-9_.-]+:\s*",lines[i]):
+                      end=i; break
+              new="".join(lines[:start])+block+"".join(lines[end:])
+          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".settings.smoke.",text=True)
+          try:
+              with os.fdopen(fd,"w") as h:
+                  h.write(new); h.flush(); os.fsync(h.fileno())
+              os.chmod(tmp,p.stat().st_mode & 0o777)
+              os.replace(tmp,p)
+          finally:
+              if os.path.exists(tmp): os.unlink(tmp)
+          PY
+          }
+
+          restore() {
+            cp -a "$B/settings.yaml.before-selfhosted-glm-smoke.$STAMP" "$S"
+            rm -f /tmp/dsh-openrouter-smoke.patch.yml /tmp/glm-selfhosted.out
+          }
+          trap restore EXIT
+
+          python3 - <<'PY'
+          import yaml
+          c=yaml.safe_load(open("/root/.dsh/.credentials.yaml")) or {}
+          print("openrouter_credential_present=" + ("yes" if "OPENROUTER_API_KEY" in (c.get("refs") or {}) else "no"))
+          PY
+
+          set_default openrouter 'z-ai/glm-5.3-flash:free'
+          set +e
+          timeout 120s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless --patch /tmp/dsh-openrouter-smoke.patch.yml 'Reply with exactly: GLM_FREE_DSH_OK' >/tmp/glm-selfhosted.out 2>&1
+          rc=$?
+          set -e
+          sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' /tmp/glm-selfhosted.out | tail -120
+          test "$rc" -eq 0
+          grep -q 'GLM_FREE_DSH_OK' /tmp/glm-selfhosted.out
+          echo GLM_FREE_DSH_SMOKE_OK
+
+          restore
+          trap - EXIT
+          grep -A3 '^agent-default-model:' "$S"
+          echo SELFHOSTED_GLM_SMOKE_COMPLETE
