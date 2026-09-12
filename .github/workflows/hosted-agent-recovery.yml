@@ -205,6 +205,29 @@ jobs:
           else
             echo "missing:/etc/mercasto-edge/reef-crm.conf"
           fi
+          echo "=== DNS authority ==="
+          (command -v dig >/dev/null 2>&1 && dig +short NS flyaicrm.com) || true
+          echo "=== harness A ==="
+          (command -v dig >/dev/null 2>&1 && dig +short A harness.flyaicrm.com) || getent ahostsv4 harness.flyaicrm.com | awk '{print $1}' | sort -u || true
+          echo "=== hermes A ==="
+          (command -v dig >/dev/null 2>&1 && dig +short A hermes.flyaicrm.com) || getent ahostsv4 hermes.flyaicrm.com | awk '{print $1}' | sort -u || true
+          echo "=== DNS credential refs ==="
+          python3 - <<'PY'
+from pathlib import Path
+import yaml
+p=Path('/root/.dsh/.credentials.yaml')
+if p.exists():
+    data=yaml.safe_load(p.read_text()) or {}
+    refs=data.get('refs') or {}
+    for k in sorted(refs):
+        ku=str(k).upper()
+        if any(s in ku for s in ('HOSTINGER','CLOUDFLARE','CF_','DNS','HAPI')):
+            print(k)
+PY
+          echo "=== likely DNS config files ==="
+          find /root /etc -maxdepth 3 -type f \
+            \( -iname '*hostinger*' -o -iname '*cloudflare*' -o -iname '*dns*' \) \
+            -printf '%p\n' 2>/dev/null | head -80 || true
           echo "=== edge mounts ==="
           docker inspect mercasto_frontend_container --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}' 2>/dev/null \
             | grep -E 'mercasto-edge|letsencrypt|nginx|cert' \
