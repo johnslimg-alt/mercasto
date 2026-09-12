@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CategoryAttributeController;
+use App\Http\Controllers\Api\DataSubjectExportController;
 use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
@@ -255,6 +256,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/mobile-push/register', [MobilePushController::class, 'register']);
     Route::post('/user/mobile-push/unregister', [MobilePushController::class, 'unregister']); // Отписка от Web Push
     Route::middleware('throttle:sensitive-profile')->delete('/user', [AccountDeletionController::class, 'delete']); // User self-deletion with financial/audit retention
+    // LFPDPPP derecho de acceso (EG-05): portable export of the caller's own data only.
+    // No subject parameter exists, so another user's export is not addressable.
+    Route::middleware('throttle:data-export')->get('/user/data-export', [DataSubjectExportController::class, 'show']);
     Route::post('/users/{id}/verify', [ProfileController::class, 'verifyUser'])->whereNumber('id');
     Route::middleware('throttle:identity-uploads')->post('/user/kyc', [ProfileController::class, 'submitKyc']); // Загрузка документов KYC
 

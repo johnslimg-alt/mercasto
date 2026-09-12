@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Ad;
 use App\Models\User;
+use App\Support\ConsentProofRetention;
+use App\Support\DataSubjectAudit;
 use App\Support\SensitiveActionReauth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -110,8 +112,29 @@ class AccountDeletionController extends Controller
             Cache::forget("ads_index_page_{$i}");
         }
 
-        $user->tokens()->delete();
-        $user->delete();
+        // LFPDPPP (EG-04): the proof that consent was obtained must survive the erasure.
+        // Pseudonymise the consent rows while the user id is still known, in the same
+        // transaction as the delete, so an account can never end up half-erased with its
+        // consent proof already unlinked.
+        $deletedUserId = $user->id;
+
+        $retainedConsentProofs = DB::transaction(function () use ($user): int {
+            $retained = ConsentProofRetention::pseudonymiseForDeletedUser(
+                $user->id,
+                ConsentProofRetention::BASIS_SELF_DELETION,
+            );
+
+            $user->tokens()->delete();
+            $user->delete();
+
+            return $retained;
+        });
+
+        DataSubjectAudit::record('account_erasure_completed', $request, [
+            'subject_id' => $deletedUserId,
+            'retained_consent_proofs' => $retainedConsentProofs,
+            'retention_basis' => ConsentProofRetention::BASIS_SELF_DELETION,
+        ]);
 
         return response()->json(['message' => 'Cuenta eliminada exitosamente.']);
     }
