@@ -1,0 +1,86 @@
+name: RDC Upgrade 0.2.50 One-Shot
+
+on:
+  push:
+    branches:
+      - ops/rdc-upgrade-0250-once
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate SSH recovery secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/rdc_upgrade_key
+          chmod 600 ~/.ssh/rdc_upgrade_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upgrade and restart RDC
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/rdc_upgrade_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          UNIT=/etc/systemd/system/remote-desktop-commander.service
+          test -f "$UNIT"
+          cp -a "$UNIT" "$UNIT.bak-$(date -u +%Y%m%dT%H%M%SZ)"
+          sed -i 's/@wonderwhy-er\/desktop-commander@0\.2\.48/@wonderwhy-er\/desktop-commander@0.2.50/g' "$UNIT"
+          grep -F '@wonderwhy-er/desktop-commander@0.2.50' "$UNIT"
+          systemctl daemon-reload
+          systemctl restart remote-desktop-commander.service
+          sleep 20
+          echo "RDC_UPGRADE_RESULT"
+          systemctl show remote-desktop-commander.service --no-pager \
+            -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStartTimestamp
+          echo "=== version process ==="
+          pgrep -af 'desktop-commander.*remote|desktop-commander/dist/index.js' || true
+          echo "=== sanitized journal ==="
+          journalctl -u remote-desktop-commander.service -n 100 --no-pager 2>/dev/null \
+            | sed -E 's/(token|authorization|credential|secret|password)([=: ]+)[^ ]+/\1\2***REDACTED***/Ig' \
+            | sed -E 's#https?://[^ ]+#<URL_REDACTED>#g; s/[A-Za-z0-9_=-]{32,}/***REDACTED***/g' \
+            | tail -80
+          REMOTE
+
+      - name: Remove SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/rdc_upgrade_key
+
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v9
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const status = process.env.JOB_STATUS || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body: `RDC_UPGRADE_0250_RESULT\nstatus=${status}\nrun_id=${context.runId}\nrun=${runUrl}`
+            });
