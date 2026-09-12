@@ -1,5 +1,12 @@
-import { trackEvent } from './analytics';
+import { getAnalyticsUserId, trackEvent } from './analytics';
+import { getCampaignAttribution } from './campaignAttribution.js';
 import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
+import {
+  REGISTRATION_EVENT_SOURCE,
+  REGISTRATION_METHOD_EMAIL,
+  REGISTRATION_PROVIDER_PASSWORD,
+  createRegistrationFetchHandler,
+} from './registrationMeasurement.js';
 import { isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const META_API_BASE = '/api/meta/events';
@@ -167,65 +174,30 @@ function handleDataLayerItem(item = {}) {
   sendMappedEvent(metaConfig, item);
 }
 
-function isRegistrationRequest(input, init = {}) {
-  const method = String(init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
-  if (method !== 'POST') return false;
-
-  try {
-    const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
-    return url.origin === window.location.origin && /^\/api\/register\/?$/.test(url.pathname);
-  } catch {
-    return false;
-  }
-}
-
-function registrationRequestWithEventId(input, init = {}) {
-  if (input instanceof Request) return null;
-
-  try {
-    const payload = JSON.parse(String(init?.body || '{}'));
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
-
-    const sharedEventId = clean(payload.meta_event_id) || registrationEventId();
-    return {
-      sharedEventId,
-      init: {
-        ...init,
-        body: JSON.stringify({
-          ...payload,
-          meta_event_id: sharedEventId,
-          openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
-        }),
-      },
-    };
-  } catch {
-    return null;
-  }
-}
-
 function patchRegistrationFetch() {
   const currentFetch = window.fetch;
   if (typeof currentFetch !== 'function' || currentFetch[FETCH_PATCH_MARKER]) return;
 
-  async function metaRegistrationFetch(input, init = {}) {
-    if (!isRegistrationRequest(input, init)) {
-      return currentFetch.call(this, input, init);
-    }
-
-    const patched = registrationRequestWithEventId(input, init);
-    if (!patched) return currentFetch.call(this, input, init);
-
-    const response = await currentFetch.call(this, input, patched.init);
-    if (response.ok) {
-      trackEvent(FUNNEL_EVENTS.SIGN_UP, {
-        event_id: patched.sharedEventId,
-        meta_event_id: patched.sharedEventId,
-        method: 'email',
-        source: 'registration_fetch',
-      });
-    }
-    return response;
-  }
+  // The email/password registration conversion is emitted here, exactly once,
+  // and only for a successful POST to this app's own registration endpoint.
+  // App.jsx deliberately does NOT emit sign_up as well: a second emitter would
+  // double count the primary signup path in GA4 and the dataLayer.
+  const metaRegistrationFetch = createRegistrationFetchHandler({
+    fetchImpl: currentFetch.bind(window),
+    emit: (payload) => trackEvent(FUNNEL_EVENTS.SIGN_UP, payload),
+    getAttribution: getCampaignAttribution,
+    getUserId: getAnalyticsUserId,
+    origin: window.location.origin,
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '',
+    method: REGISTRATION_METHOD_EMAIL,
+    provider: REGISTRATION_PROVIDER_PASSWORD,
+    source: REGISTRATION_EVENT_SOURCE,
+    // Registration ids come from the shared funnel generator so the browser
+    // Pixel copy and the server-side observer copy deduplicate.
+    eventIdFactory: () => registrationEventId(),
+    consent: isOpenAIAdsMeasurementAllowed,
+    onError: () => {},
+  });
 
   Object.defineProperty(metaRegistrationFetch, FETCH_PATCH_MARKER, { value: true });
   window.fetch = metaRegistrationFetch;

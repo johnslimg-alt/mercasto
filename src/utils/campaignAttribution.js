@@ -156,8 +156,14 @@ export function getCampaignAttribution() {
     attribution_referrer_host: clean(active.referrerHost),
     attribution_ai_referral: active.channel === 'ai_referral' || isAiReferralSource(active.source),
     attribution_landing_path: clean(active.landingPath, 500),
+    ...(Number.isFinite(active.capturedAt) ? { attribution_captured_at: active.capturedAt } : {}),
     first_touch_source: clean(firstTouch?.source),
+    first_touch_medium: clean(firstTouch?.medium),
     first_touch_campaign: clean(firstTouch?.campaign),
+    first_touch_content: clean(firstTouch?.content),
+    first_touch_term: clean(firstTouch?.term),
+    first_touch_landing_path: clean(firstTouch?.landingPath, 500),
+    first_touch_paid: Boolean(firstTouch?.paid),
   };
 }
 

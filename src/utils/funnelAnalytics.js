@@ -23,15 +23,45 @@ export const FUNNEL_EVENTS = Object.freeze({
   PURCHASE: 'purchase',
 });
 
+let eventIdCounter = 0;
+
+/**
+ * Unique suffix for a deduplication id.
+ *
+ * Prefers a cryptographic source. The last resort keeps uniqueness (which is all
+ * a deduplication id needs) without Math.random(), which must not be used to
+ * build values that travel into request bodies.
+ */
+function eventIdToken() {
+  const cryptoObj = globalThis.crypto;
+
+  try {
+    if (typeof cryptoObj?.randomUUID === 'function') return cryptoObj.randomUUID();
+  } catch {
+    // Fall through to the next source.
+  }
+
+  try {
+    if (typeof cryptoObj?.getRandomValues === 'function') {
+      const bytes = cryptoObj.getRandomValues(new Uint8Array(16));
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+  } catch {
+    // Fall through to the counter-based suffix.
+  }
+
+  eventIdCounter = (eventIdCounter + 1) % 1_000_000;
+  const monotonic = String(globalThis.performance?.now?.() ?? 0).replace(/\./g, '');
+  return `${Date.now().toString(36)}_${eventIdCounter.toString(36)}_${monotonic}`;
+}
+
 export function createAnalyticsEventId(prefix = 'event') {
   const safePrefix = String(prefix || 'event')
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 32) || 'event';
-  const random = globalThis.crypto?.randomUUID?.()
-    || `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  return `${safePrefix}_${random}`.slice(0, 120);
+  return `${safePrefix}_${eventIdToken()}`.slice(0, 120);
 }
 
 export function registrationEventId() {

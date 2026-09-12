@@ -155,40 +155,52 @@ assertContains(
 );
 
 assertContains(
+  'src/utils/registrationMeasurement.js',
+  'registrationEventId()',
+  'the registration interceptor falls back to the shared funnel event-id generator'
+);
+
+assertContains(
   'src/utils/funnelAnalytics.js',
   "return createAnalyticsEventId('register_user');",
   'shared registration ids satisfy the backend observer allowlist'
 );
 
 assertContains(
-  'src/utils/metaCapiBridge.js',
+  'src/utils/registrationMeasurement.js',
   'meta_event_id: sharedEventId',
   'the registration request carries the server-side CompleteRegistration event id'
 );
 
 assertContains(
-  'src/utils/metaCapiBridge.js',
-  'if (response.ok) {',
+  'src/utils/registrationMeasurement.js',
+  'response.ok !== true',
   'browser CompleteRegistration waits for successful account creation'
 );
 
 assertContains(
-  'src/utils/metaCapiBridge.js',
-  'event_id: patched.sharedEventId',
+  'src/utils/registrationMeasurement.js',
+  'event_id: resolvedEventId',
   'browser and server CompleteRegistration copies share one deduplication id'
 );
 
-assertOrder(
+assertContains(
   'src/utils/metaCapiBridge.js',
+  'createRegistrationFetchHandler(',
+  'the registration handoff is wired into the existing Meta bridge'
+);
+
+assertOrder(
+  'src/utils/registrationMeasurement.js',
   'meta_event_id: sharedEventId',
-  'const response = await currentFetch.call(this, input, patched.init);',
+  'const response = await fetchImpl(input, patched.init);',
   'the event id is attached before Laravel creates the user'
 );
 
 assertOrder(
-  'src/utils/metaCapiBridge.js',
-  'const response = await currentFetch.call(this, input, patched.init);',
-  'trackEvent(FUNNEL_EVENTS.SIGN_UP',
+  'src/utils/registrationMeasurement.js',
+  'const response = await fetchImpl(input, patched.init);',
+  'emit(buildRegistrationEventPayload({',
   'the browser conversion is emitted only after the registration response succeeds'
 );
 

@@ -9,6 +9,7 @@ use App\Services\GamificationService;
 use App\Support\AnalyticsTrackingConsent;
 use App\Support\EmailIdentity;
 use App\Support\PrivacyFingerprint;
+use App\Support\RegistrationAttribution;
 use App\Support\SecureOneTimeCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -837,6 +838,11 @@ class AuthController extends Controller
                 $request->merge([
                     'openai_measurement_consent' => (bool) ($registrationConsent['openai_measurement_consent'] ?? false),
                 ]);
+                // The attribution slice travelled inside the one-time consent
+                // state (captured in the browser before the provider redirect), so
+                // merge it back onto the callback request for the user-created
+                // attribution observer. Consent enforcement is unchanged.
+                $request->merge(RegistrationAttribution::only($registrationConsent));
 
                 $user = DB::transaction(function () use ($provider, $socialUser, $request, $registrationConsent) {
                     $user = new User();

@@ -18,6 +18,7 @@ use App\Models\Ad;
 use App\Models\User;
 use App\Observers\AdObserver;
 use App\Observers\UserMetaRegistrationObserver;
+use App\Observers\UserRegistrationAttributionObserver;
 use App\Services\AI\FraudDetectionService;
 use App\Services\AI\FraudRiskFeatureExtractor;
 use App\Services\AI\PythonFraudDetectionService;
@@ -190,5 +191,6 @@ class AppServiceProvider extends ServiceProvider
         // Register model observers.
         Ad::observe(AdObserver::class);
         User::observe(UserMetaRegistrationObserver::class);
+        User::observe(UserRegistrationAttributionObserver::class);
     }
 }

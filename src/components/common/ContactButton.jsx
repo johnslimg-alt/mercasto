@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { X, MessageCircle, Shield, AlertTriangle } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
 import { getCurrentSiteLanguage, whatsappInterestMessage } from '../../utils/whatsappLocale';
+import { events } from '../../utils/analytics';
+import { CONTACT_BUTTON_SOURCE, logContactIntent } from '../../utils/contactIntent';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
@@ -41,21 +43,32 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
 
   const hasContacts = Boolean(whatsappUrl || telegramUrl);
 
-  // Логирование клика
+  // Логирование клика.
+  // The contact intent is emitted BEFORE the click POST: contact_opened is the
+  // conversion signal (Meta Contact / GA4 contact_opened) and it must still be
+  // measured when the logging request is rejected or the network is flaky.
   const logContact = async (channel) => {
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/ads/${ad.id}/click`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
-        },
-        body: JSON.stringify({ channel, ad_id: ad.id })
-      });
-    } catch (e) {
-      // Тихо игнорируем ошибки логирования
-    }
+    return logContactIntent({
+      channel,
+      ad,
+      analytics: events,
+      source: CONTACT_BUTTON_SOURCE,
+      post: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await fetch(`${API_URL}/ads/${ad.id}/click`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { Authorization: `Bearer ${token}` })
+            },
+            body: JSON.stringify({ channel, ad_id: ad.id })
+          });
+        } catch (e) {
+          // Тихо игнорируем ошибки логирования
+        }
+      },
+    });
   };
 
   const handleWhatsAppClick = () => {
