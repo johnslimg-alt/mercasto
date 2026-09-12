@@ -3,6 +3,9 @@ name: Hosted Server Agent Recovery
 # Out-of-band recovery only: fixed service names, no arbitrary command input.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ops/hermes-publish-ssh
   issue_comment:
     types: [created]
 
@@ -120,10 +123,11 @@ jobs:
   hermes_publish:
     name: Publish Hermes out of band
     if: >-
-      github.event_name == 'issue_comment' &&
-      github.event.issue.number == 832 &&
-      github.actor == 'johnslimg-alt' &&
-      github.event.comment.body == 'RUN:hermes_publish_ssh:MERCASTO'
+      (github.event_name == 'push' && github.ref_name == 'ops/hermes-publish-ssh') ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.number == 832 &&
+       github.actor == 'johnslimg-alt' &&
+       github.event.comment.body == 'RUN:hermes_publish_ssh:MERCASTO')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
