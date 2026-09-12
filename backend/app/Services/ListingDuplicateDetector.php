@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Ad;
+use Illuminate\Support\Collection;
 
 /**
  * Detects content-identical resubmissions from the same seller.
@@ -41,6 +42,13 @@ class ListingDuplicateDetector
     public const REASON_MARKER = 'Posible duplicado';
 
     /**
+     * Human-readable description of the ordering key that decides which submission
+     * is the original. Surfaced by the resolution command so an operator can see
+     * exactly what "earliest" means before approving a run.
+     */
+    public const ORDER_DESCRIPTION = 'submission order (created_at, then id as tiebreaker)';
+
+    /**
      * @return array{
      *     is_duplicate: bool,
      *     fingerprint: string,
@@ -56,18 +64,43 @@ class ListingDuplicateDetector
 
         $candidates = Ad::query()
             ->where('user_id', $ad->user_id)
-            // Only strictly earlier submissions can be the original. Without this the
+            // Only strictly earlier SUBMISSIONS can be the original. Without this the
             // earliest ad of a group matches a later copy and the two accuse each
             // other, which would route an established listing to review as if it were
             // the duplicate and make the duplicate count unstable.
-            ->where('id', '<', $ad->getKey())
+            //
+            // Submission order is keyed on created_at with id as a deterministic
+            // tiebreaker. Ad id is an insertion counter, which is NOT the same concept
+            // as submission time: a row restored, imported or backfilled with an
+            // explicit created_at can carry an id that disagrees with when it was
+            // submitted. In this codebase those paths do not exist today (every ad
+            // goes through Ad::create(), created_at is not fillable, and no write sets
+            // created_at or an explicit id), so the two orders currently agree
+            // exactly - but created_at alone is not a total order (seconds tie), and
+            // relying on that alignment would be an unexamined assumption.
+            ->where(function ($query) use ($ad): void {
+                if ($ad->created_at === null) {
+                    // Defensive: with no submission timestamp, fall back to insertion
+                    // order so an original is still deterministic.
+                    $query->where('id', '<', $ad->getKey());
+
+                    return;
+                }
+
+                $query->where('created_at', '<', $ad->created_at)
+                    ->orWhere(function ($tie) use ($ad): void {
+                        $tie->where('created_at', $ad->created_at)
+                            ->where('id', '<', $ad->getKey());
+                    });
+            })
             ->where('price', $ad->price)
             // A catalog placeholder is editorial content, not a submission, so it can
             // never make a real listing look like a duplicate.
             ->where('is_catalog_filler', false)
+            ->orderBy('created_at')
             ->orderBy('id')
             ->limit(self::MAX_CANDIDATES + 1)
-            ->get(['id', 'user_id', 'title', 'price', 'description']);
+            ->get(['id', 'user_id', 'title', 'price', 'description', 'created_at']);
 
         $truncated = $candidates->count() > self::MAX_CANDIDATES;
         $candidates = $candidates->take(self::MAX_CANDIDATES);
@@ -84,6 +117,23 @@ class ListingDuplicateDetector
             'candidates_truncated' => $truncated,
             'matched_on' => ['seller_id', 'title', 'price', 'description'],
         ];
+    }
+
+    /**
+     * Sort ads into submission order: created_at first, id as a deterministic
+     * tiebreaker (created_at is only second-granular, so ties are common in a burst).
+     *
+     * Shared so the detector's notion of "the original" and the resolution command's
+     * --keep=earliest|latest can never disagree about ordering.
+     *
+     * @param  Collection<int, Ad>  $ads
+     * @return Collection<int, Ad>
+     */
+    public function sortBySubmissionOrder(Collection $ads): Collection
+    {
+        return $ads
+            ->sort(fn (Ad $a, Ad $b): int => ($a->created_at <=> $b->created_at) ?: ($a->id <=> $b->id))
+            ->values();
     }
 
     /**
@@ -147,5 +197,26 @@ class ListingDuplicateDetector
             self::REASON_MARKER,
             $originalAdId,
         );
+    }
+
+    /**
+     * Fail-closed reason for an inconclusive scan.
+     *
+     * A truncated candidate window means the absence of a match proves nothing, so a
+     * negative result must not be reported as "unique" — a high-volume seller could
+     * otherwise push the real original past the cap and have copies auto-published.
+     */
+    public function truncatedReason(): string
+    {
+        return 'No se pudo completar la verificación de duplicados: el vendedor tiene más anuncios con el mismo precio que el límite de comparación. Se requiere revisión humana.';
+    }
+
+    /**
+     * True when the scan was inconclusive, i.e. the ad must not be treated as unique.
+     */
+    public function isInconclusive(array $signal): bool
+    {
+        return ($signal['candidates_truncated'] ?? false) === true
+            && ($signal['is_duplicate'] ?? false) !== true;
     }
 }

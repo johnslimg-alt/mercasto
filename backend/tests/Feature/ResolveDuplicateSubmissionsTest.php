@@ -158,6 +158,103 @@ class ResolveDuplicateSubmissionsTest extends TestCase
         $this->assertSame('manual_review', $middle->fresh()->ai_moderation_status);
     }
 
+    public function test_keep_earliest_follows_submission_order_not_ad_id(): void
+    {
+        // --keep must resolve against submission order, not the ad-id insertion
+        // counter. Force the two orders to genuinely disagree: the HIGHER id row is the
+        // EARLIER submission, so an id-based keeper would keep the wrong ad.
+        $seller = User::factory()->create();
+        $lowerIdLaterSubmission = $this->createAd($seller);
+        $higherIdEarlierSubmission = $this->createAd($seller);
+
+        DB::table('ads')->where('id', $higherIdEarlierSubmission->id)->update(['created_at' => now()->subDays(3)]);
+        DB::table('ads')->where('id', $lowerIdLaterSubmission->id)->update(['created_at' => now()->subDay()]);
+
+        $this->assertSame(0, $this->resolve(['--apply' => true]));
+
+        $output = Artisan::output();
+        $this->assertStringContainsString('submission order', $output);
+
+        $this->assertSame(
+            Ad::MODERATION_APPROVED,
+            $higherIdEarlierSubmission->fresh()->ai_moderation_status,
+            'The earlier SUBMISSION is kept, even though it carries the higher id.'
+        );
+        $this->assertSame('manual_review', $lowerIdLaterSubmission->fresh()->ai_moderation_status);
+    }
+
+    public function test_recent_copies_are_resolved_against_an_original_that_predates_the_window(): void
+    {
+        // Regression: requiring the detector's nominated original to equal the
+        // window-local keeper dropped every actionable row when the true original sat
+        // outside a --since window, letting a following reconciliation publish both.
+        $seller = User::factory()->create();
+        $original = $this->createAd($seller);
+        $keeperInWindow = $this->createAd($seller);
+        $copyInWindow = $this->createAd($seller);
+
+        DB::table('ads')->where('id', $original->id)->update(['created_at' => now()->subDays(10)]);
+        DB::table('ads')->where('id', $keeperInWindow->id)->update(['created_at' => now()->subDay()]);
+        DB::table('ads')->where('id', $copyInWindow->id)->update(['created_at' => now()->subHours(2)]);
+
+        $this->assertSame(0, $this->resolve([
+            '--apply' => true,
+            '--since' => now()->subDays(2)->toDateTimeString(),
+        ]));
+
+        $this->assertSame(
+            'manual_review',
+            $copyInWindow->fresh()->ai_moderation_status,
+            'An in-window copy must be resolved even when the original predates the window.'
+        );
+        $this->assertSame(Ad::MODERATION_APPROVED, $keeperInWindow->fresh()->ai_moderation_status);
+        $this->assertSame(Ad::MODERATION_APPROVED, $original->fresh()->ai_moderation_status);
+
+        // The reason points at the true original, not the window-local keeper.
+        $this->assertStringContainsString(
+            'del anuncio #'.$original->id,
+            (string) $copyInWindow->fresh()->ai_moderation_reason
+        );
+    }
+
+    public function test_manual_review_action_archives_the_duplicate_so_it_cannot_be_renewed(): void
+    {
+        // A non-archived duplicate (expired/paused/inactive) would otherwise stay out
+        // of the admin queue and could be paid back into publication by
+        // AdRenewalService::fulfill(), which only refuses statuses outside
+        // active/expired/paused/inactive.
+        $seller = User::factory()->create();
+        $this->createAd($seller);
+        $expiredCopy = $this->createAd($seller, [
+            'status' => 'expired',
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $this->assertSame(0, $this->resolve(['--apply' => true]));
+
+        $expiredCopy->refresh();
+        $this->assertSame('archived', $expiredCopy->status);
+        $this->assertSame('manual_review', $expiredCopy->ai_moderation_status);
+        $this->assertNotContains(
+            $expiredCopy->status,
+            ['active', 'expired', 'paused', 'inactive'],
+            'The resolved duplicate must not be in the renewable status set.'
+        );
+    }
+
+    public function test_reject_action_is_unaffected_by_the_archiving_rule(): void
+    {
+        $seller = User::factory()->create();
+        $this->createAd($seller);
+        $expiredCopy = $this->createAd($seller, ['status' => 'expired', 'expires_at' => now()->addDay()]);
+
+        $this->assertSame(0, $this->resolve(['--apply' => true, '--action' => 'reject']));
+
+        $expiredCopy->refresh();
+        $this->assertSame('rejected', $expiredCopy->status);
+        $this->assertSame('admin_rejected', $expiredCopy->ai_moderation_status);
+    }
+
     public function test_near_misses_and_singletons_are_never_touched(): void
     {
         $seller = User::factory()->create();

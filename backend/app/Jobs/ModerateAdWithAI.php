@@ -128,9 +128,13 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
         // moderation path. It only SURFACES a suspicion: the submission is routed to
         // human review and is never auto-rejected.
         $this->duplicateSignal = $duplicates->detect($ad);
-        $this->duplicateReason = ($this->duplicateSignal['is_duplicate'] ?? false)
-            ? $duplicates->reasonFor($this->duplicateSignal)
-            : null;
+        $this->duplicateReason = match (true) {
+            (bool) ($this->duplicateSignal['is_duplicate'] ?? false) => $duplicates->reasonFor($this->duplicateSignal),
+            // Fail closed: a truncated scan proves nothing, so a negative result must
+            // never be treated as "unique" and auto-published.
+            $duplicates->isInconclusive($this->duplicateSignal) => $duplicates->truncatedReason(),
+            default => null,
+        };
 
         $ad->forceFill([
             'status' => 'archived',

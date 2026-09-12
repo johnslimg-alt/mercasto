@@ -142,6 +142,18 @@ grep -qF '{--action=manual_review :' "$RESOLVE_DUPLICATES"
 grep -qF '{--keep=earliest :' "$RESOLVE_DUPLICATES"
 grep -qF '{--apply :' "$RESOLVE_DUPLICATES"
 grep -qF -- "->where('status', '!=', 'active')" "$RESOLVE_DUPLICATES"
+# The keeper is re-read and fingerprint-checked under a lock inside the same
+# transaction, so a row can never be resolved against an original that was deleted or
+# edited after the work list was built.
+grep -qF "Ad::query()->lockForUpdate()->find(\$item['keeper'])" "$RESOLVE_DUPLICATES"
+# A duplicate routed to manual review must also be archived: the admin queue only lists
+# pending or archived unfinished ads, and AdRenewalService::fulfill() refuses to
+# reactivate statuses outside active/expired/paused/inactive, so an archived row cannot
+# be paid back into publication while it is still under review.
+grep -qF "'status' => 'archived'," "$RESOLVE_DUPLICATES"
+# A truncated candidate window proves nothing, so a negative result must fail closed
+# instead of being treated as unique.
+grep -qF '$duplicates->isInconclusive($this->duplicateSignal) => $duplicates->truncatedReason(),' "$JOB"
 if grep -qE "hash\(|mb_strtolower|number_format\(" "$RESOLVE_DUPLICATES"; then
   echo "Duplicate resolution must reuse ListingDuplicateDetector, not re-implement its key" >&2
   exit 1

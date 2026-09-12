@@ -8,6 +8,7 @@ use App\Models\AdModerationDecision;
 use App\Models\User;
 use App\Services\ListingDuplicateDetector;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -259,6 +260,115 @@ class ListingDuplicateDetectionTest extends TestCase
         $signal = app(ListingDuplicateDetector::class)->detect($copy);
         $this->assertTrue($signal['is_duplicate']);
         $this->assertSame($original->id, $signal['duplicate_of_ad_id']);
+    }
+
+    public function test_original_is_chosen_by_submission_order_not_ad_id(): void
+    {
+        // Ad id is an insertion counter, not submission time. Force the two orders to
+        // genuinely disagree: the HIGHER id row is the EARLIER submission, and the
+        // LOWER id row is the LATER submission.
+        $seller = User::factory()->create();
+        $lowerIdLaterSubmission = $this->createAd($seller);
+        $higherIdEarlierSubmission = $this->createAd($seller);
+
+        DB::table('ads')->where('id', $higherIdEarlierSubmission->id)->update(['created_at' => now()->subDays(3)]);
+        DB::table('ads')->where('id', $lowerIdLaterSubmission->id)->update(['created_at' => now()->subDay()]);
+
+        $signal = app(ListingDuplicateDetector::class)->detect($lowerIdLaterSubmission->fresh());
+
+        $this->assertTrue($signal['is_duplicate'], 'The later submission must be detected as a copy.');
+        $this->assertSame(
+            $higherIdEarlierSubmission->id,
+            $signal['duplicate_of_ad_id'],
+            'The earlier SUBMISSION is the original, even when it carries the higher id.'
+        );
+
+        // And the true original is not accused by the later copy.
+        $this->assertFalse(
+            app(ListingDuplicateDetector::class)->detect($higherIdEarlierSubmission->fresh())['is_duplicate']
+        );
+    }
+
+    public function test_stale_duplicate_evidence_from_an_earlier_cycle_is_not_surfaced(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create();
+        $ad = $this->queuedSubmission($seller);
+
+        // An earlier cycle flagged this ad as a duplicate of #999.
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'ai',
+            'decision' => 'manual_review',
+            'reason' => 'Posible duplicado del anuncio #999',
+            'metadata' => [
+                'technical_status' => 'manual_review',
+                'duplicate' => [
+                    'is_duplicate' => true,
+                    'duplicate_of_ad_id' => 999,
+                    'fingerprint' => 'stale-fingerprint',
+                    'candidate_count' => 1,
+                    'candidates_truncated' => false,
+                    'matched_on' => ['seller_id', 'title', 'price', 'description'],
+                ],
+            ],
+        ]);
+
+        // A newer decision supersedes it and found no duplicate.
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'system',
+            'decision' => 'queued',
+            'reason' => 'Nuevo ciclo de revisión',
+            'metadata' => ['duplicate' => ['is_duplicate' => false, 'duplicate_of_ad_id' => null]],
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson("/api/admin/moderation/ads/{$ad->id}")
+            ->assertOk()
+            ->assertJsonPath('suspected_duplicate', null);
+    }
+
+    public function test_a_truncated_duplicate_scan_fails_closed_into_human_review(): void
+    {
+        // A truncated window means "no match" proves nothing: a seller could push the
+        // real original past the cap and have a copy auto-published.
+        config(['ai_moderation.assist_only' => false]);
+        $this->fakeApprovingGateway();
+        $seller = User::factory()->create();
+
+        for ($i = 0; $i <= ListingDuplicateDetector::MAX_CANDIDATES; $i++) {
+            // Same price (so they fill the candidate window) but distinct content.
+            $this->createAd($seller, ['title' => "Anuncio distinto {$i}"]);
+        }
+
+        $ad = $this->queuedSubmission($seller);
+
+        app()->call([new ModerateAdWithAI($ad->id), 'handle']);
+
+        $ad->refresh();
+        $this->assertSame('archived', $ad->status);
+        $this->assertSame('manual_review', $ad->ai_moderation_status);
+
+        $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest('id')->firstOrFail();
+        $this->assertTrue($decision->metadata['duplicate']['candidates_truncated']);
+        $this->assertFalse($decision->metadata['duplicate']['is_duplicate']);
+    }
+
+    public function test_a_complete_scan_without_a_match_still_publishes_normally(): void
+    {
+        // Control for the fail-closed rule: an untruncated scan that finds nothing must
+        // not be diverted.
+        config(['ai_moderation.assist_only' => false]);
+        $this->fakeApprovingGateway();
+        $seller = User::factory()->create();
+        $ad = $this->queuedSubmission($seller);
+
+        app()->call([new ModerateAdWithAI($ad->id), 'handle']);
+
+        $ad->refresh();
+        $this->assertSame('active', $ad->status);
+        $this->assertSame(Ad::MODERATION_APPROVED, $ad->ai_moderation_status);
     }
 
     public function test_detection_is_measurable_through_the_admin_payload(): void

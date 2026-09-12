@@ -50,7 +50,7 @@ class ResolveDuplicateSubmissions extends Command
 {
     protected $signature = 'ads:resolve-duplicate-submissions
         {--action=manual_review : What to do with the duplicates: manual_review or reject}
-        {--keep=earliest : Which member of each group to keep: earliest or latest}
+        {--keep=earliest : Which member of each group to keep, by submission order (created_at, then id as tiebreaker): earliest or latest}
         {--since= : Only consider ads created on or after this date/time}
         {--limit=0 : Maximum number of duplicate rows to change (0 = no limit)}
         {--apply : Persist the changes (dry-run by default)}';
@@ -92,12 +92,20 @@ class ResolveDuplicateSubmissions extends Command
         }
 
         $this->line(sprintf('Policy: action=%s keep=%s%s', $action, $keep, $limit > 0 ? ' limit='.$limit : ''));
+        $this->line('Ordering: '.ListingDuplicateDetector::ORDER_DESCRIPTION.' — "earliest" and "latest" are resolved against this key, not against ad id.');
 
         $pool = Ad::query()
             ->where('is_catalog_filler', false)
             ->when($since, fn ($query) => $query->where('created_at', '>=', $since))
             ->orderBy('id')
             ->get(['id', 'user_id', 'title', 'price', 'description', 'status', 'ai_moderation_status', 'expires_at', 'created_at']);
+
+        // Group members are put in SUBMISSION order (created_at, id as tiebreaker), not
+        // ad-id order, so --keep=earliest|latest means the earliest/latest submission.
+        // Ad id is an insertion counter, which is not the same concept as submission
+        // time. The ordering helper is shared with the detector so the pipeline and
+        // this command can never disagree about which row is the original.
+        $pool = $detector->sortBySubmissionOrder($pool);
 
         $groups = $pool
             ->groupBy(fn (Ad $ad): string => $detector->fingerprint($ad))
@@ -129,25 +137,38 @@ class ResolveDuplicateSubmissions extends Command
             $candidates = $members
                 ->reject(fn (Ad $ad): bool => $ad->id === $keeper->id)
                 ->filter(fn (Ad $ad): bool => $ad->ai_moderation_status === Ad::MODERATION_APPROVED)
-                ->filter(function (Ad $ad) use ($detector, $keeper, $keep): bool {
-                    if ($keep !== 'earliest') {
-                        // Grouping by the detector's own fingerprint is the proof of
-                        // membership; the detector's `id <` rule is intentionally
-                        // inverted when the operator asks to keep the latest.
-                        return true;
+                ->values();
+
+            // Reference the true original. With --keep=earliest the detector nominates
+            // the globally earliest same-content submission, which may sit OUTSIDE a
+            // --since window; requiring it to equal the window-local keeper would drop
+            // every actionable row and let a following reconciliation publish both
+            // copies. Membership is proven by the detector, not by that equality.
+            $referenceId = (int) $keeper->id;
+
+            if ($keep === 'earliest' && $candidates->isNotEmpty()) {
+                $verified = [];
+
+                foreach ($candidates as $candidate) {
+                    $signal = $detector->detect($candidate);
+
+                    if (! $signal['is_duplicate']) {
+                        continue;
                     }
 
-                    $signal = $detector->detect($ad);
+                    $verified[] = $candidate;
+                    $referenceId = (int) $signal['duplicate_of_ad_id'];
+                }
 
-                    return $signal['is_duplicate'] && (int) $signal['duplicate_of_ad_id'] === (int) $keeper->id;
-                })
-                ->values();
+                $candidates = collect($verified);
+            }
 
             if ($candidates->isEmpty()) {
                 // Still reported, so the operator can see the group exists but holds
                 // nothing actionable (e.g. every copy is already in human review).
                 $tableRows[] = [
-                    $keeper->id,
+                    $referenceId,
+                    $this->submittedAt($keeper),
                     '—',
                     (string) $keeper->user_id,
                     mb_strimwidth((string) $keeper->title, 0, 40, '…'),
@@ -157,11 +178,14 @@ class ResolveDuplicateSubmissions extends Command
             }
 
             foreach ($candidates as $candidate) {
-                $toChange[] = ['ad' => $candidate, 'keeper' => $keeper->id, 'fingerprint' => $fingerprint, 'group_size' => $members->count()];
+                $toChange[] = ['ad' => $candidate, 'keeper' => $referenceId, 'fingerprint' => $fingerprint, 'group_size' => $members->count()];
             }
 
             $tableRows[] = [
-                $keeper->id,
+                $referenceId,
+                $referenceId === (int) $keeper->id
+                    ? $this->submittedAt($keeper)
+                    : '(earlier submission outside the --since window)',
                 $candidates->pluck('id')->implode(', '),
                 (string) $keeper->user_id,
                 mb_strimwidth((string) $keeper->title, 0, 40, '…'),
@@ -175,17 +199,30 @@ class ResolveDuplicateSubmissions extends Command
 
         if ($tableRows !== []) {
             $this->newLine();
-            $this->table(['Kept', 'To change', 'Seller', 'Title'], $tableRows);
+            $this->table(['Kept', 'Kept at (submitted)', 'To change', 'Seller', 'Title'], $tableRows);
         }
 
         foreach ($skippedActiveGroups as $skipped) {
             $this->warn('SKIPPED (contains active inventory): '.$skipped);
         }
 
+        $stale = 0;
         foreach ($toChange as $item) {
             if ($apply) {
-                $changed += $this->applyResolution($detector, $item, $action, $keep);
+                $applied = $this->applyResolution($detector, $item, $action, $keep);
+                $changed += $applied;
+
+                if ($applied === 0) {
+                    $stale++;
+                }
             }
+        }
+
+        if ($stale > 0) {
+            $this->warn(sprintf(
+                '%d row(s) were skipped because the row or its original changed while the command was running. Re-run to re-evaluate.',
+                $stale
+            ));
         }
 
         $this->newLine();
@@ -210,6 +247,15 @@ class ResolveDuplicateSubmissions extends Command
     }
 
     /**
+     * Submission timestamp shown in the dry-run table so the operator can see the
+     * value the ordering key was evaluated against.
+     */
+    private function submittedAt(Ad $ad): string
+    {
+        return $ad->created_at?->toDateTimeString() ?? '(no timestamp)';
+    }
+
+    /**
      * @param  array{ad: Ad, keeper: int, fingerprint: string, group_size: int}  $item
      */
     private function applyResolution(ListingDuplicateDetector $detector, array $item, string $action, string $keep): int
@@ -228,6 +274,15 @@ class ResolveDuplicateSubmissions extends Command
                 return 0;
             }
 
+            // The keeper must still exist and still be the same content, otherwise the
+            // row would be recorded as a duplicate of an ad that no longer exists or no
+            // longer matches. Locked and checked inside the same transaction.
+            $keeper = Ad::query()->lockForUpdate()->find($item['keeper']);
+
+            if (! $keeper || $detector->fingerprint($keeper) !== $item['fingerprint']) {
+                return 0;
+            }
+
             $attributes = $action === 'reject'
                 ? [
                     // Mirrors AdminAdModerationController::decide() for a rejection.
@@ -235,9 +290,13 @@ class ResolveDuplicateSubmissions extends Command
                     'ai_moderation_status' => 'admin_rejected',
                 ]
                 : [
-                    // The pipeline's manual-review state. `status` is deliberately left
-                    // untouched: the row is already hidden, and only the approval marker
-                    // has to go for the reconciliation predicate to stop matching it.
+                    // The pipeline's manual-review state. `archived` is required, not
+                    // cosmetic: the admin queue only lists pending or archived
+                    // unfinished ads, and AdRenewalService::fulfill() refuses to
+                    // reactivate anything outside active/expired/paused/inactive, so an
+                    // archived row cannot be paid back into publication while it is
+                    // still under review.
+                    'status' => 'archived',
                     'ai_moderation_status' => 'manual_review',
                 ];
 

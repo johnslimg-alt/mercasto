@@ -273,20 +273,39 @@ class AdminAdModerationController extends Controller
     }
 
     /**
+     * Duplicate evidence for the CURRENT moderation cycle only.
+     *
+     * Scanning the whole history would keep showing a duplicate marker from an
+     * earlier cycle after the original had been removed or changed, and after a
+     * human had already acted on it. So only the most recent decision can surface a
+     * suspicion: a newer cycle decision, or a human decision, supersedes it and the
+     * marker disappears until moderation re-evaluates the ad.
+     *
+     * Decisions are compared by id, which stays deterministic when several decisions
+     * share a timestamp.
+     *
      * @param  array<int, array<string, mixed>>  $decisions
      * @return array<string, mixed>|null
      */
     private function presentDuplicate(array $decisions): ?array
     {
-        foreach ($decisions as $decision) {
-            $duplicate = is_array($decision) ? ($decision['metadata']['duplicate'] ?? null) : null;
+        $latest = null;
 
-            if (is_array($duplicate) && ($duplicate['is_duplicate'] ?? false) === true) {
-                return $duplicate;
+        foreach ($decisions as $decision) {
+            if (! is_array($decision)) {
+                continue;
+            }
+
+            if ($latest === null || (int) ($decision['id'] ?? 0) > (int) ($latest['id'] ?? 0)) {
+                $latest = $decision;
             }
         }
 
-        return null;
+        $duplicate = $latest['metadata']['duplicate'] ?? null;
+
+        return is_array($duplicate) && ($duplicate['is_duplicate'] ?? false) === true
+            ? $duplicate
+            : null;
     }
 
     private function presentAiAssist(Ad $ad, array $decisions): array
