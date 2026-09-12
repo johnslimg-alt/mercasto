@@ -230,6 +230,7 @@
   {"domain":null,"method":"GET|HEAD","uri":"seguridad","name":null,"action":"App\\Http\\Controllers\\SeoShellController@source","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"servicios","name":null,"action":"App\\Http\\Controllers\\SeoShellController@vertical","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"share/ads/{id}","name":null,"action":"App\\Http\\Controllers\\ShareAdController","middleware":["web"]},
+  {"domain":null,"method":"GET|HEAD","uri":"share/ads/{id}/og.jpg","name":"share.og-image","action":"App\\Http\\Controllers\\ShareOgImageController","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"sitemap-ads-{chunk}.xml","name":null,"action":"App\\Http\\Controllers\\Api\\SitemapController@adsChunk","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"sitemap-ads.xml","name":null,"action":"App\\Http\\Controllers\\Api\\SitemapController@ads","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"sitemap-categories.xml","name":null,"action":"App\\Http\\Controllers\\Api\\SitemapController@categories","middleware":["web"]},
