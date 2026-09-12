@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "Waivers for scripts/gate-integrity-check.mjs.",
+    "",
+    "A waiver suppresses a violation that is already owned by another in-flight PR.",
+    "Every waiver MUST name an owner. Waivers are self-expiring: once the owning PR",
+    "lands and the violation disappears, the check reports the waiver as 'stale-waiver'",
+    "and fails CI until the entry is deleted. That is deliberate -- a waiver cannot rot",
+    "into a permanent silent suppression.",
+    "",
+    "Do NOT add a waiver to make a real violation disappear. Fix the gate."
+  ],
+  "waivers": [
+    {
+      "check": "dead-code-assertion",
+      "gate": "scripts/check-recovery-guards.mjs",
+      "target": "backend/app/Http/Controllers/Api/AdController.php",
+      "literalContains": "is_catalog_filler",
+      "owner": "PR #1131 (fix/catalog-real-inventory-ranking-20260911)",
+      "reason": "The only occurrence of orderBy('ads.is_catalog_filler', 'asc') is inside AdController::index(), which no route or caller reaches (GET /ads -> AdIndexController@index). PR #1131 already deletes that line, moves the ranking rule into App\\Support\\CatalogInventoryRanking, retargets this guard to the routed controller, and adds backend/tests/Feature/CatalogRealInventoryRankingTest.php. Editing the same assertion here would collide with #1131, so this waiver is reported rather than fixed. It expires automatically when #1131 merges."
+    }
+  ]
+}

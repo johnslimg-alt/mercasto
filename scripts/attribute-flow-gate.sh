@@ -65,9 +65,23 @@ grep -qF "'attributes' => 'nullable|array'" "$CONTROLLER"
 grep -qF "filled('attributes')" "$CONTROLLER"
 grep -qF "input('attributes')" "$CONTROLLER"
 grep -qF "attributes" "$CONTROLLER"
-grep -qF "filled('filters')" "$CONTROLLER"
-grep -qF "attributes->{" "$CONTROLLER"
-grep -qF "whereIn(" "$CONTROLLER"
+# The public filter path lives in the routed catalog query, not in AdController: GET /ads is served
+# by AdIndexController@index -> AdQueryFilters::apply(). These two literals previously matched only
+# AdController::index(), which no route or caller reaches, so the gate proved nothing about the API
+# a visitor actually hits. See scripts/gate-integrity-check.mjs.
+FILTERS="backend/app/Support/AdQueryFilters.php"
+CATALOG_TEST="backend/tests/Feature/CatalogQueryInvariantsTest.php"
+grep -qF "filled('filters')" "$FILTERS"
+grep -qF "attributes->{" "$FILTERS"
+# ...and the JSON-attribute filtering it describes is asserted against the routed endpoint.
+if [ ! -s "$CATALOG_TEST" ]; then
+  echo "Missing behavioural catalog test: $CATALOG_TEST" >&2
+  exit 1
+fi
+if ! grep -qF "test_attribute_filter_is_applied_through_the_json_attributes_column" "$CATALOG_TEST"; then
+  echo "Behavioral attribute-filter invariant missing from $CATALOG_TEST" >&2
+  exit 1
+fi
 
 # Public API filters must preserve current production category and legacy JSON-key compatibility.
 grep -qF "'motor'" "$CATEGORY_CONFIG"

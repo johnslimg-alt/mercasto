@@ -57,21 +57,51 @@ grep -qF "params.append('search', debouncedSearch)" "$APP"
 grep -qF "params.append('category', activeCat)" "$APP"
 grep -qF "params.append('location', selectedState)" "$APP"
 
-# Backend listing search must support active-only, radius, location, city, state, price, condition and dynamic filters.
-grep -qF "where('ads.status', 'active')" "$CONTROLLER"
-grep -qF "whereNotNull('latitude')" "$CONTROLLER"
-grep -qF "orderBy('distance')" "$CONTROLLER"
-grep -qF "filled('location')" "$CONTROLLER"
-grep -qF "todo méxico" "$CONTROLLER"
-grep -qF "location ILIKE ? OR state ILIKE ?" "$CONTROLLER"
-grep -qF "filled('state')" "$CONTROLLER"
-grep -qF "state ILIKE ?" "$CONTROLLER"
-grep -qF "filled('city')" "$CONTROLLER"
-grep -qF "location ILIKE ?" "$CONTROLLER"
-grep -qF "filled('min_price')" "$CONTROLLER"
-grep -qF "filled('max_price')" "$CONTROLLER"
-grep -qF "filled('condition')" "$CONTROLLER"
-grep -qF "filled('filters')" "$CONTROLLER"
+# Backend listing search must support active-only, radius, location, city, state, price, condition
+# and dynamic filters. These literals are asserted in the ROUTED catalog query path:
+#   routes/api.php GET /ads -> AdIndexController@index -> AdQueryFilters::apply()
+# They used to be asserted in Api/AdController.php, whose index() method is unreachable (no route,
+# no call site). That dead copy kept the gate green while the live filters could break unnoticed,
+# and the live path had long been re-implemented in a different dialect (LOWER(...) LIKE LOWER(?)
+# instead of the Postgres ILIKE pinned here). scripts/gate-integrity-check.mjs now fails CI if any
+# gate pins controller code that nothing can reach again.
+CATALOG="backend/app/Http/Controllers/Api/AdIndexController.php"
+FILTERS="backend/app/Support/AdQueryFilters.php"
+CATALOG_TEST="backend/tests/Feature/CatalogQueryInvariantsTest.php"
+grep -qF "where('ads.status', 'active')" "$CATALOG"
+grep -qF "whereNotNull('latitude')" "$CATALOG"
+grep -qF "orderBy('distance')" "$CATALOG"
+grep -qF "filled('location')" "$CATALOG"
+grep -qF "todo méxico" "$CATALOG"
+grep -qF "filled('state')" "$CATALOG"
+grep -qF "filled('city')" "$CATALOG"
+grep -qF "filled('condition')" "$CATALOG"
+grep -qF "LOWER(state) LIKE LOWER(?)" "$FILTERS"
+grep -qF "LOWER(location) LIKE LOWER(?)" "$FILTERS"
+grep -qF "filled('filters')" "$FILTERS"
+grep -qF "price_max" "$FILTERS"
+
+# The behaviour those literals describe is proved end to end against the routed endpoint, so the
+# guarantee no longer depends on where the SQL text lives or which dialect it uses.
+if [ ! -s "$CATALOG_TEST" ]; then
+  echo "Missing behavioural catalog test: $CATALOG_TEST" >&2
+  echo "The public catalog filters must be proved against GET /ads, not inferred from source text." >&2
+  exit 1
+fi
+for catalog_invariant in \
+  test_public_catalog_returns_only_active_listings \
+  test_price_range_filters_bound_the_returned_inventory \
+  test_condition_filter_returns_only_matching_listings \
+  test_city_filter_returns_only_listings_in_that_city \
+  test_state_filter_returns_only_listings_in_that_state \
+  test_attribute_filter_is_applied_through_the_json_attributes_column \
+  test_offset_pagination_has_a_stable_total_order
+do
+  if ! grep -qF "$catalog_invariant" "$CATALOG_TEST"; then
+    echo "Behavioral catalog invariant missing from $CATALOG_TEST: $catalog_invariant" >&2
+    exit 1
+  fi
+done
 
 # Posting and detail pages must keep location consistent with the listing search surface.
 grep -qF "MapV3" "$POST_SCREEN"

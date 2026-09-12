@@ -5,12 +5,21 @@ on:
     branches:
       - main
     paths:
+      # The guard asserts source text in these trees. Keep them directory-wide:
+      # a file-scoped list is how backend/app/Http/Controllers/Api/AdController.php
+      # ended up asserted by a guard that never ran when that controller changed,
+      # letting the 2026-08 catalog P0 sit undetected. scripts/gate-integrity-check.mjs
+      # fails CI if this list stops covering everything the guard reads.
       - 'index.html'
-      - 'src/main.jsx'
-      - 'src/lib/notificationPolyfill.js'
+      - 'src/**'
+      - 'public/**'
+      - 'backend/app/**'
       - '.github/workflows/emergency-container-frontend-patch.yml'
       - '.github/workflows/emergency-ssh-frontend-deploy.yml'
+      - '.github/workflows/recovery-guard.yml'
       - 'scripts/check-recovery-guards.mjs'
+      - 'scripts/gate-integrity-check.mjs'
+      - 'scripts/gate-integrity-waivers.json'
       - 'package.json'
 
 permissions:
@@ -27,3 +36,5 @@ jobs:
           node-version: '22'
       - name: Run recovery guard checks
         run: npm run check:recovery
+      - name: Run gate integrity checks
+        run: npm run check:gate-integrity
