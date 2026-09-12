@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\Api\SitemapController;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
@@ -86,6 +87,9 @@ class RequeueLegacyModeration extends Command
                     'ai_moderation_confidence' => null,
                     'ai_moderated_at' => null,
                 ])->saveQuietly();
+
+                // saveQuietly() bypasses AdObserver: a visible listing may have just been hidden.
+        SitemapController::forgetAdsCache();
 
                 $cycle = AdModerationDecision::create([
                     'ad_id' => $ad->id,

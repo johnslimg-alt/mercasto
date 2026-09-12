@@ -78,20 +78,82 @@ class AdsSitemapCacheInvalidationTest extends TestCase
             ->assertDontSee('https://mercasto.test/ads/' . $listing->id, false);
     }
 
-    public function test_forget_ads_cache_drops_the_inventory_and_every_chunk_key(): void
+    public function test_content_edit_that_changes_membership_invalidates_the_sitemap(): void
     {
-        Cache::put('sitemap_ads_v4', ['xml' => 'stale'], 1800);
-        Cache::put('sitemap_ads_chunk_count_v1', 3, 1800);
-        Cache::put('sitemap_ads_v4_chunk_2', ['xml' => 'stale'], 1800);
-        Cache::put('sitemap_ads_v4_chunk_4', ['xml' => 'stale'], 1800);
+        // Thin content is excluded by curation, so this listing is publicly visible but absent
+        // from the sitemap. Editing the title/description changes membership without touching
+        // status, expires_at or is_catalog_filler.
+        $listing = $this->hiddenListing([
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'title' => 'ok',
+            'description' => 'corto',
+        ]);
+
+        $this->get('/sitemap-ads.xml')
+            ->assertDontSee('https://mercasto.test/ads/' . $listing->id, false);
+
+        $listing->forceFill([
+            'title' => 'Bicicleta urbana con frenos revisados',
+            'description' => 'Descripción verificable con detalle suficiente para no ser delgada.',
+        ])->save();
+
+        $after = $this->get('/sitemap-ads.xml');
+        $after->assertOk();
+        $after->assertSee('https://mercasto.test/ads/' . $listing->id, false);
+        $this->assertSame('ok', $after->headers->get('X-Mercasto-Sitemap-Health'));
+    }
+
+    public function test_forget_ads_cache_bumps_the_generation_so_the_next_request_rebuilds(): void
+    {
+        $listing = $this->hiddenListing();
+        $listing->forceFill(['status' => 'active', 'expires_at' => now()->addDays(3)])->save();
+        $this->get('/sitemap-ads.xml')->assertSee('https://mercasto.test/ads/' . $listing->id, false);
+
+        $before = (int) Cache::get('sitemap_ads_generation_v1', 1);
 
         SitemapController::forgetAdsCache();
 
-        $this->assertFalse(Cache::has('sitemap_ads_v4'));
-        $this->assertFalse(Cache::has('sitemap_ads_chunk_count_v1'));
-        $this->assertFalse(Cache::has('sitemap_ads_v4_chunk_2'));
-        // The cached chunk count was 3, so the spare tail chunk is dropped as well.
-        $this->assertFalse(Cache::has('sitemap_ads_v4_chunk_4'));
+        // Invalidation is a durable generation bump: every chunk key is scoped to the generation,
+        // so nothing has to be enumerated and nothing can be served stale afterwards.
+        $this->assertSame($before + 1, (int) Cache::get('sitemap_ads_generation_v1', 1));
+
+        Ad::query()->whereKey($listing->id)->update(['status' => 'archived']);
+
+        $this->get('/sitemap-ads.xml')
+            ->assertOk()
+            ->assertDontSee('https://mercasto.test/ads/' . $listing->id, false);
+    }
+
+    public function test_a_cached_chunk_is_not_served_stale_after_its_count_key_expires(): void
+    {
+        config(['marketplace.ads_sitemap.urls_per_chunk' => 2]);
+
+        // Newest-first ordering with two URLs per chunk: chunk 3 holds the two oldest listings.
+        $listings = collect(range(1, 6))
+            ->map(fn (int $index) => $this->hiddenListing([
+                'status' => 'active',
+                'expires_at' => now()->addDays(3),
+                'title' => "Anuncio elegible número {$index}",
+            ]));
+        $oldest = $listings->first();
+
+        // Prime the index (chunk-count key) and the third chunk.
+        $this->get('/sitemap.xml')->assertOk();
+        $this->get('/sitemap-ads-3.xml')
+            ->assertOk()
+            ->assertSee('https://mercasto.test/ads/' . $oldest->id, false);
+
+        // The chunk's own 30-minute TTL starts when the chunk is requested, so it can outlive the
+        // chunk-count key. Simulate that expiry, then hide a listing the cached chunk advertises.
+        Cache::forget('sitemap_ads_chunk_count_v1');
+        Ad::query()->whereKey($oldest->id)->update(['status' => 'archived']);
+
+        SitemapController::forgetAdsCache();
+
+        $this->get('/sitemap-ads-3.xml')
+            ->assertOk()
+            ->assertDontSee('https://mercasto.test/ads/' . $oldest->id, false);
     }
 
     /**

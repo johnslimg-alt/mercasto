@@ -14,8 +14,35 @@ Allow: /
 # instead of the listing (verified with a headless render on 2026-09-12). robots.txt matches
 # the longest path, so Disallow: /api/ still blocks every other API route (auth, admin,
 # payments, internal).
-Allow: /api/ads
-Allow: /api/categories
+# Exact endpoint plus subtree only: a bare `Allow: /api/ads` is a prefix rule that would
+# also permit hypothetical siblings such as /api/ads-archive.
+Allow: /api/ads$
+Allow: /api/ads/
+Allow: /api/categories$
+# robots.txt cannot express HTTP methods, so every write target under the allowed prefixes gets a
+# longer, explicit Disallow (longest match wins). The public metric/report endpoints are
+# throttle-only - no auth - so a rendering crawler must not be told they are permitted.
+# None of these paths matches a GET that ad-detail hydration issues; that is asserted by
+# scripts/robots-write-path-contract.test.mjs. Two write routes deliberately have no rule
+# because they share their exact path with a hydration GET (POST /api/ads/{id} and
+# POST /api/categories, both authenticated + CSRF-protected); robots.txt cannot separate them.
+Disallow: /api/ads/impressions
+Disallow: /api/categories/*
+Disallow: /api/ads/*/view
+Disallow: /api/ads/*/click
+Disallow: /api/ads/*/report
+Disallow: /api/ads/*/contact-seller
+Disallow: /api/ads/*/status
+Disallow: /api/ads/*/pause
+Disallow: /api/ads/*/activate
+Disallow: /api/ads/*/republish
+Disallow: /api/ads/*/renew
+Disallow: /api/ads/*/favorite
+Disallow: /api/ads/*/promote/credits
+Disallow: /api/ads/promote/credits/bulk
+Disallow: /api/ads/generate-description
+Disallow: /api/ads/bulk-upload
+Disallow: /api/ads/bulk-action
 Disallow: /api/
 Disallow: /admin
 Disallow: /dashboard
@@ -39,8 +66,35 @@ Disallow: /
 # Default policy for other crawlers.
 User-agent: *
 Allow: /
-Allow: /api/ads
-Allow: /api/categories
+# Exact endpoint plus subtree only: a bare `Allow: /api/ads` is a prefix rule that would
+# also permit hypothetical siblings such as /api/ads-archive.
+Allow: /api/ads$
+Allow: /api/ads/
+Allow: /api/categories$
+# robots.txt cannot express HTTP methods, so every write target under the allowed prefixes gets a
+# longer, explicit Disallow (longest match wins). The public metric/report endpoints are
+# throttle-only - no auth - so a rendering crawler must not be told they are permitted.
+# None of these paths matches a GET that ad-detail hydration issues; that is asserted by
+# scripts/robots-write-path-contract.test.mjs. Two write routes deliberately have no rule
+# because they share their exact path with a hydration GET (POST /api/ads/{id} and
+# POST /api/categories, both authenticated + CSRF-protected); robots.txt cannot separate them.
+Disallow: /api/ads/impressions
+Disallow: /api/categories/*
+Disallow: /api/ads/*/view
+Disallow: /api/ads/*/click
+Disallow: /api/ads/*/report
+Disallow: /api/ads/*/contact-seller
+Disallow: /api/ads/*/status
+Disallow: /api/ads/*/pause
+Disallow: /api/ads/*/activate
+Disallow: /api/ads/*/republish
+Disallow: /api/ads/*/renew
+Disallow: /api/ads/*/favorite
+Disallow: /api/ads/*/promote/credits
+Disallow: /api/ads/promote/credits/bulk
+Disallow: /api/ads/generate-description
+Disallow: /api/ads/bulk-upload
+Disallow: /api/ads/bulk-action
 Disallow: /api/
 Disallow: /admin
 Disallow: /dashboard

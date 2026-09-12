@@ -23,8 +23,17 @@ class AdObserver
         'admin_manual_review',
     ];
 
-    /** Attributes that decide whether a listing may appear in the canonical ads sitemap. */
-    private const SITEMAP_VISIBILITY_FIELDS = ['status', 'expires_at', 'is_catalog_filler'];
+    /**
+     * Attributes that decide whether a listing may appear in the canonical ads sitemap: the
+     * visibility contract (status, expires_at, is_catalog_filler) plus every field the sitemap
+     * curation reads - the thin-content check uses title and description, and the duplicate
+     * fingerprint (same recipe as ads:audit-active-content-quality) also uses price, category,
+     * state and city. Editing one of these can add or remove a listing without touching status.
+     */
+    private const SITEMAP_MEMBERSHIP_FIELDS = [
+        'status', 'expires_at', 'is_catalog_filler',
+        'title', 'description', 'price', 'category', 'state', 'city',
+    ];
 
     public function created(Ad $ad): void
     {
@@ -90,7 +99,7 @@ class AdObserver
             $this->queueForModeration($ad, false);
         }
 
-        if ($ad->wasChanged(self::SITEMAP_VISIBILITY_FIELDS)) {
+        if ($ad->wasChanged(self::SITEMAP_MEMBERSHIP_FIELDS)) {
             $this->forgetSitemapCaches();
         }
     }

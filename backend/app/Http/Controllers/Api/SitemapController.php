@@ -21,6 +21,12 @@ class SitemapController extends Controller
     public const ADS_URLS_PER_CHUNK = 45000;
 
     private const ADS_MAX_FILE_BYTES = 50000000;
+
+    /** Historical cache-key family for the ads sitemap; generation-scoped at runtime. */
+    private const ADS_CACHE_PREFIX = 'sitemap_ads_v4';
+
+    /** Durable generation counter; bumping it invalidates every cached ads-sitemap artifact. */
+    private const ADS_GENERATION_KEY = 'sitemap_ads_generation_v1';
     private const ADS_CACHE_TTL = 1800;
 
     /** Mirrors ListingQualityPreflightService: below these minimums a listing is thin. */
@@ -266,20 +272,40 @@ class SitemapController extends Controller
      * The sitemap is cached for 30 minutes, so without this any code path that changes which
      * listings are publicly visible (publish, pause, archive, expire, seller re-confirmation,
      * moderation reconciliation, deletion) keeps advertising the previous inventory. Call it
-     * from model-event paths through AdObserver and explicitly from query-builder bulk updates,
-     * which do not fire model events.
+     * from model-event paths through AdObserver and explicitly from the writers that bypass model
+     * events (query-builder updates, Ad::insert(), saveQuietly()); the enumerated list lives in
+     * scripts/catalog-index-hygiene-gate.sh.
+     *
+     * Invalidation works by bumping a durable cache generation: every ads-sitemap key embeds the
+     * current generation, so one increment makes all of them unreachable at once. Nothing has to
+     * be enumerated, which is what makes this immune to the awkward case where a chunk's 30-minute
+     * TTL outlives the chunk-count key (a later chunk would otherwise stay cached and be served
+     * stale after a visibility change).
      */
     public static function forgetAdsCache(): void
     {
-        $chunks = max(1, (int) Cache::get('sitemap_ads_chunk_count_v1', 1));
-
-        Cache::forget('sitemap_ads_v4');
-        Cache::forget('sitemap_ads_chunk_count_v1');
-
-        // Chunks 2..n, plus one spare so a growing inventory never leaves a stale tail chunk.
-        for ($chunk = 2; $chunk <= $chunks + 1; $chunk++) {
-            Cache::forget("sitemap_ads_v4_chunk_{$chunk}");
+        // Permanent key: the generation must never reset to a value whose artifacts could still
+        // be cached. add() only writes when the key is missing, so concurrent bumps cannot lose
+        // an increment (worst case the generation jumps by two, which is harmless).
+        if (! Cache::add(self::ADS_GENERATION_KEY, 2, null)) {
+            Cache::increment(self::ADS_GENERATION_KEY);
         }
+
+        // Legacy un-suffixed keys written before generation scoping; they expire on their own.
+        Cache::forget(self::ADS_CACHE_PREFIX);
+        Cache::forget('sitemap_ads_chunk_count_v1');
+    }
+
+    /** The cache generation that currently scopes every ads-sitemap artifact. */
+    private static function adsGeneration(): int
+    {
+        return max(1, (int) Cache::get(self::ADS_GENERATION_KEY, 1));
+    }
+
+    /** One ads-sitemap cache key, scoped to the current generation. */
+    private static function adsCacheKey(string $suffix): string
+    {
+        return self::ADS_CACHE_PREFIX . '.g' . self::adsGeneration() . $suffix;
     }
 
     /**
@@ -290,7 +316,7 @@ class SitemapController extends Controller
      */
     private function adsChunkCount(): int
     {
-        return Cache::remember('sitemap_ads_chunk_count_v1', self::ADS_CACHE_TTL, function (): int {
+        return Cache::remember(self::adsCacheKey('.chunks'), self::ADS_CACHE_TTL, function (): int {
             return max(1, (int) ceil(
                 ListingIndexability::apply(Ad::query())->count() / $this->adsUrlsPerChunk()
             ));
@@ -311,12 +337,13 @@ class SitemapController extends Controller
             return $this->buildAdsSitemapChunk($chunk);
         };
 
-        // Chunk 1 keeps the historical cache key so existing cache-busting call sites keep working.
-        if ($chunk === 1) {
-            return Cache::remember('sitemap_ads_v4', self::ADS_CACHE_TTL, $build);
-        }
-
-        return Cache::remember("sitemap_ads_v4_chunk_{$chunk}", self::ADS_CACHE_TTL, $build);
+        // Chunk 1 keeps the historical key prefix; the generation suffix scopes it to the
+        // current inventory revision, so invalidating never has to enumerate chunk keys.
+        return Cache::remember(
+            self::adsCacheKey($chunk === 1 ? '' : ".chunk{$chunk}"),
+            self::ADS_CACHE_TTL,
+            $build
+        );
     }
 
     /**

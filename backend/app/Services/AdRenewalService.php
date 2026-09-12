@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\NewNotification;
+use App\Http\Controllers\Api\SitemapController;
 use App\Support\PaymentPayloadSanitizer;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -268,6 +269,8 @@ class AdRenewalService
     {
         Cache::forget("ad_{$adId}");
         Cache::forget('sitemap_xml');
+        // Paid renewal activates through DB::table(), so AdObserver never fires.
+        SitemapController::forgetAdsCache();
         Cache::forget('google_merchant_xml');
         Cache::forget('ads_featured_block');
 

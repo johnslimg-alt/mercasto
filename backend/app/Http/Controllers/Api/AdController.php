@@ -1460,6 +1460,9 @@ class AdController extends Controller
         // Вставляем остатки
         if (count($batch) > 0) {
             Ad::insert($batch);
+            // Ad::insert() fires no model events; today the imported rows are pending, but the
+            // sitemap must not depend on that staying true.
+            SitemapController::forgetAdsCache();
         }
 
         // Сбрасываем кэш, чтобы массово загруженные объявления сразу появились на сайте и в SEO-фидах
