@@ -101,6 +101,26 @@ jobs:
             -p ActiveState -p SubState -p MainPID -p NRestarts
           REMOTE
 
+      - name: Diagnose Hermes publish failure
+        if: failure()
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/hermes_publish_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          for file in /tmp/hermes-glm-smoke /tmp/hermes-deepseek-smoke /tmp/hermes-web-sync.log; do
+            if [ -s "$file" ]; then
+              echo "=== $(basename "$file") ==="
+              tail -120 "$file" \
+                | sed -E 's/(api[_-]?key|authorization|bearer|token|secret|password)([=: ]+)[^ ]+/\1\2***REDACTED***/Ig' \
+                | sed -E 's/sk-[A-Za-z0-9_-]{16,}/***REDACTED***/g'
+            fi
+          done
+          systemctl is-active hermes-dashboard.service 2>/dev/null || true
+          REMOTE
+
       - name: Remove SSH key
         if: always()
         shell: bash
