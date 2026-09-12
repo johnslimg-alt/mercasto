@@ -131,34 +131,39 @@ trivially true because its real size is exactly 1200x630.
 > **not** yet emit `og:image:width/height` (verified - no match anywhere in the
 > repo). PR #1138 is expected to add it. Land this card first, then have #1138
 > read the dimensions from the file it actually serves; the helper for that is
-> already sketched in "Suggested wiring" below.
+> already applied in the wiring section below.
 
-## Suggested wiring (`ShareAdController.php`)
+## Wiring (applied on this branch)
 
-Not applied in this PR (asset/design only). Replace the icon fallback at
-`backend/app/Http/Controllers/ShareAdController.php:119`:
+`ShareAdController::DEFAULT_SHARE_IMAGE` is the single source of truth for the
+served URL. `resolveImage()` returns it when a listing has no usable photo, and
+`resolveImageSize()` returns its declared size so `og:image:width/height` are
+emitted for the fallback as well.
 
-```php
-if (!$candidate) {
-    return url('/og-default-1200x630.jpg');
-}
-```
+The size is a **constant**, not a runtime `getimagesize()`, because the card ships
+with the static frontend (the Dockerfile copies `public/` to the nginx document
+root) and is therefore not present in the backend container. It is not a guess:
+`test_declared_default_card_size_matches_the_committed_asset` measures the
+committed file and fails if the constants drift.
 
-and, when #1138 adds the dimensions, derive them from the served file so they
-can never lie:
+`resolveImageSize()` matches paths against an **allowlist**, not a pattern. That
+matters because production returns the SPA shell with **HTTP 200** for unknown
+root paths, so a naive "does this URL resolve" check would happily advertise a
+preview size for an HTML document. Covered by
+`test_share_card_does_not_advertise_dimensions_for_other_public_assets`.
 
-```php
-$path = public_path(ltrim(parse_url($imageUrl, PHP_URL_PATH) ?? '', '/'));
-$size = is_file($path) ? @getimagesize($path) : false;
-$imageWidth  = $size[0] ?? null;
-$imageHeight = $size[1] ?? null;
-```
+### Sequencing
 
-Emit the two meta tags only when both are non-null:
+This branch is stacked on **#1138** (which adds the `og:image:width/height`
+emission). **Merge #1138 first, then rebase this onto it.** Both PRs touch
+`ShareAdController.php` and `ShareAdCardTest.php`.
 
-```php
-{$imageMeta}
-```
+`scripts/share-og-smoke.sh` carries a **transitional exemption**: the `>=600x315`
+assertion is fatal for every undersized image *except* the legacy
+`icon-512x512.png` that production still serves until this deploys. That case
+reports a loud WARN instead, so merging does not turn `smoke:all` / `gate:prod`
+red for everyone. **Tighten it by deleting that commented block once the branded
+card is deployed** — after that, every undersized preview must fail.
 
 ## Changing the artwork
 

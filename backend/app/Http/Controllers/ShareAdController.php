@@ -19,6 +19,27 @@ use Illuminate\Http\Response;
 class ShareAdController extends Controller
 {
     /**
+     * Branded 1200x630 card used when a listing has no usable photo. Lives in the
+     * frontend's public/ (shipped to the static document root by the Dockerfile) and
+     * is the single source of truth for the served URL. Artwork and regeneration
+     * steps: design/og/README.md.
+     */
+    private const DEFAULT_SHARE_IMAGE = 'og-default-1200x630.jpg';
+
+    /**
+     * Declared size of DEFAULT_SHARE_IMAGE. Constants rather than a runtime
+     * getimagesize() call because the frontend's public/ directory is not present in
+     * the backend container at runtime - only the file's known size is available here.
+     *
+     * This is not a guess: the asset is version-controlled, produced deterministically
+     * from design/og/og-default-1200x630.svg, and ShareAdCardTest asserts that the
+     * committed file really is this size. Replace the artwork at a different size and
+     * update these two numbers in the same commit, or that test fails.
+     */
+    private const DEFAULT_SHARE_IMAGE_WIDTH = 1200;
+    private const DEFAULT_SHARE_IMAGE_HEIGHT = 630;
+
+    /**
      * Query parameters forwarded to the canonical listing. Exactly the attribution keys
      * campaignAttribution.js reads, so the redirect never reflects arbitrary query input.
      */
@@ -144,9 +165,17 @@ HTML;
     }
 
     /**
-     * Local dimensions of an uploaded listing photo, so og:image:width/height are only
-     * emitted when they are real (never guessed). Remote/CDN images and the site icon
-     * are skipped, and only the storage media path is inspected (no traversal).
+     * Dimensions of the image we actually serve, so og:image:width/height are only
+     * emitted when they are real (never guessed). Remote/CDN images are skipped, and
+     * only two path shapes are inspected (no traversal):
+     *
+     *   storage/...        an uploaded listing photo, measured from disk
+     *   <default card>     the branded fallback, whose size is a known constant
+     *
+     * The path is compared against an allowlist rather than pattern-matched, so no
+     * other public asset can have its size advertised as a preview size. That also
+     * closes off the soft-404 trap: an unknown root path returns the SPA shell with
+     * HTTP 200, which would otherwise look like a valid image to a naive check.
      *
      * @return array{0:int,1:int}|null
      */
@@ -160,9 +189,17 @@ HTML;
 
         $relative = ltrim($path, '/');
 
-        if ($relative === ''
-            || str_contains($relative, '..')
-            || ! preg_match('#^storage/[A-Za-z0-9][A-Za-z0-9._/-]*$#', $relative)) {
+        if ($relative === '' || str_contains($relative, '..')) {
+            return null;
+        }
+
+        // The bundled card ships with the static frontend, so the backend container
+        // cannot stat it. Its size is asserted against the committed file by test.
+        if ($relative === self::DEFAULT_SHARE_IMAGE) {
+            return [self::DEFAULT_SHARE_IMAGE_WIDTH, self::DEFAULT_SHARE_IMAGE_HEIGHT];
+        }
+
+        if (! preg_match('#^storage/[A-Za-z0-9][A-Za-z0-9._/-]*$#', $relative)) {
             return null;
         }
 
@@ -223,6 +260,12 @@ HTML;
     /**
      * image_url / image may be stored as a JSON array string, a full URL, or a
      * storage-relative path. Resolve to a single absolute image URL for og:image.
+     *
+     * When the listing has no usable photo at all we fall back to the branded
+     * 1200x630 share card, never to the square app icon: a 512x512 icon is below
+     * every platform's large-preview minimum, so it renders as a small or
+     * centre-cropped card. The dimensions of this file are reported truthfully
+     * because it is listed in resolveImageSize().
      */
     private function resolveImage(Ad $ad): string
     {
@@ -230,7 +273,7 @@ HTML;
             ?? $this->firstImageCandidate($ad->image);
 
         if (!$candidate) {
-            return url('/icon-512x512.png');
+            return url('/' . self::DEFAULT_SHARE_IMAGE);
         }
 
         if (preg_match('#^https?://#i', $candidate)) {
