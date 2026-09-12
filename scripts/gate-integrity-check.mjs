@@ -422,6 +422,16 @@ function reachableMethods() {
     for (const match of source.matchAll(/(?:app|resolve)\(\s*([A-Za-z_][\w]*)::class\s*\)\s*->\s*([A-Za-z_]\w*)\s*\(/g)) {
       containerCalls.add(`${match[1]}@${match[2]}`);
     }
+    // Direct static dispatch: `IndexNowController::notifyAdChange($ad, 'create')`.
+    // Production reaches controller methods this way -- an observer registered in
+    // AppServiceProvider calls IndexNowController::notifyAdChange on every ad
+    // create/update/delete. Without this seed the method looks unreachable, and a
+    // checker that reports LIVE code as dead is how working code gets deleted.
+    // Capitalised class names only, so `self::`, `static::` and `parent::` stay
+    // the business of the intra-class edges above, and `::class` is excluded.
+    for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)::([a-z][A-Za-z0-9_]*)\s*\(/g)) {
+      callablePairs.add(`${match[1]}@${match[2]}`);
+    }
 
     const className = /class\s+([A-Za-z_]\w*)/.exec(source)?.[1];
     if (!className) continue;
@@ -475,10 +485,22 @@ function reachableMethods() {
   return { has: (controller, method) => closure.has(`${controller}@${method}`) };
 }
 
-/** Finds the method enclosing a byte offset inside a PHP class file. */
+/**
+ * Finds the method enclosing a byte offset inside a PHP class file.
+ *
+ * Modifiers are matched in any order and any combination: `public static
+ * function` used to fall through, so an assertion inside a static method had no
+ * enclosing method, was skipped, and was never reported as dead code. Static
+ * controller methods are exactly where this matters -- `IndexNowController::
+ * notifyAdChange` is a public static invoked by an observer.
+ */
 function enclosingMethod(source, offset) {
   const before = source.slice(0, offset);
-  const matches = [...before.matchAll(/\n\s*(?:public|protected|private)?\s*function\s+([A-Za-z_]\w*)\s*\(/g)];
+  const matches = [
+    ...before.matchAll(
+      /\n\s*(?:(?:public|protected|private|static|final|abstract)\s+)*function\s+([A-Za-z_]\w*)\s*\(/g
+    ),
+  ];
   if (matches.length === 0) return null;
   return matches[matches.length - 1][1];
 }
@@ -510,6 +532,19 @@ function validateWaivers(waivers) {
       const value = waiver[field];
       if (typeof value !== 'string' || value.trim() === '') {
         problems.push(`${where}.${field} is required and must be a non-empty string`);
+      }
+    }
+    // A gate can hold several dead-code assertions against the same controller, so
+    // gate+target does not identify one violation. Without a binding literal the
+    // waiver silently transfers to whichever assertion becomes dead next, staying
+    // non-stale and outliving the violation its owner signed off on. Trigger
+    // coverage violations are keyed by target alone, so they need no extra field.
+    if (waiver.check === 'dead-code-assertion') {
+      const value = waiver.literalContains;
+      if (typeof value !== 'string' || value.trim() === '') {
+        problems.push(
+          `${where}.literalContains is required for a dead-code-assertion waiver: gate+target can match several assertions, so the waiver could transfer to a different violation`
+        );
       }
     }
   });
@@ -610,10 +645,21 @@ function workflowFilters(path) {
     // a paths block is indented like a list item, and treating it as a dedent
     // silently emptied the list.
     if (/^\s*#/.test(line)) continue;
-    const key = /^(\s*)(paths|paths-ignore):\s*$/.exec(line);
+    const key = /^(\s*)(paths|paths-ignore):\s*(.*)$/.exec(line);
     if (key) {
-      current = key[2] === 'paths' ? result.paths : result.pathsIgnore;
+      const target = key[2] === 'paths' ? result.paths : result.pathsIgnore;
       result.found = true;
+      const inline = key[3].trim();
+      if (inline.startsWith('[')) {
+        // YAML flow sequence: `paths: ['scripts/**', 'backend/**']`. Treating this
+        // as a key with no value left found=false, so the workflow looked
+        // unfiltered and appeared to cover every asserted target -- the opposite
+        // of what an inline filter that omits a target actually means.
+        for (const item of inline.matchAll(/['"]([^'"]+)['"]/g)) target.push(item[1]);
+        current = null; // a flow sequence is complete on its own line
+        continue;
+      }
+      current = inline === '' ? target : null;
       continue;
     }
     const item = /^\s*-\s*'([^']+)'\s*$/.exec(line) ?? /^\s*-\s*"([^"]+)"\s*$/.exec(line);
@@ -702,6 +748,25 @@ function workflowExecutedText(path, scripts) {
   return text;
 }
 
+/** Interpreters whose presence on a line means the path is being run, not just named. */
+const SCRIPT_INTERPRETERS = /\b(?:node|npx|bash|sh|bun|deno|php)\b/;
+
+/**
+ * Does an executed command line actually RUN the script, or merely name it?
+ *
+ * Substring containment is not enough: `test -f scripts/check-recovery-guards.mjs`,
+ * `echo scripts/check-recovery-guards.mjs`, or a `grep` pattern naming the path all
+ * contain it without executing it, and would let a workflow count as running the
+ * guard after the real step was deleted. A line counts only when the path appears
+ * as a standalone token AND the same line invokes an interpreter.
+ */
+function lineInvokesScript(line, scriptPath) {
+  const escaped = scriptPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const asToken = new RegExp(String.raw`(?:^|[\s'"=(])${escaped}(?=$|[\s'");&|])`);
+  if (!asToken.test(line)) return false;
+  return SCRIPT_INTERPRETERS.test(line);
+}
+
 /** Workflows that actually execute a gate, resolved through npm script indirection. */
 function workflowsRunningGate(gateScript, scripts) {
   const dir = join(ROOT, '.github/workflows');
@@ -709,7 +774,8 @@ function workflowsRunningGate(gateScript, scripts) {
   for (const name of readdirSync(dir)) {
     if (!/\.ya?ml$/.test(name)) continue;
     const path = `.github/workflows/${name}`;
-    if (!workflowExecutedText(path, scripts).includes(gateScript)) continue;
+    const executed = workflowExecutedText(path, scripts);
+    if (!executed.split('\n').some((line) => lineInvokesScript(line, gateScript))) continue;
     result.push(path);
   }
   return result;

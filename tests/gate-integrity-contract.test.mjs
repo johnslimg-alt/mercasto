@@ -657,6 +657,7 @@ test('a fully specified waiver binds to its violation and is accepted', () => {
         check: 'dead-code-assertion',
         gate: 'scripts/waived-ok-gate.mjs',
         target: CONTROLLER_PATH,
+        literalContains: "orderBy('foo.dead'",
         owner: 'owner',
         reason: 'bound to one concrete violation',
       }],
@@ -747,6 +748,180 @@ test('negative control: a docblock callable pair does not make a method reachabl
     },
     ({ status, output }) => {
       assert.equal(status, 0, `a real callable pair must keep legacy reachable:\n${output}`);
+    }
+  );
+});
+
+test('negative control: a dead-code waiver without a binding literal is rejected', () => {
+  // Two dead assertions live in the same controller, so gate+target alone cannot
+  // identify one of them. Without literalContains the waiver would silently
+  // transfer to whichever assertion becomes dead next and outlive its owner's
+  // sign-off.
+  const files = {
+    [CONTROLLER_PATH]: controllerWith([
+      '    public function index()',
+      '    {',
+      "        $query->orderBy('foo.first', 'asc');",
+      '    }',
+      '    public function legacy()',
+      '    {',
+      "        $query->orderBy('foo.second', 'asc');",
+      '    }',
+    ]),
+    [ROUTES_PATH]: "<?php\n",
+    'scripts/ambiguous-gate.mjs': [
+      "import { readFileSync } from 'node:fs';",
+      'function assertContains(path, needle) {',
+      "  if (!readFileSync(path, 'utf8').includes(needle)) throw new Error('missing');",
+      '}',
+      `assertContains('${CONTROLLER_PATH}', "orderBy('foo.first', 'asc')", 'first');`,
+      `assertContains('${CONTROLLER_PATH}', "orderBy('foo.second', 'asc')", 'second');`,
+      '',
+    ].join('\n'),
+    'scripts/gate-integrity-waivers.json': JSON.stringify({
+      waivers: [{
+        check: 'dead-code-assertion',
+        gate: 'scripts/ambiguous-gate.mjs',
+        target: CONTROLLER_PATH,
+        owner: 'owner',
+        reason: 'no binding literal',
+      }],
+    }, null, 2),
+  };
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'an unbound dead-code waiver must be rejected');
+    assert.match(output, /invalid-waiver/);
+    assert.match(output, /literalContains is required/);
+  });
+});
+
+// --- Finding: a command must INVOKE the guard, not merely name it (P2) ----
+
+test('negative control: naming the guard without running it does not count', () => {
+  const base = {
+    [ROUTES_PATH]: "<?php\n",
+    [GUARD_PATH]: guardAsserting('workflow_dispatch', '.github/workflows/emergency-ssh-frontend-deploy.yml'),
+    '.github/workflows/emergency-ssh-frontend-deploy.yml': 'name: Emergency\non:\n  workflow_dispatch:\n',
+  };
+  const yaml = (run) => [
+    'name: Fixture',
+    'on:',
+    '  pull_request:',
+    '    paths:',
+    "      - 'scripts/**'",
+    "      - '.github/workflows/**'",
+    'jobs:',
+    '  check:',
+    '    steps:',
+    `      - run: ${run}`,
+    '',
+  ].join('\n');
+
+  // Control: a real invocation -> the guard runs, coverage holds.
+  withRepo(
+    { ...base, '.github/workflows/guard.yml': yaml(`node ${GUARD_PATH}`) },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a genuine invocation must count:\n${output}`);
+    }
+  );
+
+  // Naming the path is not executing it: `test -f` and `echo` contain the path.
+  for (const run of [`test -f ${GUARD_PATH}`, `echo ${GUARD_PATH}`]) {
+    withRepo(
+      { ...base, '.github/workflows/guard.yml': yaml(run) },
+      ({ status, output }) => {
+        assert.notEqual(status, 0, `"${run}" must NOT count as running the guard`);
+        assert.match(output, /gate-not-triggered/);
+      }
+    );
+  }
+});
+
+// --- Finding: inline (flow-style) workflow path filters (P2) -------------
+
+test('negative control: inline paths flow sequences are parsed', () => {
+  const base = {
+    [ROUTES_PATH]: "<?php\n",
+    [GUARD_PATH]: guardAsserting('workflow_dispatch', '.github/workflows/emergency-ssh-frontend-deploy.yml'),
+    '.github/workflows/emergency-ssh-frontend-deploy.yml': 'name: Emergency\non:\n  workflow_dispatch:\n',
+  };
+  const yaml = (paths) => [
+    'name: Fixture',
+    'on:',
+    '  pull_request:',
+    `    paths: [${paths}]`,
+    'jobs:',
+    '  check:',
+    '    steps:',
+    `      - run: node ${GUARD_PATH}`,
+    '',
+  ].join('\n');
+
+  // Control: the asserted workflow file is listed -> covered.
+  withRepo(
+    { ...base, '.github/workflows/guard.yml': yaml("'scripts/**', '.github/workflows/**'") },
+    ({ status, output }) => {
+      assert.equal(status, 0, `an inline list that covers the target must pass:\n${output}`);
+    }
+  );
+
+  // The inline list omits the asserted workflow file. Treating the filter as
+  // absent made the workflow look unfiltered and cover everything.
+  withRepo(
+    { ...base, '.github/workflows/guard.yml': yaml("'scripts/**'") },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'an inline list that omits the target must be honoured');
+      assert.match(output, /gate-not-triggered/);
+      assert.match(output, /emergency-ssh-frontend-deploy\.yml/);
+    }
+  );
+});
+
+// --- Finding: direct static controller calls are production reachability --
+
+test('negative control: a direct static controller call keeps the method reachable', () => {
+  const controller = controllerWith([
+    '    public static function notifyAdChange($ad)',
+    '    {',
+    "        $query->orderBy('foo.dead', 'asc');",
+    '    }',
+  ]);
+
+  // Without a static call site the method is unreachable.
+  withRepo(
+    {
+      [CONTROLLER_PATH]: controller,
+      [ROUTES_PATH]: "<?php\n",
+      'scripts/static-gate.mjs': guardAsserting("orderBy('foo.dead', 'asc')"),
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'an uncalled static method is still unreachable');
+      assert.match(output, /dead-code-assertion/);
+    }
+  );
+
+  // With one -- as AdObserver does for IndexNowController::notifyAdChange -- the
+  // method is live and must NOT be reported, or the checker would invite someone
+  // to delete working production code.
+  withRepo(
+    {
+      [CONTROLLER_PATH]: controller,
+      [ROUTES_PATH]: "<?php\n",
+      'backend/app/Observers/SomeObserver.php': [
+        '<?php',
+        'class SomeObserver',
+        '{',
+        '    public function created($ad)',
+        '    {',
+        "        FooController::notifyAdChange($ad);",
+        '    }',
+        '}',
+        '',
+      ].join('\n'),
+      'scripts/static-ok-gate.mjs': guardAsserting("orderBy('foo.dead', 'asc')"),
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a statically called method is reachable:\n${output}`);
     }
   );
 });
