@@ -111,9 +111,20 @@ for (let iter = 1; iter <= iterations; iter++) {
       dialogs: document.querySelectorAll('[role="dialog"]').length,
     }));
     detail = state;
+    // Verbatim culprit dump: every control that belongs to the registration form,
+    // plus every :invalid node in the document.
+    const dump = await form.evaluate((f) => ({
+      formId: f.id,
+      formCount: document.querySelectorAll('form').length,
+      formsContainingNameInput: Array.from(document.querySelectorAll('form')).filter(x => x.querySelector('input[name="name"]')).length,
+      nameInputsInDocument: document.querySelectorAll('input[name="name"]').length,
+      elements: Array.from(f.elements).map(e => ({ name: e.name, type: e.type, required: e.required, valid: e.checkValidity(), msg: e.validationMessage, form: f.id })),
+      invalidNodes: Array.from(document.querySelectorAll(':invalid')).map(e => ({ tag: e.tagName, name: e.name, type: e.type, closestForm: e.form && e.form.id })),
+    }));
     if (state.name !== 'Seller Redirect Test' || state.password !== 'SecurePass123!' || !state.valid) {
       verdict = 'CORRUPTED';
       corrupted++;
+      console.log(`  CULPRIT DUMP: ${JSON.stringify(dump)}`);
     } else {
       passed++;
     }

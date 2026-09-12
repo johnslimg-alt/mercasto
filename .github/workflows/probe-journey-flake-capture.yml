@@ -1,8 +1,10 @@
 name: Probe journey flake capture
 
 # TEMPORARY diagnostic workflow (branch-only, never merged).
-# Reproduces the seller-registration-redirect flake under real CI conditions with
-# trace + screenshot + instrumented timeline capture, then uploads the evidence.
+# A/B harness for the seller-registration-redirect focus race:
+#   1) run the focus-race probe N times and dump the culprit controls on corruption
+#   2) run the exact journey shard config once
+# The same workflow is run once without the fix and once with it.
 
 on:
   push:
@@ -33,6 +35,12 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Record built bundle identity
+        run: |
+          echo "index bundle:"; ls dist/assets | grep -E '^index-.*\.js$' || true
+          echo "requestAnimationFrame autofocus call sites remaining in App.jsx:"
+          grep -c "requestAnimationFrame" src/App.jsx || true
+
       - name: Start preview server
         run: |
           ./node_modules/.bin/vite preview --host 127.0.0.1 --port 4180 --strictPort >/tmp/probe-preview.log 2>&1 &
@@ -41,6 +49,19 @@ jobs:
             sleep 1
           done
           cat /tmp/probe-preview.log; exit 1
+
+      - name: Focus-race probe (60 iterations)
+        continue-on-error: true
+        run: |
+          node probe-focus-race.mjs http://127.0.0.1:4180 60 2>&1 | tee /tmp/probe-focus.log
+
+      - name: Instrumented fate probe (8 iterations)
+        continue-on-error: true
+        run: |
+          for i in $(seq 1 8); do
+            echo "##### PROBE ITERATION $i #####"
+            node probe-modal-fate.mjs http://127.0.0.1:4180 desktop 1 0 2>&1 || echo "PROBE ITERATION $i exited non-zero"
+          done | tee /tmp/probe-timeline.log
 
       - name: Exact journey shard repro (desktop + mobile, retries=0)
         continue-on-error: true
@@ -57,42 +78,19 @@ jobs:
             --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=0 --reporter=list \
             2>&1 | tee /tmp/probe-shard.log
 
-      - name: Repeated desktop spec with full trace
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          BASE_URL=http://127.0.0.1:4180 CI=1 npx playwright test \
-            tests/e2e/seller-registration-redirect.spec.js \
-            --project=chromium-desktop --workers=1 --retries=0 --repeat-each=25 \
-            --trace=on --screenshot=on --reporter=list 2>&1 | tee /tmp/probe-repeat.log
-
-      - name: Instrumented fate probe (10 iterations)
-        continue-on-error: true
-        run: |
-          for i in $(seq 1 10); do
-            echo "##### PROBE ITERATION $i #####"
-            node probe-modal-fate.mjs http://127.0.0.1:4180 desktop 1 0 2>&1 || echo "PROBE ITERATION $i exited non-zero"
-          done | tee /tmp/probe-timeline.log
-
-      - name: Focus-race probe (40 iterations)
-        continue-on-error: true
-        run: |
-          node probe-focus-race.mjs http://127.0.0.1:4180 40 2>&1 | tee /tmp/probe-focus.log
-
       - name: Summarize findings
         if: always()
         run: |
-          echo "=== shard failures ==="
-          grep -nE "✘|failed|passed" /tmp/probe-shard.log 2>/dev/null | tail -20 || true
-          echo "=== repeat failures ==="
-          grep -nE "✘|failed|passed" /tmp/probe-repeat.log 2>/dev/null | tail -20 || true
-          echo "=== probe verdicts ==="
-          grep -cE "poll: tries=" /tmp/probe-timeline.log 2>/dev/null || true
-          grep -nE "lastVal=false|lastErr=|aborted|REACT_WROTE_CHECKED|removeChild" /tmp/probe-timeline.log 2>/dev/null | head -40 || true
-          echo "=== focus-race verdicts ==="
-          grep -E "SUMMARY:|CORRUPTED|ERROR:" /tmp/probe-focus.log 2>/dev/null | head -30 || true
-          echo "=== focus-race detail (corrupted iterations) ==="
-          grep -E "CORRUPTED|FOCUS_CALL|VALUE_WRITE" /tmp/probe-focus.log 2>/dev/null | head -60 || true
+          echo "=== focus-race verdict summary ==="
+          grep -E "SUMMARY:" /tmp/probe-focus.log 2>/dev/null || true
+          echo "=== focus-race corrupted iterations (with culprit dump) ==="
+          grep -E "CORRUPTED|CULPRIT DUMP" /tmp/probe-focus.log 2>/dev/null | head -20 || true
+          echo "=== focus-race focus evidence (FOCUS_CALL / VALUE_WRITE) ==="
+          grep -E "FOCUS_CALL|VALUE_WRITE" /tmp/probe-focus.log 2>/dev/null | head -40 || true
+          echo "=== shard result ==="
+          grep -E "✘|failed|passed \(" /tmp/probe-shard.log 2>/dev/null | tail -10 || true
+          echo "=== fate probe verdicts ==="
+          grep -E "VERDICT|lastVal=" /tmp/probe-timeline.log 2>/dev/null | head -20 || true
 
       - name: Upload failure evidence
         if: always()
@@ -102,8 +100,7 @@ jobs:
           path: |
             test-results/**
             /tmp/probe-shard.log
-            /tmp/probe-repeat.log
-            /tmp/probe-timeline.log
             /tmp/probe-focus.log
+            /tmp/probe-timeline.log
           if-no-files-found: warn
           retention-days: 14
