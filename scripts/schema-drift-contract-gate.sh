@@ -13,8 +13,9 @@ for file in \
   backend/database/migrations/2026_08_07_051100_adopt_payment_products_table.php \
   ops/schema/known-unmanaged-production-tables.txt \
   scripts/schema-migration-inventory.py \
+  backend/database/seeders/PaymentProductsSeeder.php \
   scripts/production-schema-drift-smoke.sh; do
-  test -f "$file"
+  test -f "$file" || { echo "FAIL: missing observed file $file" >&2; exit 1; }
 done
 
 inventory="$(scripts/schema-migration-inventory.py)"
