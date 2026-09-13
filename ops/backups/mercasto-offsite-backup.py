@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, fcntl, hashlib, json, logging, os, shutil, subprocess, sys, tempfile
+import argparse, fcntl, hashlib, json, logging, os, secrets, shutil, subprocess, sys, tempfile, time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,6 +13,19 @@ LOG_PATH = Path('/var/log/mercasto-offsite-backup.log')
 FAILURE_PATH = STATE_DIR / 'FAILED'
 MIN_AGE_SECONDS = 120
 MAX_STATUS_AGE_HOURS = 30
+
+# Throwaway restore-drill target. The drill must never create a database inside
+# the production cluster, so it restores into a dedicated container that has its
+# own anonymous volume and no route to anything else. DEFAULT_RESTORE_IMAGE is
+# kept equal to the docker-compose postgres pin by
+# scripts/offsite-backup-contract-gate.sh, so the drill still proves the dump
+# restores on the production PostgreSQL version.
+DEFAULT_RESTORE_IMAGE = 'pgvector/pgvector:pg18'
+RESTORE_IMAGE = os.environ.get('MERCASTO_RESTORE_DRILL_IMAGE', DEFAULT_RESTORE_IMAGE)
+RESTORE_CONTAINER = 'mercasto_restore_drill'
+RESTORE_DB = 'mercasto_restore_drill'
+RESTORE_USER = 'restore_drill'
+RESTORE_READY_ATTEMPTS = 90
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)sZ %(levelname)s %(message)s',
                     handlers=[logging.FileHandler(LOG_PATH), logging.StreamHandler(sys.stdout)])
@@ -129,29 +142,78 @@ def upload_and_verify(s3, bucket, keys, src, plain_hash, toc_count, work):
         raise RuntimeError(f'remote TOC mismatch: local={toc_count} remote={remote_toc}')
     return enc_hash, remote_plain, remote_toc
 
+def start_drill_container():
+    # Reclaim a container left behind by a previous killed run first, so a stale
+    # drill container can never be mistaken for a live one. docker rm -f -v also
+    # removes the container's own anonymous volume.
+    subprocess.run(['docker','rm','-f','-v',RESTORE_CONTAINER], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # The credential is passed BY NAME: '-e POSTGRES_PASSWORD' with no value makes
+    # docker read it from this process environment, so the secret never enters
+    # argv and therefore can never surface in a CalledProcessError message or log.
+    env = dict(os.environ, POSTGRES_PASSWORD=secrets.token_hex(24))
+    run(['docker','run','-d',
+         '--name',RESTORE_CONTAINER,
+         '--network','none',
+         '--label','mercasto=restore-drill',
+         '-e',f'POSTGRES_USER={RESTORE_USER}',
+         '-e','POSTGRES_PASSWORD',
+         '-e',f'POSTGRES_DB={RESTORE_DB}',
+         RESTORE_IMAGE],
+        stdout=subprocess.DEVNULL, env=env)
+
+def wait_for_drill_container():
+    # Readiness must mean "the FINAL postmaster accepts queries", not just
+    # "something is listening". The image entrypoint runs initdb behind a
+    # temporary server that then exits, so a bare pg_isready probe can succeed
+    # and vanish, failing the restore on a closed socket. Require two consecutive
+    # successful queries with an unchanged postmaster start time instead.
+    previous = None
+    for _ in range(RESTORE_READY_ATTEMPTS):
+        try:
+            probe = run(['docker','exec',RESTORE_CONTAINER,'psql','-U',RESTORE_USER,'-d',RESTORE_DB,
+                         '-X','-Atqc','SELECT pg_postmaster_start_time();'],
+                        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            current = probe.stdout.strip()
+        except subprocess.CalledProcessError:
+            current = ''
+        if current:
+            if current == previous:
+                return
+            previous = current
+        else:
+            previous = None
+        time.sleep(1)
+    raise RuntimeError('restore drill container did not become ready')
+
 def scratch_restore(downloaded):
-    stamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
-    db = f'mercasto_restore_drill_{stamp}'
-    remote = f'/tmp/{db}.dump'
-    run(['docker','cp',str(downloaded),f'mercasto_db_container:{remote}'])
-    created = False
+    """Restore the newest dump into a throwaway container and verify it.
+
+    Isolation contract, asserted by scripts/offsite-backup-contract-gate.sh:
+      * a dedicated container, never the production database container;
+      * --network none and no published host port;
+      * its own anonymous volume, never the production data directory.
+    Cleanup runs in a single finally block, so it holds on success and on every
+    failure. A SIGKILL cannot run it, but the next run's leading `docker rm -f -v`
+    reclaims both the container and its volume.
+    """
     try:
-        run(['docker','exec','mercasto_db_container','sh','-lc',f'createdb -U "$POSTGRES_USER" {db}'])
-        created = True
-        run(['docker','exec','mercasto_db_container','sh','-lc',
-             f'pg_restore -U "$POSTGRES_USER" -d {db} --no-owner --no-privileges {remote}'],
-             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        q = run(['docker','exec','mercasto_db_container','sh','-lc',
-                 f"psql -U \"$POSTGRES_USER\" -d {db} -Atqc \"select count(*) from pg_tables where schemaname='public';\""],
+        start_drill_container()
+        wait_for_drill_container()
+        remote = f'/tmp/{RESTORE_DB}.dump'
+        run(['docker','cp',str(downloaded),f'{RESTORE_CONTAINER}:{remote}'], stdout=subprocess.DEVNULL)
+        run(['docker','exec',RESTORE_CONTAINER,'pg_restore',
+             '-U',RESTORE_USER,'-d',RESTORE_DB,
+             '--no-owner','--no-privileges',remote],
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        q = run(['docker','exec',RESTORE_CONTAINER,'psql','-U',RESTORE_USER,'-d',RESTORE_DB,
+                 '-X','-Atqc',"select count(*) from pg_tables where schemaname='public';"],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         tables = int(q.stdout.strip())
         if tables < 10:
             raise RuntimeError(f'scratch restore has too few public tables: {tables}')
-        return {'database': db, 'public_tables': tables, 'result': 'success'}
+        return {'database': RESTORE_DB, 'container': RESTORE_CONTAINER, 'public_tables': tables, 'result': 'success'}
     finally:
-        if created:
-            subprocess.run(['docker','exec','mercasto_db_container','sh','-lc',f'dropdb -U "$POSTGRES_USER" --if-exists {db}'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(['docker','exec','mercasto_db_container','rm','-f',remote], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(['docker','rm','-f','-v',RESTORE_CONTAINER], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def write_state(data):
     STATE_DIR.mkdir(parents=True, exist_ok=True)
