@@ -312,6 +312,22 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
+                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{t.total_views_count || 'Vistas totales'}</span>
+                    <span data-testid="admin-measured-views-value" className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
+                      {adminAnalytics ? formatNumber(adminAnalytics.total_views ?? 0, lang) : '—'}
+                    </span>
+                    {/* Source is named explicitly so the figure can never be confused with
+                        the unverified ads.views demo counter (docs/analytics/views-provenance.md). */}
+                    <span data-testid="admin-measured-views-source" className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
+                      ad_views
+                    </span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-500 shadow-sm border border-emerald-100/55 dark:border-emerald-900/30">
+                    <BarChart3 size={24} />
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <div>
                     <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{adminCopy.admin_global_ctr}</span>
                     <span data-testid="admin-ctr-value" className="text-3xl font-black text-blue-500 mt-1 block">
                       {adminAnalytics ? `${formatNumber(adminAnalytics.ctr ?? 0, lang, { maximumFractionDigits: 2 })}%` : '—'}

@@ -272,15 +272,66 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
     }
   }, [dashboardTab, loadUserPayments]);
 
+  // Measured seller analytics (server-side aggregates over ad_views /
+  // ad_impressions / ad_clicks). Loaded so the KPI cards never fall back to the
+  // unverified `ads.views` counter.
+  const [measuredSellerStats, setMeasuredSellerStats] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!user?.id) return undefined;
+    if (dashboardTab === 'settings' || dashboardTab === 'company') return undefined;
+
+    let cancelled = false;
+    const loadMeasuredSellerStats = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const base = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+        const res = await fetch(`${base}/seller/stats`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data && typeof data === 'object') setMeasuredSellerStats(data);
+      } catch {
+        // The KPI cards fall back to measured client-side counters and "—" for views.
+      }
+    };
+
+    void loadMeasuredSellerStats();
+    return () => { cancelled = true; };
+  }, [user?.id, dashboardTab]);
+
   const getDaysUntilExpiry = (expiresAt) => {
     if (!expiresAt) return null;
     const diff = new Date(expiresAt) - new Date();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
-  const totalViews = userAds.reduce((sum, ad) => sum + (ad.views || 0), 0);
-  const totalImpressions = userAds.reduce((sum, ad) => sum + (ad.impressions_count || 0), 0);
-  const totalContactClicks = userAds.reduce((sum, ad) => sum + (ad.whatsapp_clicks || 0), 0);
+  // Impressions and contacts are measured per-ad from the ad_impressions and
+  // ad_clicks logs (see AdController::myAds), so they are safe fallbacks.
+  const totalImpressionsFallback = userAds.reduce((sum, ad) => sum + (ad.impressions_count || 0), 0);
+  const totalContactClicksFallback = userAds.reduce((sum, ad) => sum + (ad.whatsapp_clicks || 0), 0);
+
+  // Measured view totals come from the server aggregate over the ad_views log.
+  // `ads.views` is NOT a measurement (synthetic demo values) and is therefore
+  // never used as the KPI here; the legacy value stays in the API payload under
+  // an explicitly unverified key.
+  const measuredViews = measuredSellerStats ? measuredSellerStats.total_views : null;
+  const totalViews = measuredViews;
+  const totalImpressions = measuredSellerStats?.total_impressions ?? totalImpressionsFallback;
+  const totalContactClicks = measuredSellerStats?.total_clicks ?? totalContactClicksFallback;
+
+  // Real week-over-week change, computed from the measured weekly windows.
+  // Previously this badge was a hardcoded "+12%".
+  const viewsWeeklyChange = (() => {
+    const thisWeek = Number(measuredSellerStats?.views_this_week);
+    const lastWeek = Number(measuredSellerStats?.views_last_week);
+    if (!Number.isFinite(thisWeek) || !Number.isFinite(lastWeek)) return null;
+    if (lastWeek <= 0) return null;
+    const percent = ((thisWeek - lastWeek) / lastWeek) * 100;
+    if (!Number.isFinite(percent)) return null;
+    return `${percent >= 0 ? '+' : ''}${percent.toFixed(0)}%`;
+  })();
 
   // Trust metrics
   const avgResponseTime = t.avg_response_under_2h;
@@ -535,17 +586,15 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             <StatCard 
               icon={Eye}
               label={t.total_views_count || 'Vistas totales'}
-              value={formatNumber(totalViews, lang)}
-              change="+12%"
-              trend="up"
+              value={totalViews === null ? '—' : formatNumber(totalViews, lang)}
+              change={viewsWeeklyChange}
+              trend={viewsWeeklyChange && viewsWeeklyChange.startsWith('-') ? 'down' : 'up'}
               color="green"
             />
             <StatCard 
               icon={MousePointer}
               label={t.contacts || 'Contactos'}
               value={totalContactClicks}
-              change="+8%"
-              trend="up"
               color="purple"
             />
             <StatCard 

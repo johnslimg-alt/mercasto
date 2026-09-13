@@ -28,7 +28,19 @@ class AdminAnalyticsController extends Controller
         $newUsers    = DB::table('users')->where('created_at', '>=', $since)->count();
         $newAds      = DB::table('ads')->where('created_at', '>=', $since)->count();
         $newMessages = DB::table('messages')->where('created_at', '>=', $since)->count();
-        $totalViews  = (int) DB::table('ads')->sum('views');
+
+        // Views are reported from the measurement log (`ad_views`) — the same
+        // table behind `genuine_listing_views` in the SEO measurement service —
+        // so this KPI has the same provenance as total_impressions/total_clicks.
+        //
+        // The legacy `ads.views` column is NOT a measurement: bulk demo seeders
+        // filled it with rand() and it is off by four orders of magnitude. It is
+        // still exposed for transparency under an explicitly unverified key,
+        // never as the KPI. See docs/analytics/views-provenance.md.
+        $totalViews  = (int) DB::table('ad_views')->count();
+        $viewsPeriod = (int) DB::table('ad_views')->where('created_at', '>=', $since)->count();
+        $legacyViewsCounter = (int) DB::table('ads')->sum('views');
+
         $totalImpressions = (int) DB::table('ad_impressions')->count();
         $totalClicks = (int) DB::table('ad_clicks')->count();
         $clicksByChannel = DB::table('ad_clicks')
@@ -208,6 +220,14 @@ class AdminAnalyticsController extends Controller
             'new_ads'        => $newAds,
             'new_messages'   => $newMessages,
             'total_views'    => $totalViews,
+            'total_views_period' => $viewsPeriod,
+            'total_views_source' => 'ad_views',
+            'total_views_verified' => true,
+            // Deliberately published, deliberately labelled: this is the old
+            // sum(ads.views) headline, which is synthetic demo data.
+            'total_views_legacy_counter' => $legacyViewsCounter,
+            'total_views_legacy_counter_verified' => false,
+            'total_views_legacy_counter_note' => 'Contador heredado de ads.views, no verificado: fue poblado con valores aleatorios por seeders de demostración. No usar como KPI.',
             'total_impressions' => $totalImpressions,
             'total_clicks'    => $totalClicks,
             'ctr'             => $totalImpressions > 0 ? round(($totalClicks / $totalImpressions) * 100, 2) : 0,

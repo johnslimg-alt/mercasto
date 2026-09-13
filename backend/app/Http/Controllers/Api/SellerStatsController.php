@@ -17,14 +17,20 @@ class SellerStatsController extends Controller
         // --- Basic ad counts ---
         $totalAds  = DB::table('ads')->where('user_id', $userId)->count();
         $activeAds = DB::table('ads')->where('user_id', $userId)->where('status', 'active')->count();
+        $adIds = DB::table('ads')->where('user_id', $userId)->pluck('id');
 
-        // --- Aggregate view count from ads.views column ---
-        $totalViews = (int) DB::table('ads')
+        // --- Measured views from the ad_views log (never sum(ads.views), which
+        //     holds synthetic demo values written by bulk seeders; see
+        //     docs/analytics/views-provenance.md) ---
+        $totalViews = (int) DB::table('ad_views')
+            ->whereIn('ad_id', $adIds)
+            ->count();
+        $legacyViewsCounter = (int) DB::table('ads')
             ->where('user_id', $userId)
             ->sum('views');
 
         $totalImpressions = (int) DB::table('ad_impressions')
-            ->whereIn('ad_id', $adIds = DB::table('ads')->where('user_id', $userId)->pluck('id'))
+            ->whereIn('ad_id', $adIds)
             ->count();
 
         $totalClicks = (int) DB::table('ad_clicks')
@@ -108,16 +114,13 @@ class SellerStatsController extends Controller
             ];
         }
 
-        // --- Fallback: if ad_views log is empty but ads.views has data, distribute evenly ---
-        if ($viewsThisWeek === 0 && $totalViews > 0) {
-            $dailyAvg = (int) round($totalViews / max($totalAds * 30, 30));
-            foreach ($viewsByDay as &$day) {
-                $day['views'] = $dailyAvg;
-            }
-            unset($day);
-            $viewsThisWeek = $dailyAvg * 7;
-            $viewsLastWeek = $dailyAvg * 7;
-        }
+        // The previous implementation synthesised a plausible 7-day curve from
+        // sum(ads.views) whenever the log was empty, which invented a time series
+        // that was never measured. Removed deliberately: an empty measured series
+        // is reported as empty and flagged via views_series_source.
+        $viewsSeriesSource = ($viewsThisWeek > 0 || $viewsLastWeek > 0 || $totalViews > 0)
+            ? 'ad_views'
+            : 'none';
 
         // --- Favorites ---
         $totalFavorites = DB::table('favorites')
@@ -164,6 +167,11 @@ class SellerStatsController extends Controller
             'total_ads'       => $totalAds,
             'active_ads'      => $activeAds,
             'total_views'     => $totalViews,
+            'total_views_source' => 'ad_views',
+            'total_views_verified' => true,
+            'total_views_legacy_counter' => $legacyViewsCounter,
+            'total_views_legacy_counter_verified' => false,
+            'views_series_source' => $viewsSeriesSource,
             'total_impressions' => $totalImpressions,
             'total_clicks'    => $totalClicks,
             'ctr'             => $totalImpressions > 0 ? round(($totalClicks / $totalImpressions) * 100, 2) : 0,
