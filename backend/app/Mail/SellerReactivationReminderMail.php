@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\User;
+use App\Support\MailLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -19,7 +20,10 @@ class SellerReactivationReminderMail extends Mailable implements ShouldQueue
         public int $readyCount,
         public string $stage,
         public string $actionUrl,
-    ) {}
+    ) {
+        // Spanish-only template: pin the mail locale so the shared layout footer renders in Spanish.
+        $this->locale(MailLocale::FALLBACK);
+    }
 
     public function envelope(): Envelope
     {
