@@ -1,10 +1,21 @@
 import { classifyReferrerHost, isAiReferralSource, normalizeTrafficSource } from './trafficSourceClassification.js';
+import { getVendorConsentState, hasVendorConsent, subscribeTrackingConsent } from './trackingConsent.js';
 
 const FIRST_TOUCH_KEY = 'mercasto.attribution.first.v1';
 const LAST_TOUCH_KEY = 'mercasto.attribution.last.v1';
 const SESSION_TOUCH_KEY = 'mercasto.attribution.session.v1';
 const PATCH_MARKER = '__mercastoCampaignAttribution';
 const ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Campaign context captured before an analytics consent grant. It stays in
+// memory only: nothing is written to localStorage/sessionStorage until the
+// visitor grants, so a visitor who declines leaves no stored attribution trace.
+// The cost of a reload before consent is the in-memory first touch (the landing
+// campaign of that page load), which is re-captured from the new URL/referrer.
+let pendingFirstTouch = null;
+let pendingLastTouch = null;
+// True once this page session persisted attribution under a grant.
+let persistedWhileGranted = false;
 
 const PARAMS = {
   source: 'utm_source',
@@ -129,11 +140,66 @@ export function attributionFromUrl(rawUrl = window.location.href, allowReferrer 
 function persistAttribution(attribution) {
   if (!attribution) return;
 
+  // Persistence only happens under a grant (capture gate or flush), so this marks
+  // that a later refusal is a live granted -> denied withdrawal whose values are
+  // worth keeping in memory for a possible re-grant.
+  persistedWhileGranted = true;
+
   const firstTouch = safeRead(localStorage, FIRST_TOUCH_KEY);
   if (!firstTouch) safeWrite(localStorage, FIRST_TOUCH_KEY, attribution);
 
   safeWrite(localStorage, LAST_TOUCH_KEY, attribution);
   safeWrite(sessionStorage, SESSION_TOUCH_KEY, attribution);
+}
+
+// Consent-gated write path. Before a grant the capture waits in memory; once
+// consent is granted the pending capture is flushed and later captures persist
+// directly (unchanged behaviour for consenting visitors).
+function rememberPendingAttribution(attribution) {
+  if (!pendingFirstTouch) pendingFirstTouch = attribution;
+  pendingLastTouch = attribution;
+}
+
+function flushPendingAttribution() {
+  if (!hasVendorConsent()) return;
+
+  const first = pendingFirstTouch;
+  const last = pendingLastTouch;
+  pendingFirstTouch = null;
+  pendingLastTouch = null;
+
+  if (first) persistAttribution(first);
+  if (last && last !== first) persistAttribution(last);
+}
+
+// A refusal erases campaign storage written by an earlier session. For a live
+// granted -> denied withdrawal the values are first moved into the in-memory
+// capture (memory only, never persisted), so withdrawing and granting again on
+// the same landing page keeps its attribution. That preservation is deliberately
+// limited to withdrawals this page session actually granted: copying stale
+// attribution during the initial cleanup of an already-refused visitor would
+// resurrect an old campaign for their next grant and misattribute the session.
+function preservePendingFromStorage() {
+  if (!pendingFirstTouch) {
+    const storedFirst = safeRead(localStorage, FIRST_TOUCH_KEY);
+    if (storedFirst) pendingFirstTouch = storedFirst;
+  }
+  if (!pendingLastTouch) {
+    const storedLast = safeRead(sessionStorage, SESSION_TOUCH_KEY) || safeRead(localStorage, LAST_TOUCH_KEY);
+    if (storedLast) pendingLastTouch = storedLast;
+  }
+}
+
+function clearStoredAttribution({ preserve = false } = {}) {
+  if (preserve && persistedWhileGranted) preservePendingFromStorage();
+
+  try {
+    localStorage.removeItem(FIRST_TOUCH_KEY);
+    localStorage.removeItem(LAST_TOUCH_KEY);
+    sessionStorage.removeItem(SESSION_TOUCH_KEY);
+  } catch {
+    // Storage may be unavailable in restricted browsers.
+  }
 }
 
 export function getCampaignAttribution() {
@@ -142,7 +208,8 @@ export function getCampaignAttribution() {
   const sessionTouch = safeRead(sessionStorage, SESSION_TOUCH_KEY);
   const lastTouch = safeRead(localStorage, LAST_TOUCH_KEY);
   const firstTouch = safeRead(localStorage, FIRST_TOUCH_KEY);
-  const active = sessionTouch || lastTouch || firstTouch || {};
+  const active = pendingLastTouch || sessionTouch || lastTouch || firstTouch || {};
+  const first = firstTouch || pendingFirstTouch;
 
   return {
     attribution_source: clean(active.source),
@@ -156,8 +223,8 @@ export function getCampaignAttribution() {
     attribution_referrer_host: clean(active.referrerHost),
     attribution_ai_referral: active.channel === 'ai_referral' || isAiReferralSource(active.source),
     attribution_landing_path: clean(active.landingPath, 500),
-    first_touch_source: clean(firstTouch?.source),
-    first_touch_campaign: clean(firstTouch?.campaign),
+    first_touch_source: clean(first?.source),
+    first_touch_campaign: clean(first?.campaign),
   };
 }
 
@@ -201,7 +268,14 @@ function patchDataLayer() {
 
 function capture(rawUrl, allowReferrer = false) {
   const attribution = attributionFromUrl(rawUrl, allowReferrer);
-  if (attribution) persistAttribution(attribution);
+  if (!attribution) return;
+
+  if (!hasVendorConsent()) {
+    rememberPendingAttribution(attribution);
+    return;
+  }
+
+  persistAttribution(attribution);
 }
 
 function patchHistory() {
@@ -230,4 +304,19 @@ export function installCampaignAttribution() {
   patchHistory();
   window.addEventListener('popstate', () => capture(window.location.href, false));
   window.__mercastoCampaignAttribution = getCampaignAttribution;
+
+  // Consent gate: attribute storage is written only after a grant. A visitor who
+  // already refused starts clean (initial cleanup, nothing preserved), and a
+  // later grant flushes the in-memory capture.
+  if (getVendorConsentState() === 'denied') clearStoredAttribution();
+  subscribeTrackingConsent((state) => {
+    if (state === 'granted') {
+      flushPendingAttribution();
+      return;
+    }
+    if (state === 'denied') {
+      // Live withdrawal: keep this session's values in memory for a re-grant.
+      clearStoredAttribution({ preserve: true });
+    }
+  });
 }

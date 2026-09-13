@@ -94,6 +94,8 @@ const META_STANDARD_EVENT_MAP = {
 let vendorsReady = false;
 let vendorActivationAllowed = false;
 let pendingVendorEvents = [];
+let preConsentPageViewDropped = false;
+let preConsentActivitySeen = false;
 let behaviorReady = false;
 let lastUrl = '';
 let pageStartedAt = Date.now();
@@ -184,19 +186,51 @@ function sanitizeParams(params = {}) {
   return out;
 }
 
+const SESSION_ID_KEY = 'mercasto_analytics_session_id';
+
+// Session correlation id. Before a consent grant it exists in memory only, so
+// the pre-consent window writes no identifier to the browser; once consent is
+// granted the same value is persisted, so the session keeps its continuity.
+let memorySessionId = '';
+let sessionIdSequence = 0;
+
+// Prefer a CSPRNG identifier. The fallback is a non-secret monotonic value: it
+// deliberately avoids Math.random(), which has no place in an analytics
+// identifier (CodeQL js/insecure-randomness).
+function createSessionId() {
+  const cryptoApi = isBrowser() ? window.crypto : undefined;
+
+  try {
+    if (typeof cryptoApi?.randomUUID === 'function') return cryptoApi.randomUUID();
+    if (typeof cryptoApi?.getRandomValues === 'function') {
+      const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+  } catch {
+    // Fall through to the monotonic id below.
+  }
+
+  sessionIdSequence += 1;
+  return `${Date.now().toString(36)}-${sessionIdSequence.toString(36)}`;
+}
+
 function getSessionId() {
   if (!isBrowser()) return '';
+  if (!memorySessionId) memorySessionId = createSessionId();
+
+  if (!hasVendorConsent()) return memorySessionId;
+
   try {
-    const key = 'mercasto_analytics_session_id';
-    let existing = sessionStorage.getItem(key);
-    if (!existing) {
-      existing = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-      sessionStorage.setItem(key, existing);
+    const stored = sessionStorage.getItem(SESSION_ID_KEY);
+    if (stored) {
+      memorySessionId = stored;
+      return stored;
     }
-    return existing;
+    sessionStorage.setItem(SESSION_ID_KEY, memorySessionId);
   } catch {
-    return '';
+    // Restricted browsers keep the in-memory id.
   }
+  return memorySessionId;
 }
 
 function inferRouteGroup(pathname) {
@@ -471,6 +505,21 @@ export function activateAnalyticsVendors() {
   queued.forEach(({ eventName, params }) => deliverVendorEvent(eventName, params));
   window.__mercastoAnalyticsVendorsActivated = true;
   window.__mercastoAnalyticsVendorsRevoked = false;
+
+  if (preConsentActivitySeen) {
+    preConsentActivitySeen = false;
+    // Measurement starts at the grant: dwell time, scroll depth and click
+    // context accumulated while consent was unknown are dropped, so no later
+    // heartbeat or page_dwell report covers the pre-consent interval.
+    resetConsentScopedEngagement();
+  }
+
+  if (preConsentPageViewDropped) {
+    preConsentPageViewDropped = false;
+    // Measurement starts now, so the visitor who granted mid-session is counted
+    // for the page they granted on. Nothing from before the grant is delivered.
+    trackPageView(undefined, undefined, { consent_grant: true });
+  }
   return true;
 }
 
@@ -483,9 +532,16 @@ export function revokeAnalyticsVendors() {
   vendorActivationAllowed = false;
   vendorsReady = false;
   pendingVendorEvents = [];
+  memorySessionId = '';
 
   syncVendorConsent(false);
   purgeVendorCookies();
+  // The analytics session id is a first-party identifier: a withdrawal removes it.
+  try {
+    sessionStorage.removeItem(SESSION_ID_KEY);
+  } catch {
+    // Storage may be unavailable in restricted browsers.
+  }
 
   window.__mercastoAnalyticsVendorsActivated = false;
   window.__mercastoAnalyticsVendorsRevoked = true;
@@ -496,12 +552,17 @@ export function trackEvent(eventName, params = {}) {
   if (!isEnabled()) return;
 
   const consentState = getVendorConsentState();
+  // Remembered so the grant can drop everything accumulated before it.
+  if (consentState !== 'granted') preConsentActivitySeen = true;
   const name = normalizeEventName(eventName);
   const payload = sanitizeParams({
     ...getPageContext(),
     ...params,
     platform: 'web',
     analytics_contract_version: FUNNEL_ANALYTICS_VERSION,
+    // Stamped so bridges and deferred replay can tell whether the event
+    // happened while the visitor had already granted consent.
+    consent_state: consentState,
     session_id: getSessionId(),
   });
 
@@ -509,24 +570,29 @@ export function trackEvent(eventName, params = {}) {
     console.debug('[Mercasto analytics]', name, payload);
   }
 
-  // The gtag() queue is local until the gtag.js library is fetched, so events
-  // collected while the visitor has not decided yet stay measured. Nothing is
-  // queued once consent was refused, and nothing is sent after a withdrawal.
-  if (consentState !== 'denied') {
+  // GA4 receives nothing that happened before a grant. The gtag() queue is
+  // flushed by gtag.js when it loads, so queueing pre-consent events would
+  // deliver them retroactively; a dropped page_view is re-emitted at grant time
+  // instead (see activateAnalyticsVendors). A page_view that is already granted
+  // clears that flag, so the grant is measured once and never twice.
+  if (consentState === 'granted') {
     const gtag = getGtag();
     if (gtag) gtag('event', name, payload);
+    if (name === 'page_view') preConsentPageViewDropped = false;
+  } else if (name === 'page_view') {
+    preConsentPageViewDropped = true;
   }
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ event: name, ...payload });
 
-  // Vendor activation stays owned by the bootstrap scheduler (first interaction,
-  // consent-aware fallback or a fresh grant). Until then events wait locally and
-  // are replayed with their original ids by activateAnalyticsVendors().
-  if (consentState === 'granted' && vendorActivationAllowed) {
-    deliverVendorEvent(name, payload);
-  } else if (consentState !== 'denied') {
-    queueVendorEvent(name, payload);
+  // Vendor events are buffered only under an existing grant: that buffer is
+  // deferred delivery for consenting visitors, never a retroactive path for
+  // events collected before consent. Refused and undecided visitors keep no
+  // vendor buffer at all.
+  if (consentState === 'granted') {
+    if (vendorActivationAllowed) deliverVendorEvent(name, payload);
+    else queueVendorEvent(name, payload);
   }
 }
 
@@ -551,6 +617,16 @@ function resetPageEngagement() {
   pageStartedAt = Date.now();
   maxScrollPercent = getScrollPercent();
   scrollThresholdsHit = new Set();
+}
+
+// Grant-time reset: unlike a route change, nothing measured before the grant may
+// be reported afterwards, so scroll depth restarts at zero instead of inheriting
+// the position already reached while consent was unknown.
+function resetConsentScopedEngagement() {
+  pageStartedAt = Date.now();
+  maxScrollPercent = 0;
+  scrollThresholdsHit = new Set();
+  recentClicks = [];
 }
 
 function flushPageDwell(reason = 'route_change') {

@@ -1,10 +1,36 @@
 import { trackEvent } from './analytics';
 import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
-import { hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
+import { getVendorConsentState, hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const META_API_BASE = '/api/meta/events';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
 const META_BROWSER_SENT_MARKER = '__mercastoMetaBrowserSent';
+
+// Consent invariant for every vendor-side delivery: only an explicit
+// `consent_state === 'granted'` stamp is deliverable or replayable. Missing,
+// empty, unknown and unstampable (frozen) items are treated as pre-consent and
+// must never reach a vendor. This governs the browser copy only: the
+// first-party server relay (POST /api/meta/events/*) receives the event
+// regardless, and gates its own onward transfer to Meta/TikTok/OpenAI in the
+// backend (App\Support\AnalyticsTrackingConsent::allowsVendorEgress).
+function isGrantedConsentState(item = {}) {
+  return String(item?.consent_state || '').toLowerCase() === 'granted';
+}
+
+// Stamps an item with the consent state at push time, so delivery and replay can
+// tell which side of the grant it came from. Already stamped items are
+// untouched; an item that cannot be stamped (frozen/immutable) stays unstamped
+// and is therefore never delivered or replayed.
+function stampConsentState(item = {}) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+  if (item.consent_state) return item;
+  try {
+    item.consent_state = getVendorConsentState();
+  } catch {
+    // Frozen or exotic items stay unstamped: not granted, never delivered.
+  }
+  return item;
+}
 
 const EVENT_MAP = {
   ad_posted: { endpoint: 'post-ad', metaName: 'PostAd', custom: true },
@@ -130,7 +156,7 @@ function sendBrowserEvent(metaConfig, payload, eventID) {
   return true;
 }
 
-function sendMappedEvent(metaConfig, item = {}) {
+function sendMappedEvent(metaConfig, item = {}, { browserAllowed = true } = {}) {
   const payload = buildPayload(item);
   const isReg = metaConfig.metaName === 'CompleteRegistration';
   const isPostAd = metaConfig.metaName === 'PostAd';
@@ -156,7 +182,8 @@ function sendMappedEvent(metaConfig, item = {}) {
     // Analytics must never block the user action when a frozen object is supplied.
   }
 
-  if (sendBrowserEvent(metaConfig, serverPayload, id)) {
+  // Browser copy: consented items only (see isGrantedConsentState).
+  if (browserAllowed && sendBrowserEvent(metaConfig, serverPayload, id)) {
     try {
       item[META_BROWSER_SENT_MARKER] = true;
     } catch {
@@ -164,6 +191,11 @@ function sendMappedEvent(metaConfig, item = {}) {
     }
   }
 
+  // Server relay: first-party receipt, so it is intentionally not gated by
+  // cookie consent here. Mapped events keep flowing to POST /api/meta/events/*
+  // for every visitor; the backend decides what leaves the server, and it
+  // forwards to Meta/TikTok/OpenAI only on an explicit affirmative consent
+  // signal (App\Support\AnalyticsTrackingConsent::allowsVendorEgress).
   if (metaConfig.server !== false && metaConfig.endpoint) {
     void sendServerEvent(metaConfig.endpoint, serverPayload);
   }
@@ -174,7 +206,11 @@ function handleDataLayerItem(item = {}) {
   const normalizedEvent = String(item.event || '').trim().toLowerCase();
   const metaConfig = EVENT_MAP[normalizedEvent];
   if (!metaConfig) return;
-  sendMappedEvent(metaConfig, item);
+  // Browser Pixel copy requires an explicit granted stamp; missing, unknown and
+  // unstampable items are pre-consent and never reach Meta's browser pixel. The
+  // server relay inside sendMappedEvent stays ungated because receipt is
+  // first-party; its onward transfer is gated in the backend.
+  sendMappedEvent(metaConfig, item, { browserAllowed: isGrantedConsentState(item) });
 }
 
 function isRegistrationRequest(input, init = {}) {
@@ -294,12 +330,17 @@ export function installMetaCapiBridge() {
   patchRegistrationFetch();
 
   window.dataLayer = window.dataLayer || [];
-  window.dataLayer.forEach(handleDataLayerItem);
+  // History is NOT stamped here. Labelling an old item with the state observed
+  // at install time would mark pre-consent events as granted whenever the
+  // visitor accepted before this bridge loaded, and they would then be replayed.
+  // Unstamped history therefore stays unstamped and is never delivered to a
+  // vendor; only the items pushed from now on are stamped, at push time.
+  window.dataLayer.forEach((item) => handleDataLayerItem(item));
 
   const originalPush = window.dataLayer.push.bind(window.dataLayer);
   window.dataLayer.push = (...items) => {
     const result = originalPush(...items);
-    items.forEach(handleDataLayerItem);
+    items.forEach((item) => handleDataLayerItem(stampConsentState(item)));
     return result;
   };
 
@@ -312,6 +353,10 @@ export function replayMetaBrowserEvents() {
 
   dataLayer.forEach((item = {}) => {
     if (!item || typeof item !== 'object' || item[META_BROWSER_SENT_MARKER]) return;
+    // Deferred replay is consented-only: only an explicit granted stamp is
+    // replayable, so events raised before the grant (or items that could not be
+    // stamped) stay local and are never sent to Meta after the visitor agrees.
+    if (!isGrantedConsentState(item)) return;
     const normalizedEvent = String(item.event || '').trim().toLowerCase();
     const metaConfig = EVENT_MAP[normalizedEvent];
     if (!metaConfig) return;
