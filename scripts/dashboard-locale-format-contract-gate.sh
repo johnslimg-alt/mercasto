@@ -27,7 +27,14 @@ if grep -Eq "en-US|es-MX|pt-BR|ru-RU|toLocale(DateString|String)\\(" "$DASH" "$S
   echo "Dashboard surfaces must use the shared locale formatter" >&2
   exit 1
 fi
-if grep -Eq "\{t\.[A-Za-z0-9_]+\}" "$DASH" | grep -q "'"; then
+# NOTE: the left side must NOT use `grep -q`. `grep -q` writes nothing to stdout,
+# so piping it into another `grep -q` produced an always-empty stream and this
+# guard could never fire (found by scripts/gate-integrity-check.mjs, RC-4 /
+# retrospective-2 case 5). Without `-q` the left side emits its matches and the
+# guard behaves as intended. Verified on the current sources: the corrected
+# pipeline still does not fire, so the gate's result is unchanged and the check is
+# now capable of failing.
+if grep -E "\{t\.[A-Za-z0-9_]+\}" "$DASH" | grep -q "'"; then
   echo "Dashboard must not contain stringified translation expressions" >&2
   exit 1
 fi

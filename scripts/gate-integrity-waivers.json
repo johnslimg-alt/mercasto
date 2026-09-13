@@ -2,18 +2,31 @@
   "_comment": [
     "Waivers for scripts/gate-integrity-check.mjs.",
     "",
-    "A waiver suppresses a violation that is already owned by another in-flight PR.",
-    "Every waiver MUST name owner, reason, gate and target: enough to bind it to ONE",
-    "concrete violation. A broad {\"check\": \"...\"} entry is rejected as invalid-waiver,",
-    "because it could suppress whichever matching violation appeared first and stay",
-    "non-stale as one violation replaced another.",
+    "A waiver records a finding that is REAL and OWNED but not yet fixed, or one that",
+    "another in-flight PR owns. Each must name owner, reason, gate and -- for checks",
+    "whose identity includes a target -- target; dead-code waivers additionally require",
+    "literalContains so they cannot transfer between assertions.",
     "",
-    "Waivers are self-expiring: once the owning PR lands and the violation disappears,",
-    "the check reports the waiver as 'stale-waiver' and fails CI until the entry is",
-    "deleted. That is deliberate -- a waiver cannot rot into a permanent silent",
-    "suppression.",
+    "Waivers are self-expiring: once the finding disappears the check reports",
+    "'stale-waiver' and fails CI until the entry is deleted.",
     "",
-    "Do NOT add a waiver to make a real violation disappear. Fix the gate."
+    "Do NOT add a waiver to make a real violation disappear. Fix it, or declare it here",
+    "with an owner and an honest reason."
   ],
-  "waivers": []
+  "waivers": [
+    {
+      "check": "asserted-orphan",
+      "gate": "scripts/csrf-session-contract-gate.sh",
+      "target": "src/contexts/AuthContext.jsx",
+      "owner": "gate-maintenance",
+      "reason": "REAL FINDING, awaiting fix (retrospective-2 RC-3). AuthContext.jsx is imported only by src/contexts/AppProviders.jsx, which nothing imports, and `useAuth` has no consumers -- so this gate asserts the CSRF/session contract inside a file that never executes in the browser. Declared rather than fixed because retargeting it means identifying the live session surface, which is a gate rewrite outside this task's scope. Re-verified 2026-09-13."
+    },
+    {
+      "check": "asserted-orphan",
+      "gate": "scripts/fixed-period-plan-copy-gate.sh",
+      "target": "src/components/screens/legal/ReembolsosScreen.jsx",
+      "owner": "gate-maintenance",
+      "reason": "REAL FINDING, awaiting fix (retrospective-2 RC-3 case 6, D-054). ReembolsosScreen.jsx is imported by nothing while the shipped page is public/reembolsos/index.html -- the exact wrong-observation-surface defect, where the gate watched a component the browser never runs. Declared rather than fixed because the correct target is the delivered static page and rewriting the assertion is outside this task's scope. Re-verified 2026-09-13."
+    }
+  ]
 }

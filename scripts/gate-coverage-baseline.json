@@ -1,0 +1,667 @@
+{
+  "owner": "gate-maintenance",
+  "recordedAt": "2026-09-13",
+  "reason": "RC-4 population from retrospective-2 section 1 case 5, recorded by eng11. These gates have no detectable control proving they can fail: no companion scripts/<name>.test.*, no tests/**/*.test.mjs naming them, and no in-gate assertion program. Listing 165 gates individually would be 165 near-identical entries, so the population carries one owner and one reason instead. THE POPULATION MAY NOT GROW: a gate without a control that is not listed here fails the check outright, and a listed gate that gains a control becomes stale and MUST have its entry deleted, so the number can only fall.",
+  "entries": [
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/account-deletion-private-data-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/ad-activation-lifecycle-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/add-i18n-keys.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/admin-request-changes-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/admin-seo-measurement-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/ai-agent-action-safety-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/ai-description-editor-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/analytics-csp-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/apply-production-hotfixes.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/auth-account-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/auth-providers-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/backend-ai-provider-boundary-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/backup-freshness-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/backup-permission-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/backup-restore-verify.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/billing-readiness-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/bugsink-bootstrap.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/bugsink-compose-env-readiness.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/bugsink-runtime-alerts-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/business-profile-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/cache-header-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/cache-policy-scan.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/capture-authenticated-ui-visual-evidence.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/capture-ui-visual-evidence.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/catalog-index-hygiene-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/catalog-reference-integrity-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/category-data-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/category-schema-audit.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/chat-api-security-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/chat-localization-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/check-route-inventory-artifact.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/client-spa-route-coverage-gate.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/clip-e2e-mock.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/compose-config-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/compose-image-digest-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/crawler-policy-production-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/csrf-session-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/dashboard-locale-format-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/dependency-update-audit.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/deploy-orphan-cleanup-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/dispatch-launch-evidence-workflows.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/docker-build-cache-cleanup-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/e2e-fixture-safety-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/edit-ad-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/email-case-identity-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/ensure-courier-origin-prereqs.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/ensure-local-ai-models.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/export-route-inventory.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/fix-public-copy-fallbacks.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/frontend-interaction-contract.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/gamification-active-progress-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/gamification-activity-endpoint-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/gamification-photo-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/gamification-referral-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/gamification-schema-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/geo-seo-plan-contract.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/github-security-scanning-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/harden-host.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/i18n-audit.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/isolated-launch-e2e-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/launch-artifact-inventory.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/launch-readiness-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/launch-status-summary.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/legacy-secret-fallback-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/legal-readiness-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/listing-lifecycle-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/listing-route-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/llamacpp-moderation-quality-benchmark.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/llamacpp-vision-benchmark-json-schema.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/llamacpp-vision-benchmark-tolerant.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/llamacpp-vision-benchmark.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/lmstudio-sdk-benchmark-wrapper.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/lmstudio-vision-benchmark.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/location-search-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/maintenance-reboot-operator-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/map-shell-localization-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/mcp-production-retirement-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/media-offsite-backup-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/media-upload-validation-scan.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/mobile-app-association-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/moderation-pipeline-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/monetization-plan-contract.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/mx-spanish-punctuation-gate.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/no-unused-graphql-surface-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/npm-audit-policy.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/offsite-backup-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/offsite-backup-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/ollama-e2e-mock.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/os-maintenance-precheck.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/otp-abuse-control-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/payment-payload-privacy-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/payment-retention-guard.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/payment-retention-scan.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/payment-webhook-idempotency-scan.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/php-runtime-dependency-parity-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/playwright-spec-titles.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/port-ownership-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/post-edit-localization-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/postgres-observability-activation-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/postgres-observability-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/postgres-observability-health.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/postgres-observability-snapshot.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/postgres-query-profile.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/privacy-retention-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/privacy-retention-dry-run.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/privacy-retention-index-readiness.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/privacy-retention-plan-readiness.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/private-identity-storage-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/production-e2e-account-security-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/production-env-readiness-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/production-error-mode-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/production-route-audit.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/production-schema-drift-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/production-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/profile-edit-localization-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/public-e2e-ci.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/public-manifest-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/public-ui-route-coverage-gate.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/public-ui-route-policy.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/public-ui-visual-evidence-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/publish-taxonomy-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/python-ai-dependency-audit.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/python-ai-private-runtime-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/real-estate-unmanaged-dependency-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/real-estate-unmanaged-dependency-scan.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/referral-localization-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/registration-consent-contract.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/repair-rdc-agent.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/report-reason-localization-contract.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/reverb-healthcheck-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/root-owned-checkout-workflow-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/route-inventory-doc-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/route-inventory-freshness-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/route-inventory-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/runtime-host-privilege-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/saved-searches-localization-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/schema-drift-contract-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/search-alert-flow-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/security-audit-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/security-probes.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/self-hosted-workflow-tempfile-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/seller-correction-flow-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/seller-reactivation-reminder-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/sensitive-profile-reauth-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/seo-public-audit.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/seo-public-audit.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/seo-route-shell-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/seo-url-inspection-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/seo-weekly-measurement-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/server-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/server-operator-branch-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/server-operator.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/server-status-safe.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/share-og-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/sitemap-shell-contract.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/smoke-tempfile-safety-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/smoke-test.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/sms-launch-mode-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/sms-readiness-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/submit-all-to-indexnow.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/supply-readiness-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/update-sitemaps.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/verify-vite-dist.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/vertical-seo-contract.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/xml-upload-security-gate.sh"
+    }
+  ]
+}
