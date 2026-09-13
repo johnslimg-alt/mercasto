@@ -370,8 +370,9 @@ test.describe('consent gated tracking vendors', () => {
       });
     }
 
-    // D-111: the first-party relay is not gated by cookie consent and still
-    // receives the mapped historical event.
+    // Receipt is first-party, so the relay is not gated by cookie consent and
+    // still receives the mapped historical event; its onward transfer to a
+    // vendor is gated server-side instead.
     expect(serverRelay.some((url) => pathOf(url) === '/api/meta/events/wishlist')).toBeTruthy();
   });
 
