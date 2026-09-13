@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\OutboundEventUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -38,13 +39,19 @@ class MetaCapiService
 
         $eventId = $eventId ?: $this->makeEventId($eventName, $customData['listing_id'] ?? null);
 
+        // The page query string can carry the visitor's free-text search term and
+        // filter selections, so only origin + path may leave the server.
+        $sanitizedSourceUrl = OutboundEventUrl::sanitize(
+            $eventSourceUrl ?: $request->headers->get('referer'),
+        );
+
         $payload = [
             'data' => [[
                 'event_name' => $eventName,
                 'event_time' => time(),
                 'event_id' => $eventId,
                 'action_source' => 'website',
-                'event_source_url' => $eventSourceUrl ?: $request->headers->get('referer') ?: url('/'),
+                'event_source_url' => $sanitizedSourceUrl ?: url('/'),
                 'user_data' => $this->userData($request, $user, $userDataOverrides),
                 'custom_data' => $customData,
             ]],

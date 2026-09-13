@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\OutboundEventUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -174,46 +175,8 @@ class OpenAiAdsCapiService
 
     private function sourceUrl(Request $request, ?string $sourceUrl): string
     {
-        $canonical = rtrim((string) config('app.frontend_url', 'https://mercasto.com'), '/');
-        $canonicalParts = parse_url($canonical);
-        $canonicalOrigin = $this->originFromParts($canonicalParts);
-        if ($canonicalOrigin === null) {
-            $canonicalOrigin = 'https://mercasto.com';
-        }
-
-        $candidate = trim((string) $sourceUrl);
-        if ($candidate === '' || ! filter_var($candidate, FILTER_VALIDATE_URL)) {
-            return $canonicalOrigin;
-        }
-
-        $parts = parse_url($candidate);
-        $candidateOrigin = $this->originFromParts($parts);
-        if ($candidateOrigin === null || strcasecmp($candidateOrigin, $canonicalOrigin) !== 0) {
-            return $canonicalOrigin;
-        }
-
-        $path = isset($parts['path']) && is_string($parts['path']) ? $parts['path'] : '/';
-        if ($path === '' || $path[0] !== '/') {
-            $path = '/';
-        }
-
-        return $canonicalOrigin . ($path === '/' ? '' : $path);
-    }
-
-    private function originFromParts(array|false $parts): ?string
-    {
-        if (! is_array($parts)) {
-            return null;
-        }
-
-        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        $host = strtolower((string) ($parts['host'] ?? ''));
-        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
-            return null;
-        }
-
-        $port = isset($parts['port']) ? ':' . (int) $parts['port'] : '';
-        return $scheme . '://' . $host . $port;
+        // Origin + path only; the shared rule lives in App\Support\OutboundEventUrl.
+        return OutboundEventUrl::sanitizeOrOrigin($sourceUrl);
     }
 
     private function makeEventId(string $eventType): string

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\OutboundEventUrl;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -43,9 +44,16 @@ class TikTokEventsApiService
         $normalizedEventId = $this->normalizeEventId(
             $eventId ?: $this->makeEventId($eventName, $properties['order_id'] ?? $properties['listing_id'] ?? null)
         );
-        $sourceUrl = $eventSourceUrl
-            ?: $request->headers->get('referer')
-            ?: config('app.frontend_url', 'https://mercasto.com');
+        // The page query string can carry the visitor's free-text search term and
+        // filter selections, so only origin + path may leave the server. `ttclid`
+        // is unaffected: userData() reads it from the raw referer, which is a click
+        // identifier the vendor is entitled to, not the visitor's search input.
+        $sourceUrl = OutboundEventUrl::sanitizeOrOrigin(
+            $eventSourceUrl ?: $request->headers->get('referer'),
+        );
+        $referrer = OutboundEventUrl::sanitize(
+            $userDataOverrides['referrer'] ?? $request->headers->get('referer'),
+        );
 
         $event = array_filter([
             'event' => $eventName,
@@ -55,8 +63,7 @@ class TikTokEventsApiService
             'properties' => $this->properties($properties),
             'page' => array_filter([
                 'url' => $sourceUrl,
-                'referrer' => $userDataOverrides['referrer']
-                    ?? $request->headers->get('referer'),
+                'referrer' => $referrer,
             ], fn ($value) => $value !== null && $value !== ''),
         ], fn ($value) => $value !== null && $value !== [] && $value !== '');
 

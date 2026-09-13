@@ -85,7 +85,9 @@ class TikTokEventsApiServiceTest extends TestCase
                 && ($payload['event_source_id'] ?? null) === 'D9C3HKBC77UBS5FSD7C0'
                 && ($event['event'] ?? null) === 'Purchase'
                 && ($event['event_id'] ?? null) === hash('sha256', 'purchase_clip_42')
-                && ($event['page']['url'] ?? null) === 'https://mercasto.com/?payment=success'
+                // Only origin + path may leave the server: the query string can carry
+                // the visitor's own search terms and filter selections.
+                && ($event['page']['url'] ?? null) === 'https://mercasto.com'
                 && ($user['email'] ?? null) === hash('sha256', 'buyer@example.com')
                 && ($user['phone'] ?? null) === hash('sha256', '+522291234567')
                 && ($user['external_id'] ?? null) === hash('sha256', '42')

@@ -422,6 +422,123 @@ class VendorEgressConsentTest extends TestCase
     }
 
     // ---------------------------------------------------------------------
+    // Egress URL privacy: the page query string must never leave the server
+    // ---------------------------------------------------------------------
+
+    public function test_relay_never_forwards_the_page_query_string_to_meta_or_tiktok(): void
+    {
+        $user = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
+        $ad = $this->createRecentAd($user);
+
+        // A real search on the live site puts the visitor's own words in the query
+        // string (App.jsx::buildHomeFilterPath), and the ad-detail overlay keeps
+        // them in the address bar when contact events fire.
+        $leakyUrl = 'https://mercasto.com/listings?search=tamazcal+espiritual'
+            .'&subcategory=salud&filters%5Benfoque_retiro%5D=Espiritual#ad-'.$ad->id;
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/meta/events/post-ad', [
+            'event_id' => 'egress_query_strip',
+            'listing_id' => $ad->id,
+            'category' => 'motor',
+            'url' => $leakyUrl,
+            'analytics_tracking_consent' => true,
+        ])->assertOk();
+
+        $meta = $this->requestTo('graph.facebook.com');
+        $this->assertNotNull($meta);
+        $metaEvent = $meta->data()['data'][0] ?? [];
+        $this->assertSame('https://mercasto.com/listings', $metaEvent['event_source_url'] ?? null);
+
+        $tiktok = $this->requestTo('business-api.tiktok.com');
+        $this->assertNotNull($tiktok);
+        $tiktokEvent = $tiktok->data()['data'][0] ?? [];
+        $this->assertSame('https://mercasto.com/listings', $tiktokEvent['page']['url'] ?? null);
+
+        // RC-4 negative control on the whole outbound payload: no visitor input, in
+        // any carrier, may appear anywhere in what the vendors receive.
+        foreach ([$meta, $tiktok] as $request) {
+            $body = json_encode($request->data());
+            foreach (['tamazcal', 'espiritual', 'enfoque_retiro', 'subcategory', 'search=', 'filters'] as $needle) {
+                $this->assertStringNotContainsStringIgnoringCase($needle, $body);
+            }
+        }
+    }
+
+    public function test_relay_never_forwards_a_query_bearing_referer_to_meta_or_tiktok(): void
+    {
+        $user = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
+        $ad = $this->createRecentAd($user);
+
+        $this->actingAs($user, 'sanctum')
+            ->withHeader('Referer', 'https://mercasto.com/listings?search=temazcal&filters%5Benfoque_retiro%5D=Espiritual')
+            ->postJson('/api/meta/events/post-ad', [
+                'event_id' => 'egress_referer_strip',
+                'listing_id' => $ad->id,
+                'analytics_tracking_consent' => true,
+            ])->assertOk();
+
+        $meta = $this->requestTo('graph.facebook.com');
+        $this->assertNotNull($meta);
+        $metaEvent = $meta->data()['data'][0] ?? [];
+        $this->assertSame('https://mercasto.com/listings', $metaEvent['event_source_url'] ?? null);
+
+        $tiktok = $this->requestTo('business-api.tiktok.com');
+        $this->assertNotNull($tiktok);
+        $tiktokEvent = $tiktok->data()['data'][0] ?? [];
+        $this->assertSame('https://mercasto.com/listings', $tiktokEvent['page']['url'] ?? null);
+        $this->assertSame('https://mercasto.com/listings', $tiktokEvent['page']['referrer'] ?? null);
+    }
+
+    public function test_tiktok_click_attribution_still_receives_ttclid_after_sanitising(): void
+    {
+        // Legitimate behaviour that must survive the strip: ttclid is a TikTok click
+        // identifier carried in the referer, not the visitor's search input.
+        $user = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
+        $ad = $this->createRecentAd($user);
+
+        $this->actingAs($user, 'sanctum')
+            ->withHeader('Referer', 'https://mercasto.com/listings?search=temazcal&ttclid=E.C.P.abc123')
+            ->postJson('/api/meta/events/post-ad', [
+                'event_id' => 'egress_ttclid_kept',
+                'listing_id' => $ad->id,
+                'analytics_tracking_consent' => true,
+            ])->assertOk();
+
+        $tiktok = $this->requestTo('business-api.tiktok.com');
+        $this->assertNotNull($tiktok);
+        $tiktokEvent = $tiktok->data()['data'][0] ?? [];
+        $this->assertSame('E.C.P.abc123', $tiktokEvent['user']['ttclid'] ?? null);
+        $this->assertStringNotContainsStringIgnoringCase('temazcal', json_encode($tiktok->data()));
+    }
+
+    public function test_openai_relay_path_keeps_its_origin_plus_path_source_url(): void
+    {
+        $user = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
+        $ad = $this->createRecentAd($user);
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/meta/events/post-ad', [
+            'event_id' => 'openai_url_strip',
+            'listing_id' => $ad->id,
+            'url' => 'https://mercasto.com/listings?search=temazcal#ad-'.$ad->id,
+            'openai_measurement_consent' => true,
+        ])->assertOk();
+
+        $openAi = $this->requestTo('bzr.openai.com');
+        $this->assertNotNull($openAi);
+        $event = $openAi->data()['events'][0] ?? [];
+        $this->assertSame('https://mercasto.com/listings', $event['source_url'] ?? null);
+        $this->assertStringNotContainsStringIgnoringCase('temazcal', json_encode($openAi->data()));
+    }
+
+    // ---------------------------------------------------------------------
     // helpers
     // ---------------------------------------------------------------------
 

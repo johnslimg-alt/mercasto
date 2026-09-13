@@ -67,7 +67,9 @@ class MetaCapiServiceTest extends TestCase
                 && ($event['event_name'] ?? null) === 'Purchase'
                 && ($event['event_id'] ?? null) === 'purchase_clip_42'
                 && ($event['action_source'] ?? null) === 'website'
-                && ($event['event_source_url'] ?? null) === 'https://mercasto.com/?payment=success'
+                // Only origin + path may leave the server: the query string can carry
+                // the visitor's own search terms and filter selections.
+                && ($event['event_source_url'] ?? null) === 'https://mercasto.com'
                 && ($event['custom_data']['currency'] ?? null) === 'MXN'
                 && (float) ($event['custom_data']['value'] ?? 0) === 99.0
                 && ($event['custom_data']['order_id'] ?? null) === 'clip-order-42'
