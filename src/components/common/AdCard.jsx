@@ -111,7 +111,10 @@ const AdCard = memo(({
           {!isCatalogFiller && !isDestacado && isUrgente && <span className="badge absolute left-1.5 top-1.5 z-10 bg-amber-500 text-[9px] text-white">{t.urgent_badge}</span>}
         </div>
         <div className="ad-result-body pointer-events-none flex min-w-0 flex-1 flex-col px-3 py-2.5 pr-12 text-[#0F172A] dark:text-white sm:px-4 sm:py-3">
-          <CardTitle className="line-clamp-2 text-[13px] font-bold leading-snug text-slate-800 dark:text-slate-100 sm:text-[14px]">{localizedText(ad.title, lang)}</CardTitle>
+          {/* Same reservation as the grid layout: the reference badge is 21px tall even on one
+              line (11px label + pill padding), so a short one-line title needs two reserved
+              lines to keep the listing's own title the heavier element. */}
+          <CardTitle className={`line-clamp-2 text-[13px] font-bold leading-snug text-slate-800 dark:text-slate-100 sm:text-[14px]${isCatalogFiller ? ' min-h-[36px]' : ''}`}>{localizedText(ad.title, lang)}</CardTitle>
           <div className="mt-1 text-[16px] font-black leading-none text-slate-950 dark:text-white sm:text-[18px]">
             ${formatNumber(ad.price, lang)} <span className="text-[9px] font-semibold text-slate-400">MXN</span>
           </div>
@@ -168,10 +171,12 @@ const AdCard = memo(({
         <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">
           ${formatNumber(ad.price, lang)} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span>
         </div>
-        {/* Two line clamp (same as the list layout): the 11px catalogue-reference badge can
-            wrap to two lines on narrow grid cards, so a one-line title let the badge carry
-            more visual weight than the listing's own title. */}
-        <CardTitle className="text-[14px] font-medium mt-1.5 line-clamp-2 text-slate-700 dark:text-slate-300">{localizedText(ad.title, lang)}</CardTitle>
+        {/* line-clamp-2 caps LONG titles but cannot protect a SHORT one: with a one-line title
+            (e.g. "iPad Mini (Tablets) - 123") the two-line 11px reference badge still carried
+            more weight than the listing's own title. Reference cards therefore reserve two
+            title lines (2 x the 21px line-height) so the title always outranks the badge. The
+            badge is the disclosure, so it keeps its full label instead of being truncated. */}
+        <CardTitle className={`text-[14px] font-medium mt-1.5 line-clamp-2 text-slate-700 dark:text-slate-300${isCatalogFiller ? ' min-h-[42px]' : ''}`}>{localizedText(ad.title, lang)}</CardTitle>
         {isCatalogFiller && <span className="badge mt-1.5 w-fit max-w-full bg-slate-900 text-[11px] leading-snug text-white dark:bg-slate-700" data-testid="catalog-reference-badge">{detailCopy.catalogTitle}</span>}
         <div className="mt-1.5"><AdRatingStars ad={ad} compact /></div>
         <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500 dark:text-slate-400">
