@@ -184,8 +184,101 @@ test.describe('consent gated tracking vendors', () => {
     ).toBeFalsy();
   });
 
-  test('returning consenting visitors still load vendors through the consent-aware fallback', async ({ page }) => {
+  test('rejecting the banner leaves no attribution or session storage behind', async ({ page }) => {
     test.setTimeout(60_000);
+    const hits = await interceptVendorTraffic(page);
+    await page.addInitScript(seedBrowserState, null);
+
+    await page.goto('/?utm_source=facebook&utm_medium=cpc&utm_campaign=storage_regression', {
+      waitUntil: 'domcontentloaded',
+    });
+
+    const banner = page.getByRole('dialog', { name: 'Aviso de cookies' });
+    await expect(banner).toBeVisible();
+    await banner.getByRole('button', { name: REJECT_LABEL }).click();
+    await expect(banner).toBeHidden();
+
+    await simulateUserActivity(page);
+    await page.waitForTimeout(1500);
+
+    const stored = await page.evaluate(() => ({
+      local: Object.keys(localStorage),
+      session: Object.keys(sessionStorage),
+    }));
+    // Storage-level proof: a network-only check cannot see any of these writes.
+    expect(stored.local.filter((key) => key.startsWith('mercasto.attribution.'))).toEqual([]);
+    expect(stored.session.filter((key) => key.startsWith('mercasto.attribution.'))).toEqual([]);
+    expect(stored.session).not.toContain('mercasto_analytics_session_id');
+    expect(stored.local).not.toContain('mercasto_analytics_session_id');
+    expect(trackingHits(hits)).toEqual([]);
+
+    // Non-vacuous control: after a deliberate grant the same keys do appear.
+    const settings = page.getByTestId('cookie-settings');
+    await settings.scrollIntoViewIfNeeded();
+    await settings.click();
+    await page.getByTestId('cookie-accept-all').click();
+    await expect
+      .poll(() => page.evaluate(() => (
+        Object.keys(localStorage).filter((key) => key.startsWith('mercasto.attribution.')).length
+      )), { message: 'a grant must persist the in-memory attribution capture' })
+      .toBeGreaterThan(0);
+    await expect
+      .poll(() => page.evaluate(() => Object.keys(sessionStorage)))
+      .toContain('mercasto_analytics_session_id');
+  });
+
+  test('a funnel event raised before consent is never replayed after the grant', async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    const hits = await interceptVendorTraffic(page);
+    await page.addInitScript(seedBrowserState, null);
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const banner = page.getByRole('dialog', { name: 'Aviso de cookies' });
+    await expect(banner).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => Boolean(window.__mercastoMetaCapiBridgeInstalled)), { timeout: 20_000 })
+      .toBeTruthy();
+
+    // Same shape as the app's own events, pushed while consent is unknown.
+    await page.evaluate(() => {
+      window.dataLayer.push({
+        event: 'favorite_added',
+        listing_id: '7777',
+        category: 'motor',
+        event_id: 'pre_consent_favorite_7777',
+      });
+    });
+
+    await banner.getByRole('button', { name: ACCEPT_LABEL }).click();
+    await expect(banner).toBeHidden();
+    await expect
+      .poll(() => hits.some((hit) => hostOf(hit) === 'www.googletagmanager.com'), { timeout: 20_000 })
+      .toBeTruthy();
+    await page.waitForTimeout(1500);
+
+    const tikTokQueue = await page.evaluate(() => (
+      Array.from(window.ttq || [], (entry) => (Array.isArray(entry) ? entry : Array.from(entry || [])))
+    ));
+    expect(tikTokQueue.some((entry) => entry[0] === 'track' && entry[1] === 'AddToWishlist')).toBeFalsy();
+
+    const metaCalls = await page.evaluate(() => (
+      Array.from(window.fbq?.queue || [], (entry) => Array.from(entry))
+    ));
+    const metaConfigured = await page.evaluate(() => typeof window.fbq === 'function');
+    if (metaConfigured) {
+      expect(metaCalls.some((entry) => entry[3]?.eventID === 'pre_consent_favorite_7777')).toBeFalsy();
+      // The grant itself is measured: a fresh page_view for the granting page arrives.
+      expect(metaCalls.some((entry) => entry[0] === 'track' && entry[1] === 'PageView')).toBeTruthy();
+    } else {
+      testInfo.annotations.push({
+        type: 'vendor-build-gated',
+        description: 'Meta Pixel is not configured in this build; pixel replay assertions limited to TikTok',
+      });
+    }
+  });
+
+  test('returning consenting visitors still load vendors through the consent-aware fallback', async ({ page }) => {    test.setTimeout(60_000);
     const hits = await interceptVendorTraffic(page);
     await page.addInitScript(seedBrowserState, 'all');
 
