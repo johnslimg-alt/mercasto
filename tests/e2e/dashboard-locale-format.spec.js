@@ -66,6 +66,23 @@ async function mockApi(page) {
     if (url.pathname.endsWith('/user/ads')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([ad]) });
     }
+    if (url.pathname.endsWith('/seller/stats')) {
+      // The views KPI is measured (ad_views), so the dashboard reads it here.
+      // The legacy counter is deliberately huge: it must never reach the UI.
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        total_views: 12345,
+        total_views_source: 'ad_views',
+        total_views_verified: true,
+        total_views_legacy_counter: 987654321,
+        total_views_legacy_counter_verified: false,
+        total_impressions: 20000,
+        total_clicks: 321,
+        views_this_week: 120,
+        views_last_week: 100,
+        views_series_source: 'ad_views',
+        views_by_day: [],
+      }) });
+    }
     if (url.pathname.endsWith('/user/favorite-ads')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     }
@@ -120,6 +137,8 @@ async function verifyDashboardLocale(page, lang, viewport) {
   await expect(planExpiry).toContainText(await browserDate(page, lang, '2026-12-31'));
   await expect(page.getByText(await browserCurrency(page, lang, 325000), { exact: true }).first()).toBeVisible();
   await expect(page.getByText(await browserNumber(page, lang, 12345), { exact: true }).first()).toBeVisible();
+  // The unverified legacy counter must not be shown to the seller in any locale.
+  await expect(page.getByText(await browserNumber(page, lang, 987654321), { exact: true })).toHaveCount(0);
   await page.getByTestId('dashboard-tab-stats').click();
   await expect(page.getByText(t.trust_score, { exact: true })).toBeVisible();
   await expect(page.getByText(t.avg_response_under_2h, { exact: true })).toBeVisible();

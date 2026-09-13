@@ -315,9 +315,10 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
   // Measured view totals come from the server aggregate over the ad_views log.
   // `ads.views` is NOT a measurement (synthetic demo values) and is therefore
   // never used as the KPI here; the legacy value stays in the API payload under
-  // an explicitly unverified key.
-  const measuredViews = measuredSellerStats ? measuredSellerStats.total_views : null;
-  const totalViews = measuredViews;
+  // an explicitly unverified key. A missing or invalid measured value renders as
+  // "—" instead of silently falling back to the counter.
+  const measuredViewTotal = Number(measuredSellerStats?.total_views);
+  const totalViews = Number.isFinite(measuredViewTotal) ? measuredViewTotal : null;
   const totalImpressions = measuredSellerStats?.total_impressions ?? totalImpressionsFallback;
   const totalContactClicks = measuredSellerStats?.total_clicks ?? totalContactClicksFallback;
 

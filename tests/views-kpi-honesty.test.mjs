@@ -100,7 +100,7 @@ test('the seller dashboard never presents the raw ads.views counter as the KPI',
   );
   assert.match(
     dashboard,
-    /measuredSellerStats\.total_views/,
+    /measuredSellerStats\??\.total_views/,
     'the dashboard views KPI must come from the measured seller stats',
   );
   assert.match(
