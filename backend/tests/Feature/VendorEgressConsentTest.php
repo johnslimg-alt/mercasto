@@ -425,6 +425,54 @@ class VendorEgressConsentTest extends TestCase
     // Egress URL privacy: the page query string must never leave the server
     // ---------------------------------------------------------------------
 
+    public function test_stripping_the_query_changes_nothing_else_in_the_vendor_payload(): void
+    {
+        // Strong form of "legitimate behaviour preserved": the only difference
+        // between the two page URLs below is the visitor's search input, so after
+        // sanitising, the two vendor payloads must be identical. Anything the vendor
+        // legitimately received from the URL (origin + path) is still there.
+        $user = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
+        $ad = $this->createRecentAd($user);
+        $cleanUrl = 'https://mercasto.com/listings/'.$ad->id;
+
+        foreach ([$cleanUrl.'?search=tamazcal+espiritual#ad-'.$ad->id, $cleanUrl] as $url) {
+            $this->actingAs($user, 'sanctum')->postJson('/api/meta/events/post-ad', [
+                'event_id' => 'egress_payload_equivalence',
+                'listing_id' => $ad->id,
+                'category' => 'motor',
+                'city' => 'Veracruz',
+                'url' => $url,
+                'analytics_tracking_consent' => true,
+            ])->assertOk();
+        }
+
+        $metaEvents = $this->requestsTo('graph.facebook.com')
+            ->map(fn (ClientRequest $request) => $request->data()['data'][0] ?? [])
+            ->all();
+        $tiktokEvents = $this->requestsTo('business-api.tiktok.com')
+            ->map(fn (ClientRequest $request) => $request->data()['data'][0] ?? [])
+            ->all();
+
+        $this->assertCount(2, $metaEvents);
+        $this->assertCount(2, $tiktokEvents);
+
+        $this->assertSame(
+            $this->withoutVolatileFields($metaEvents[0]),
+            $this->withoutVolatileFields($metaEvents[1]),
+            'The leaky and the clean page URL must produce the same Meta payload.',
+        );
+        $this->assertSame(
+            $this->withoutVolatileFields($tiktokEvents[0]),
+            $this->withoutVolatileFields($tiktokEvents[1]),
+            'The leaky and the clean page URL must produce the same TikTok payload.',
+        );
+
+        $this->assertSame($cleanUrl, $metaEvents[0]['event_source_url'] ?? null);
+        $this->assertSame($cleanUrl, $tiktokEvents[0]['page']['url'] ?? null);
+    }
+
     public function test_relay_never_forwards_the_page_query_string_to_meta_or_tiktok(): void
     {
         $user = User::factory()->create([
@@ -541,6 +589,19 @@ class VendorEgressConsentTest extends TestCase
     // ---------------------------------------------------------------------
     // helpers
     // ---------------------------------------------------------------------
+
+    /**
+     * Vendor payloads carry a server clock reading that is not part of this contract.
+     *
+     * @param  array<string, mixed>  $event
+     * @return array<string, mixed>
+     */
+    private function withoutVolatileFields(array $event): array
+    {
+        unset($event['event_time']);
+
+        return $event;
+    }
 
     private function createRecentAd(User $user): Ad
     {
