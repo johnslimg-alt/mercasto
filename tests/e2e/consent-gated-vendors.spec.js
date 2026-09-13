@@ -294,7 +294,12 @@ test.describe('consent gated tracking vendors', () => {
     const hits = await interceptVendorTraffic(page);
     const serverRelay = [];
     await page.route('**/api/meta/events/**', async (route) => {
-      serverRelay.push(route.request().url());
+      const body = route.request().postDataJSON?.() ?? {};
+      serverRelay.push({
+        url: route.request().url(),
+        listingId: String(body?.listing_id || ''),
+        consentSignal: body?.analytics_tracking_consent,
+      });
       await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
     });
     // Deterministic version of the reported race: the Meta bridge chunk loads
@@ -372,8 +377,66 @@ test.describe('consent gated tracking vendors', () => {
 
     // Receipt is first-party, so the relay is not gated by cookie consent and
     // still receives the mapped historical event; its onward transfer to a
-    // vendor is gated server-side instead.
-    expect(serverRelay.some((url) => pathOf(url) === '/api/meta/events/wishlist')).toBeTruthy();
+    // vendor is gated server-side on the per-request signal below.
+    const historicalRelay = serverRelay.find((call) => pathOf(call.url) === '/api/meta/events/wishlist');
+    expect(historicalRelay).toBeTruthy();
+    // The signal must describe the EVENT (raised pre-consent), not the live page
+    // state at send time, otherwise the server forwards it to Meta and TikTok.
+    expect(historicalRelay.consentSignal).toBe(false);
+
+    // Positive control: an event raised after the grant still authorises egress.
+    await page.evaluate(() => {
+      window.dataLayer.push({
+        event: 'favorite_added',
+        listing_id: '7777',
+        category: 'motor',
+        event_id: 'granted_favorite_7777',
+      });
+    });
+    await expect
+      .poll(() => serverRelay.some((call) => call.listingId === '7777'), { timeout: 10_000 })
+      .toBeTruthy();
+    expect(serverRelay.find((call) => call.listingId === '7777').consentSignal).toBe(true);
+  });
+
+  test('a withdrawal and re-grant with no page activity starts a fresh interval', async ({ page }) => {
+    test.setTimeout(90_000);
+    await interceptVendorTraffic(page);
+    await page.addInitScript(seedBrowserState, 'all');
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect
+      .poll(() => page.evaluate(() => Boolean(window.__mercastoAnalyticsVendorsActivated)), { timeout: 20_000 })
+      .toBeTruthy();
+    await page.waitForTimeout(3000);
+
+    // Withdraw and re-grant the way another tab or a server sync does it: consent
+    // storage changes plus the consent event, with no page activity in between.
+    const setConsentFromAnotherTab = (value) => page.evaluate((next) => {
+      localStorage.setItem('cookie_consent', next);
+      window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
+    }, value);
+
+    await setConsentFromAnotherTab('essential');
+    await expect
+      .poll(() => page.evaluate(() => Boolean(window.__mercastoAnalyticsVendorsRevoked)), { timeout: 10_000 })
+      .toBeTruthy();
+    await page.waitForTimeout(6000);
+
+    await setConsentFromAnotherTab('all');
+    await expect
+      .poll(() => page.evaluate(() => Boolean(window.__mercastoAnalyticsVendorsActivated)), { timeout: 10_000 })
+      .toBeTruthy();
+
+    // Dwell must be measured from the re-grant, not from before the withdrawal.
+    await page.waitForTimeout(4000);
+    await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+
+    const dwell = await page.evaluate(() => (
+      [...(window.dataLayer || [])].reverse().find((item) => item?.event === 'page_dwell') || null
+    ));
+    expect(dwell).not.toBeNull();
+    expect(dwell.dwell_seconds).toBeLessThanOrEqual(7);
   });
 
   test('a mid-session grant does not report pre-consent dwell time or scroll depth', async ({ page }) => {

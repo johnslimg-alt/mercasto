@@ -60,6 +60,9 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {} } = {
   };
 
   const registered = new Map();
+  // Tests replace window.fetch to observe relayed requests; keep the bare global
+  // in sync because browsers alias it and Node does not.
+  let fetchImpl = async () => ({ ok: true, clone: () => ({ json: async () => ({}) }) });
   const window = {
     location: new URL(href),
     innerWidth: 1280,
@@ -74,7 +77,8 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {} } = {
     dispatchEvent,
     setTimeout: (fn, ms) => setTimeout(fn, ms),
     clearTimeout: (handle) => clearTimeout(handle),
-    fetch: async () => ({ ok: true, clone: () => ({ json: async () => ({}) }) }),
+    get fetch() { return fetchImpl; },
+    set fetch(impl) { fetchImpl = impl; globalThis.fetch = impl; },
     crypto: globalThis.crypto,
     navigator: { language: 'es-MX' },
     dataLayer: [],
@@ -103,10 +107,12 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {} } = {
     navigator: Object.getOwnPropertyDescriptor(globalThis, 'navigator'),
   };
 
+  const previousFetch = globalThis.fetch;
   globalThis.window = window;
   globalThis.document = document;
   globalThis.localStorage = window.localStorage;
   globalThis.sessionStorage = window.sessionStorage;
+  globalThis.fetch = fetchImpl;
   Object.defineProperty(globalThis, 'navigator', { value: window.navigator, configurable: true, writable: true });
 
   return {
@@ -131,6 +137,8 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {} } = {
       else globalThis.localStorage = previous.localStorage;
       if (previous.sessionStorage === undefined) delete globalThis.sessionStorage;
       else globalThis.sessionStorage = previous.sessionStorage;
+      if (previousFetch === undefined) delete globalThis.fetch;
+      else globalThis.fetch = previousFetch;
       if (previous.navigator) Object.defineProperty(globalThis, 'navigator', previous.navigator);
       else delete globalThis.navigator;
     },
@@ -514,6 +522,42 @@ test('stale attribution from an earlier release is not restored for an already-r
     assert.deepEqual(storedAttributionKeys(env), [], 'a direct grant must not resurrect stale attribution');
     assert.equal(getCampaignAttribution().attribution_campaign, '');
     assert.equal(getCampaignAttribution().first_touch_campaign, '');
+  } finally {
+    env.restore();
+  }
+});
+
+test('the relay carries the consent signal of the event, not the live page state', async () => {
+  const env = installFakeBrowser({ consent: 'all' });
+
+  try {
+    const relayed = [];
+    env.window.fetch = async (url, init = {}) => {
+      relayed.push({ url: String(url), body: JSON.parse(String(init.body || '{}')) });
+      return { ok: true, clone: () => ({ json: async () => ({}) }) };
+    };
+
+    // One event raised before the grant, one raised after it. Both are relayed now.
+    env.window.dataLayer.push({ event: 'favorite_added', listing_id: '5005', consent_state: 'unknown' });
+    env.window.dataLayer.push({ event: 'favorite_added', listing_id: '5006', consent_state: 'granted' });
+
+    moduleCounter += 1;
+    const { installMetaCapiBridge } = await import(`../src/utils/metaCapiBridge.js?case=${moduleCounter}`);
+    installMetaCapiBridge();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const preConsentRelay = relayed.find((call) => call.body?.listing_id === '5005');
+    const grantedRelay = relayed.find((call) => call.body?.listing_id === '5006');
+
+    // Receipt stays first-party and ungated for both.
+    assert.ok(preConsentRelay, 'the relay still receives the pre-consent event');
+    assert.ok(grantedRelay, 'the relay receives the consented event');
+    // The signal the server uses to authorise onward transfer describes the event.
+    assert.equal(preConsentRelay.body.analytics_tracking_consent, false,
+      'a pre-consent event must not authorise its own egress');
+    assert.equal(preConsentRelay.body.openai_measurement_consent, false);
+    assert.equal(grantedRelay.body.analytics_tracking_consent, true,
+      'a consented event still authorises egress');
   } finally {
     env.restore();
   }

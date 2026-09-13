@@ -1,10 +1,11 @@
-import { trackEvent } from './analytics';
+import { trackEvent } from './analytics.js';
 import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
 import { getVendorConsentState, hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const META_API_BASE = '/api/meta/events';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
 const META_BROWSER_SENT_MARKER = '__mercastoMetaBrowserSent';
+const ENV = import.meta.env || {};
 
 // Consent invariant for every vendor-side delivery: only an explicit
 // `consent_state === 'granted'` stamp is deliverable or replayable. Missing,
@@ -86,11 +87,15 @@ function buildPayload(dataLayerItem = {}) {
     city: clean(dataLayerItem.city || dataLayerItem.location_city || ''),
     url: clean(dataLayerItem.page_location || window.location.href),
     event_id: clean(dataLayerItem.event_id || dataLayerItem.meta_event_id || ''),
-    // Explicit per-request consent signals. The server cannot read localStorage, so
-    // they must travel with every call that may cause third-party egress; the server
-    // treats anything other than an explicit affirmative as "no consent".
-    analytics_tracking_consent: hasVendorConsent(),
-    openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
+    // Explicit per-request consent signals. The server cannot read localStorage,
+    // so they must travel with every relayed event: the backend forwards to
+    // Meta/TikTok only on an explicit affirmative here
+    // (App\Support\AnalyticsTrackingConsent::allowsVendorEgress). They describe
+    // THIS EVENT, not the page state at send time: an event raised before the
+    // grant must never authorise its own onward transfer when it is relayed
+    // later (for example from the install-time history walk).
+    analytics_tracking_consent: isGrantedConsentState(dataLayerItem),
+    openai_measurement_consent: isGrantedConsentState(dataLayerItem) && isOpenAIAdsMeasurementAllowed(),
   };
 }
 
@@ -120,7 +125,7 @@ async function sendServerEvent(endpoint, payload) {
     }
     return true;
   } catch (error) {
-    if (import.meta.env.VITE_ANALYTICS_VERBOSE === 'true') {
+    if (ENV.VITE_ANALYTICS_VERBOSE === 'true') {
       console.warn('[Mercasto Meta CAPI] server event failed', endpoint, error);
     }
     return false;
