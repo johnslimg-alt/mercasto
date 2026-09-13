@@ -292,7 +292,7 @@ class SeoShellController extends Controller
                     'name' => 'Mercasto',
                     'url' => url('/'),
                 ],
-            ], 404);
+            ], 404, 'listing');
         }
 
         $title = Str::limit($this->localized($ad->title) ?: 'Anuncio en Mercasto', 80, '');
@@ -342,7 +342,7 @@ class SeoShellController extends Controller
                     'name' => 'Mercasto',
                     'url' => url('/'),
                 ],
-            ]);
+            ], 200, 'listing');
         }
 
         $price = number_format((float) $ad->price, 2, '.', '');
@@ -372,10 +372,15 @@ class SeoShellController extends Controller
                     ? 'https://schema.org/NewCondition'
                     : 'https://schema.org/UsedCondition',
             ],
-        ]);
+        ], 200, 'listing');
     }
 
-    private function renderShell(array $meta, array $schema, int $status = 200): Response
+    /**
+     * @param  string|null  $seoOwner  When set, the document is marked
+     *   `data-mercasto-seo-owner="<value>"` so hydration knows this page's head was decided by
+     *   the server and must not be overwritten while the client has no data of its own.
+     */
+    private function renderShell(array $meta, array $schema, int $status = 200, ?string $seoOwner = null): Response
     {
         $url = (string) config('app.frontend_shell_url', 'http://mercasto-frontend:8081/index.html');
         $frontend = Http::timeout(3)->accept('text/html')->get($url);
@@ -385,6 +390,15 @@ class SeoShellController extends Controller
         }
 
         $html = $frontend->body();
+
+        if ($seoOwner !== null) {
+            $html = $this->replaceFirst(
+                $html,
+                '#<html([^>]*)>#i',
+                '<html$1 data-mercasto-seo-owner="' . e($seoOwner) . '">',
+            );
+        }
+
         $html = $this->replaceFirst($html, '#<title>.*?</title>#si', '<title>' . e($meta['title']) . '</title>');
         $html = $this->replaceMeta($html, 'name', 'description', $meta['description']);
         $html = $this->replaceMeta($html, 'property', 'og:type', $meta['type']);

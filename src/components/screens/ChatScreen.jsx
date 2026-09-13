@@ -13,7 +13,7 @@ import {
   User,
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 const CHAT_POLL_INTERVAL_MS = 20000;
 
 function apiHeaders(token, json = false) {

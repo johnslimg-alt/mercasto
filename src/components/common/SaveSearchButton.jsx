@@ -9,7 +9,7 @@ const SaveSearchButton = ({ token, filters, onSave }) => {
   const [searchName, setSearchName] = useState('');
   const { t } = useTranslation();
 
-  const API_BASE = import.meta.env.VITE_API_URL || 'https://mercasto.com/api';
+  const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
   const generateDefaultName = () => {
     const parts = [];

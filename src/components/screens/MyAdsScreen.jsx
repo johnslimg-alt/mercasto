@@ -5,7 +5,7 @@ import { localizedText } from '../../utils/localize';
 import { formatMXN, formatNumber } from '../../utils/localeFormat';
 import { isAdCreditPromotionEligible, isPausedAdBulkActivatable, isReviewReadyForBulkReactivation, isSellerConfirmationPending } from '../../utils/adBulkEligibility';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // Returns days until expiry (negative = already expired)
 function daysUntilExpiry(expiresAt) {

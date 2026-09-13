@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { ADMIN_FRAUD_RISK_NAMESPACE } from './adminFraudRiskI18n';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const PAGE_SIZE = 50;
 
 const readAdmin = () => {

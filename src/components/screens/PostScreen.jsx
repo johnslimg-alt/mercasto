@@ -44,7 +44,7 @@ function getPostSubcategoryOptions(category, lang = 'es') {
   }));
 }
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const MEXICO_STATES = Object.keys(mexicoLocations);
 

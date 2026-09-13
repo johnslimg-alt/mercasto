@@ -5,7 +5,7 @@ import { getTranslations } from '../../utils/translations';
 import { localizedText } from '../../utils/localize';
 import { formatMXN, formatNumber } from '../../utils/localeFormat';
 
-const API = (window.VITE_API_URL || import.meta.env?.VITE_API_URL || 'https://mercasto.com/api');
+const API = (window.VITE_API_URL || import.meta.env?.VITE_API_URL || '/api');
 
 function SparkBar({ data, t }) {
   if (!data || data.length === 0) return null;

@@ -6,7 +6,7 @@ import {
 import { formatDate, formatDateTime, formatNumber } from '../../utils/localeFormat';
 import { getAdminOperationalCopy } from '../../utils/adminOperationalCopy';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 
 function MetricCard({ icon: Icon, label, value, note }) {

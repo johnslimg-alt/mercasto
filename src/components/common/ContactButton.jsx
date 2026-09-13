@@ -4,7 +4,7 @@ import { localizedText } from '../../utils/localize';
 import { getCurrentSiteLanguage, whatsappInterestMessage } from '../../utils/whatsappLocale';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function ContactButton({ ad, user, t = {}, className = '' }) {
   const [isOpen, setIsOpen] = useState(false);

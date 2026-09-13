@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function useListingAutofill() {
   const [loading, setLoading] = useState(false);

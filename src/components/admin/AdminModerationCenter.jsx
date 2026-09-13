@@ -5,7 +5,7 @@ import { ADMIN_MODERATION_NAMESPACE } from './adminModerationI18n';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 import { getImageUrl } from '../../utils/imageHelpers';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const readAdmin = () => {
   try {

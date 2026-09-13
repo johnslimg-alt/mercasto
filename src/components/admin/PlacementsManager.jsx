@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff, Layout } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function PlacementsManager({ user }) {
   const { t } = useTranslation();

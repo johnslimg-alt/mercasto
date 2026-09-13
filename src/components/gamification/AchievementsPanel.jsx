@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Flame, Star, Lock, Zap, TrendingUp } from 'lucide-react';
 import { getAchievementsTranslations } from './achievementsI18n';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const RARITY_COLORS = {
   common: 'from-slate-400 to-slate-600',

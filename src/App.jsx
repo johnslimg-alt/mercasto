@@ -177,7 +177,7 @@ const getEnvVar = (key, prodFallback) => {
   throw new Error(`Environment variable ${key} is required in development/staging. Please check your .env file.`);
 };
 
-const API_URL = getEnvVar('VITE_API_BASE_URL', 'https://mercasto.com/api');
+const API_URL = getEnvVar('VITE_API_BASE_URL', '/api');
 const STORAGE_URL = getEnvVar('VITE_STORAGE_URL', 'https://mercasto.com/storage');
 const ENABLE_AI_PANEL = import.meta.env.VITE_ENABLE_AI_PANEL === 'true';
 
@@ -1695,16 +1695,36 @@ function App() {
     const geoSourceOwnsSeo = /^\/(?:como-funciona|seguridad|tarifas|sobre-mercasto|ayuda\/(?:publicar-anuncio|comprar-y-contactar))\/?$/.test(location.pathname);
     const routeSeoOwner = document.documentElement.dataset.mercastoSeoOwner;
     const routeOwnsSeo = sellerProfileOwnsSeo || geoSourceOwnsSeo || routeSeoOwner === 'not-found';
+    // The SEO shell marks the listing pages it already rendered with
+    // `data-mercasto-seo-owner="listing"` (SeoShellController::ad). The server is the authority
+    // on such a page's identity and indexability, so hydration may only rewrite that head once
+    // it actually holds the listing payload. Without this, a blocked or failed
+    // /api/ads/{id} request replaced the listing title with the generic site title, deleted the
+    // server's JSON-LD, and even let /anuncio/{id} claim index,follow for a catalog reference.
+    const serverOwnsListingHead = routeSeoOwner === 'listing';
+    const isListingPath = /^\/(?:ads|anuncio)\/\d+\/?$/.test(location.pathname);
+    const hasListingPayload = Boolean(viewedAd);
+    const clientMayRewriteHead = hasListingPayload || !serverOwnsListingHead;
+    // A listing page with no payload has no basis for an indexability or canonical decision:
+    // never fabricate one in either direction, leave whatever the server rendered.
+    const listingDecisionUnresolved = isListingPath && !hasListingPayload;
+
     if (!routeOwnsSeo) {
-      document.title = title;
-      document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
-      document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
-      document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
-      document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', title);
-      document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', desc);
+      // ...and not when the SEO shell already rendered this listing page while the client has
+      // no listing payload of its own (see clientMayRewriteHead above).
+      if (clientMayRewriteHead) {
+        document.title = title;
+        document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
+        document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
+        document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+        document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', title);
+        document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', desc);
+      }
     }
-    document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
-    document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
+    if (clientMayRewriteHead) {
+      document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
+      document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
+    }
     const canonicalHref = viewedAd
       ? listingUrl(viewedAd.id)
       : viewedCompany
@@ -1712,8 +1732,10 @@ function App() {
         : verticalCanonicalAlias
           ? `${window.location.origin}${verticalCanonicalAlias}`
           : `${window.location.origin}${window.location.pathname}`;
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalHref);
-    document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
+    if (clientMayRewriteHead) {
+      document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalHref);
+      document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
+    }
 
     const privatePathPatterns = [
       /^\/post\/?$/,
@@ -1727,10 +1749,6 @@ function App() {
     ];
     const isResultsPage = ['/', '/listings'].includes(location.pathname.replace(/\/+$/, '') || '/');
     const isPrivateRoute = privatePathPatterns.some(pattern => pattern.test(location.pathname));
-    // `/ads/{id}` is proxied to the Laravel SEO shell, which already rendered the correct
-    // robots directive. Leave it in place until the ad payload arrives so the crawler-visible
-    // value never flips optimistically.
-    const isServerRenderedListing = /^\/ads\/\d+\/?$/.test(location.pathname);
     const robotsContent = isPrivateRoute
       ? ROBOTS_PRIVATE
       : viewedAd
@@ -1746,7 +1764,7 @@ function App() {
       robotsEl.setAttribute('name', 'robots');
       document.head.appendChild(robotsEl);
     }
-    if (routeSeoOwner !== 'not-found' && !(isServerRenderedListing && !viewedAd)) {
+    if (routeSeoOwner !== 'not-found' && !listingDecisionUnresolved) {
       robotsEl.setAttribute('content', robotsContent);
     }
 
@@ -1756,14 +1774,15 @@ function App() {
       canonicalEl.setAttribute('rel', 'canonical');
       document.head.appendChild(canonicalEl);
     }
-    canonicalEl.setAttribute('href', canonicalHref);
-
-    // Внедрение Schema.org JSON-LD структурированных данных
-    const existingScript = document.getElementById('schema-ld-json');
-    if (existingScript) {
-      existingScript.remove();
+    if (!listingDecisionUnresolved) {
+      canonicalEl.setAttribute('href', canonicalHref);
     }
 
+    // Schema.org JSON-LD. A server-rendered listing page ships its own schema (Product for an
+    // indexable listing, WebPage otherwise) and the client may only replace that when it has
+    // schema data of its own — deleting first and re-adding later is what left listing pages
+    // with no structured data at all whenever the payload was unavailable or not indexable.
+    // On every other page the client owns the schema slot, as before.
     let schemaData = null;
 
     if (viewedAd && isViewedListingIndexable) {
@@ -1843,12 +1862,24 @@ function App() {
       };
     }
 
+    const existingScript = document.getElementById('schema-ld-json');
+
     if (schemaData) {
+      if (existingScript) {
+        existingScript.remove();
+      }
       const script = document.createElement('script');
       script.type = 'application/ld+json';
       script.id = 'schema-ld-json';
+      // Marks the script as client-authored so navigation cleanup only ever removes what the
+      // client wrote, never the schema the SEO shell rendered.
+      script.dataset.mercastoOwner = 'client';
       script.text = JSON.stringify(schemaData);
       document.head.appendChild(script);
+    } else if (!serverOwnsListingHead && existingScript) {
+      // The client owns the schema slot on every page the SEO shell did not render for a
+      // listing (SPA navigation must not leave a previous page's schema behind).
+      existingScript.remove();
     }
 
     if (typeof window !== 'undefined') {
@@ -1862,7 +1893,7 @@ function App() {
 
     return () => {
       const cleanupScript = document.getElementById('schema-ld-json');
-      if (cleanupScript) {
+      if (cleanupScript?.dataset?.mercastoOwner === 'client') {
         cleanupScript.remove();
       }
     };
