@@ -230,6 +230,12 @@ test.describe('consent gated tracking vendors', () => {
   test('a funnel event raised before consent is never replayed after the grant', async ({ page }, testInfo) => {
     test.setTimeout(60_000);
     const hits = await interceptVendorTraffic(page);
+    const serverRelay = [];
+    // Registered after the catch-all route, so this one wins for the relay.
+    await page.route('**/api/meta/events/**', async (route) => {
+      serverRelay.push(route.request().url());
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    });
     await page.addInitScript(seedBrowserState, null);
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -276,9 +282,15 @@ test.describe('consent gated tracking vendors', () => {
         description: 'Meta Pixel is not configured in this build; pixel replay assertions limited to TikTok',
       });
     }
+
+    // Cookie consent gates the browser Pixel, never the first-party CAPI relay:
+    // the mapped event still reaches our server, whose own consent handling
+    // decides what leaves it.
+    expect(serverRelay.some((url) => pathOf(url) === '/api/meta/events/wishlist')).toBeTruthy();
   });
 
-  test('returning consenting visitors still load vendors through the consent-aware fallback', async ({ page }) => {    test.setTimeout(60_000);
+  test('returning consenting visitors still load vendors through the consent-aware fallback', async ({ page }) => {
+    test.setTimeout(60_000);
     const hits = await interceptVendorTraffic(page);
     await page.addInitScript(seedBrowserState, 'all');
 
