@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // Кэширование запросов (чтобы не запрашивать баннеры повторно при навигации)
 const bannerCache = new Map();

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff, Image } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function BannersManager({ user }) {
   const [banners, setBanners] = useState([]);

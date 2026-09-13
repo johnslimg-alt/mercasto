@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BadgeCheck, Download, FileText, Loader2, ShieldAlert, ShieldCheck, ShieldX } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 function aiLabel(status, copy) {
   if (status === 'pass') return copy.admin_ai_pass;

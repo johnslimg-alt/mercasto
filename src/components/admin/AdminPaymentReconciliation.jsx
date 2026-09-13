@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatDateTime, formatMXN, formatNumber } from '../../utils/localeFormat';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const COPY = Object.freeze({
   es: {

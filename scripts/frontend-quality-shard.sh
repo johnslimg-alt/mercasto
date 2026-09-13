@@ -75,6 +75,7 @@ case "${shard}" in
       tests/e2e/seller-registration-redirect.spec.js tests/e2e/publish-first-value.spec.js \
       tests/e2e/first-response-return.spec.js tests/e2e/seo-index-hygiene.spec.js \
       tests/e2e/catalog-reference-labelling-headings.spec.js \
+      tests/e2e/listing-metadata-authority.spec.js \
       tests/e2e/listing-autofill.spec.js \
       --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=0 --reporter=list
     ;;

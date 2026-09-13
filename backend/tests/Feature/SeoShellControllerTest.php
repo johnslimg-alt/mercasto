@@ -168,6 +168,41 @@ class SeoShellControllerTest extends TestCase
         $response->assertSee('<script type="module" src="/assets/app-current.js"></script>', false);
     }
 
+    public function test_listing_shell_marks_the_document_as_server_owned(): void
+    {
+        // Hydration reads this marker: the server decided this listing page's head, so the
+        // client must not rewrite it while it has no listing payload of its own.
+        $user = User::factory()->create();
+        $ad = Ad::create([
+            'user_id' => $user->id,
+            'title' => 'Bicicleta urbana',
+            'description' => 'Bicicleta urbana lista para rodar por toda la ciudad, frenos revisados.',
+            'price' => 3500,
+            'location' => 'Guadalajara',
+            'category' => 'deportes',
+            'condition' => 'usado',
+            'image_url' => 'ads/bicicleta.webp',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+
+        $this->get("https://mercasto.test/ads/{$ad->id}")
+            ->assertOk()
+            ->assertSee('data-mercasto-seo-owner="listing"', false);
+
+        // The branded 404 shell for a missing listing is still a listing page: it must keep its
+        // own noindex rather than let hydration decide.
+        $this->get('https://mercasto.test/ads/404404')
+            ->assertNotFound()
+            ->assertSee('data-mercasto-seo-owner="listing"', false);
+
+        // Catalog pages are not listing pages and must not claim the marker.
+        $this->get('https://mercasto.test/listings')
+            ->assertOk()
+            ->assertDontSee('data-mercasto-seo-owner="listing"', false);
+    }
+
     public function test_catalog_reference_is_noindex_and_never_claims_product_availability(): void
     {
         $user = User::factory()->create();

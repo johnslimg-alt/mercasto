@@ -18,7 +18,7 @@ import {
   Users,
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const readAdmin = () => {
   try {

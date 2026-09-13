@@ -393,7 +393,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   onClick={async () => {
                     try {
                       const tok = localStorage.getItem('auth_token');
-                      const r = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api'}/email/send-verification`, {
+                      const r = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/email/send-verification`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${tok}` }
                       });
@@ -1080,7 +1080,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   {t.pending_reviews_desc || 'Deja tu opinión sobre los anuncios con los que te has puesto en contacto.'}
                 </p>
                 {(() => {
-                  const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+                  const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
                   let contacted = [];
                   try { contacted = JSON.parse(localStorage.getItem('mercasto_contact_history') || '[]'); } catch(e) {}
 

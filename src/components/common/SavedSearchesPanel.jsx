@@ -25,7 +25,7 @@ const SavedSearchesPanel = ({ token: propToken, onSearchClick, onSearchSelect })
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_BASE = import.meta.env.VITE_API_URL || 'https://mercasto.com/api';
+  const API_BASE = import.meta.env.VITE_API_URL || '/api';
   const token = propToken || localStorage.getItem('auth_token') || localStorage.getItem('token');
   const runSavedSearch = onSearchSelect || onSearchClick;
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Building2, FileCheck2, Loader2, ShieldCheck, ShieldAlert, ShieldQuestion, ExternalLink, UploadCloud } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const localTranslations = {
   es: {

@@ -4,7 +4,7 @@ import Pusher from 'pusher-js';
 window.Pusher = Pusher;
 
 const token = localStorage.getItem('auth_token');
-const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
 const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || (window.location.protocol === 'https:' ? 'https' : 'http');
 const reverbPort = Number(import.meta.env.VITE_REVERB_PORT || (reverbScheme === 'https' ? 443 : 80));
 const reverbHost = import.meta.env.VITE_REVERB_HOST || window.location.hostname;

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import QRCode from 'qrcode';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 function getToken() {
   return localStorage.getItem('auth_token');

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ShieldAlert, ShieldCheck, ShieldX, Loader2, Download, FileText } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function AdminBusinessVerifications({ token, copy }) {
   const [items, setItems] = useState([]);

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDateTime, formatMXN } from '../../utils/localeFormat';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 function parsePayload(notification) {
   if (notification.type !== 'price_drop' || !notification.data) return null;
