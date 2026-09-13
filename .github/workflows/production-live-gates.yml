@@ -22,9 +22,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Runner policy for this workflow (measured 2026-09-13, Eng-36):
+  #
+  #   * A job belongs on the self-hosted runner only when it must read
+  #     srv1526037-v2 itself: /var/www/mercasto, the live container via
+  #     `docker exec`, or `sudo scripts/server-operator.sh`.
+  #   * A job that only curls the public https://mercasto.com surface belongs on
+  #     ubuntu-latest. This repository is public, so hosted minutes are free,
+  #     while the single self-hosted runner is the merge queue's bottleneck: on
+  #     2026-09-13 it accepted no job between 11:51Z and 15:54Z while required
+  #     smokes sat queued (run 34756898405 was superseded after 2h35m queued
+  #     without ever starting).
+  #   * The original reason for pinning the SEO smoke on the runner (PR #399,
+  #     2026-08-04) was that GitHub-hosted Azure runners timed out and never
+  #     reached nginx while mercasto.com was a direct-origin A record. That
+  #     condition no longer exists now that the Cloudflare edge is authoritative
+  #     (docs/security/EDGE_WAF_DDOS_DECISION.md, 2026-08-07), so do not re-pin
+  #     it without re-measuring.
   seo-aeo-smoke:
     name: SEO/AEO production smoke
-    runs-on: [self-hosted, linux]
+    # Hosted on purpose: this job only curls the public Cloudflare edge and
+    # reads nothing from srv1526037-v2. Executed from ubuntu-24.04 (egress
+    # 132.196.7.16, cf-ray a3a828487ae61969-ORD) every assertion below passed
+    # and the homepage returned HTTP/2 200 with the full security-header set.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     if: ${{ github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
@@ -53,6 +74,13 @@ jobs:
 
   production-error-mode:
     name: Production error mode and leak smoke
+    # Stays self-hosted: scripts/production-error-mode-smoke.sh reads the
+    # production checkout (/var/www/mercasto) and `docker exec`s the live
+    # mercasto_backend_container to assert env=production and debug=false.
+    # Replayed verbatim on ubuntu-latest on 2026-09-13 it failed with
+    # "/var/www/mercasto: MISSING" and
+    # "backend container is not running: mercasto_backend_container" (exit 1).
+    # Its HTTP probes are hosted-satisfiable; the runtime half is not.
     runs-on: [self-hosted, linux]
     timeout-minutes: 10
     if: ${{ github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository }}
@@ -70,6 +98,12 @@ jobs:
 
   production-session-security:
     name: Production bearer and session security smoke
+    # Stays self-hosted: scripts/production-session-security-smoke.sh reads the
+    # live container's bootstrap config (session.secure, http_only, same_site,
+    # cors.allowed_origins). Replayed verbatim on ubuntu-latest on 2026-09-13 it
+    # died at that `docker exec` with
+    # "Error response from daemon: No such container: mercasto_backend_container"
+    # (exit 1) before reaching any assertion. Its curl/CORS probes passed hosted.
     runs-on: [self-hosted, linux]
     timeout-minutes: 10
     if: ${{ github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository }}
@@ -87,6 +121,11 @@ jobs:
 
   live-server-gate:
     name: Live server gate verify_quick
+    # Stays self-hosted and cannot be hosted: it runs
+    # `sudo -n bash scripts/server-operator.sh verify_quick` from the production
+    # checkout, which drives docker compose, `npm run verify:quick` and the
+    # server-resident smoke scripts. On ubuntu-latest the first assertion
+    # already fails because /var/www/mercasto does not exist.
     runs-on: [self-hosted, linux]
     needs:
       - seo-aeo-smoke
