@@ -90,11 +90,15 @@ function buildPayload(dataLayerItem = {}) {
     // Explicit per-request consent signals. The server cannot read localStorage,
     // so they must travel with every relayed event: the backend forwards to
     // Meta/TikTok only on an explicit affirmative here
-    // (App\Support\AnalyticsTrackingConsent::allowsVendorEgress). They describe
-    // THIS EVENT, not the page state at send time: an event raised before the
-    // grant must never authorise its own onward transfer when it is relayed
-    // later (for example from the install-time history walk).
-    analytics_tracking_consent: isGrantedConsentState(dataLayerItem),
+    // (App\Support\AnalyticsTrackingConsent::allowsVendorEgress).
+    //
+    // Both conditions are required:
+    //  - the EVENT carries the granted stamp, so an event raised before the grant
+    //    can never authorise its own egress when relayed later (for example from
+    //    the install-time history walk), and
+    //  - consent STILL holds, so a consented event relayed after a withdrawal
+    //    cannot authorise egress on the strength of a consent that is gone.
+    analytics_tracking_consent: isGrantedConsentState(dataLayerItem) && hasVendorConsent(),
     openai_measurement_consent: isGrantedConsentState(dataLayerItem) && isOpenAIAdsMeasurementAllowed(),
   };
 }

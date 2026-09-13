@@ -9,12 +9,12 @@ const APP_URL = 'https://mercasto.test/?utm_source=facebook&utm_medium=cpc&utm_c
 
 let moduleCounter = 0;
 
-function installFakeBrowser({ consent = null, href = APP_URL, cookies = {} } = {}) {
+function installFakeBrowser({ consent = null, href = APP_URL, cookies = {}, localStore: existingLocal, sessionStore: existingSession } = {}) {
   const requests = [];
   const listeners = new Map();
   const cookieJar = new Map(Object.entries({ _ga: 'GA1.1.1.2', _fbp: 'fb.1.1.2', csrf_token: 'keep', ...cookies }));
-  const localStore = new Map();
-  const sessionStore = new Map();
+  const localStore = existingLocal || new Map();
+  const sessionStore = existingSession || new Map();
 
   if (consent) localStore.set('cookie_consent', consent);
 
@@ -558,6 +558,72 @@ test('the relay carries the consent signal of the event, not the live page state
     assert.equal(preConsentRelay.body.openai_measurement_consent, false);
     assert.equal(grantedRelay.body.analytics_tracking_consent, true,
       'a consented event still authorises egress');
+  } finally {
+    env.restore();
+  }
+});
+
+test('a consented event relayed after a withdrawal does not authorise egress', async () => {
+  const env = installFakeBrowser({ consent: 'all' });
+
+  try {
+    const relayed = [];
+    env.window.fetch = async (url, init = {}) => {
+      relayed.push({ url: String(url), body: JSON.parse(String(init.body || '{}')) });
+      return { ok: true, clone: () => ({ json: async () => ({}) }) };
+    };
+
+    // Consented event, pushed while the grant held, still sitting in history when
+    // the visitor withdraws before the delayed bridge installs.
+    env.window.dataLayer.push({ event: 'favorite_added', listing_id: '6006', consent_state: 'granted' });
+    env.setConsent('essential');
+
+    moduleCounter += 1;
+    const { installMetaCapiBridge } = await import(`../src/utils/metaCapiBridge.js?case=${moduleCounter}`);
+    installMetaCapiBridge();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const relay = relayed.find((call) => call.body?.listing_id === '6006');
+    assert.ok(relay, 'receipt stays first-party and still happens after a withdrawal');
+    assert.equal(relay.body.analytics_tracking_consent, false,
+      'a withdrawn consent must not authorise egress for a previously consented event');
+    assert.equal(relay.body.openai_measurement_consent, false);
+  } finally {
+    env.restore();
+  }
+});
+
+test('attribution stored before a reload survives a withdrawal and re-grant', async () => {
+  const env = installFakeBrowser({ consent: 'all' });
+
+  try {
+    const first = await loadCampaignAttribution();
+    first.installCampaignAttribution();
+    assert.ok(env.localStore.has(ATTRIBUTION_KEYS[0]), 'the campaign was persisted under consent');
+
+    // Reload on a direct URL: fresh module state, same browser storage, still granted.
+    const reloadEnv = installFakeBrowser({
+      consent: 'all',
+      href: 'https://mercasto.test/',
+      localStore: env.localStore,
+      sessionStore: env.sessionStore,
+    });
+    try {
+      const reloaded = await loadCampaignAttribution();
+      reloaded.installCampaignAttribution();
+
+      reloadEnv.setConsent('essential');
+      assert.deepEqual(storedAttributionKeys(reloadEnv), [], 'the withdrawal still clears storage');
+      reloadEnv.setConsent('all');
+      assert.equal(
+        reloadEnv.localStore.has(ATTRIBUTION_KEYS[0]),
+        true,
+        're-granting after a reload must not lose the campaign that was already collected',
+      );
+      assert.equal(reloaded.getCampaignAttribution().attribution_campaign, 'consent_unit');
+    } finally {
+      reloadEnv.restore();
+    }
   } finally {
     env.restore();
   }

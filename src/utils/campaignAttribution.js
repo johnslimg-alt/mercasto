@@ -309,6 +309,11 @@ export function installCampaignAttribution() {
   // already refused starts clean (initial cleanup, nothing preserved), and a
   // later grant flushes the in-memory capture.
   if (getVendorConsentState() === 'denied') clearStoredAttribution();
+  // Attribution stored by an earlier page load is still active for this session
+  // when the visitor arrives consented — a reload on a direct URL captures
+  // nothing new, but the stored campaign must survive a later withdrawal so a
+  // re-grant keeps it (sessionStorage survives reloads; this flag would not).
+  if (hasVendorConsent()) persistedWhileGranted = true;
   subscribeTrackingConsent((state) => {
     if (state === 'granted') {
       flushPendingAttribution();
