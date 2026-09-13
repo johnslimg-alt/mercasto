@@ -54,7 +54,7 @@ jobs:
           BASE_URL=http://127.0.0.1:4181 CI=1 npx playwright test \
             tests/e2e/consent-gated-vendors.spec.js \
             --project=chromium-desktop --workers=1 --retries=0 --repeat-each=12 \
-            --trace=on --screenshot=on --reporter=list 2>&1 | tee /tmp/consent-repeat.log
+            --trace=on --reporter=list 2>&1 | tee /tmp/consent-repeat.log
 
       - name: Summarize
         if: always()
