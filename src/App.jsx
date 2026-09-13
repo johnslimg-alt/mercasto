@@ -87,7 +87,16 @@ async function getEcho() {
   _echoInstance = mod.default;
   return _echoInstance;
 }
-const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
+// Consent stays available. Loading the dialog through React.lazy put a consent-owned
+// chunk between the visitor and a legal requirement: if `CookieBanner-*.js` failed to
+// fetch, React.lazy threw into the root ErrorBoundary, which replaced the whole app and
+// then let staleChunkRecovery navigate to `/?__mercasto_refresh=<ts>` - so a failed
+// *consent* chunk took the marketplace down. The banner also renders for essentially
+// every first-time visitor (no stored decision), so the boundary bought no deferral:
+// measured on a lockfile-faithful build, the chunk was fetched on 100% of first visits
+// (and even for visitors who had already decided) as a second round trip. Eager is both
+// available and slightly smaller in total (one request, 0.61 kB less gzip, measured).
+import CookieBanner from './components/CookieBanner';
 import { useUI } from './contexts/UIContext';
 
 const SUPPORTED_LANGUAGES = new Set([
@@ -4716,9 +4725,9 @@ function App() {
         </div>
       )}
 
-      <Suspense fallback={null}>
-        <CookieBanner t={t} lang={lang} />
-      </Suspense>
+      {/* Rendered directly: the consent dialog owns no lazy chunk, so nothing about it
+          can fail independently of the app, and it mounts with the shell it belongs to. */}
+      <CookieBanner t={t} lang={lang} />
     </div>
   );
 }
