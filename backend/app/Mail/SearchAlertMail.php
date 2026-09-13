@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\SearchAlert;
+use App\Support\MailLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Collection;
@@ -18,7 +19,10 @@ class SearchAlertMail extends Mailable implements ShouldQueue
     public function __construct(
         public SearchAlert $alert,
         public Collection $newAds,
-    ) {}
+    ) {
+        // Spanish-only template: pin the mail locale so the shared layout footer renders in Spanish.
+        $this->locale(MailLocale::FALLBACK);
+    }
 
     public function envelope(): Envelope
     {
