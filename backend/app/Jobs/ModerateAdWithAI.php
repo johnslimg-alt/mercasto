@@ -98,8 +98,11 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        Cache::forget('ai_moderation:provider_unavailable');
-
+        // The provider-unavailable flag gates new dispatches in
+        // ads:moderate-pending. It is cleared only after a gateway response is
+        // actually received (see the success path below). Clearing it here, on
+        // entry, erased the backoff set by the previous failed attempt, so the
+        // scheduler kept queueing work against a provider that was down.
         $covers->ensureCover($ad);
         $ad->refresh();
         if (! $this->isCurrentModerationCycle()) {
@@ -222,6 +225,9 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 maxTimeoutSeconds: $gatewayTimeoutCap,
             );
             $provider = (string) $gatewayResponse['provider'];
+            // The gateway answered with a valid contract, so the provider is
+            // reachable again and the scheduler may resume queueing work.
+            Cache::forget('ai_moderation:provider_unavailable');
             $model = (string) $gatewayResponse['model'];
             $runtimeMs = (int) ($gatewayResponse['latency_ms'] ?? max(0, (int) round((hrtime(true) - $attemptStartedAt) / 1_000_000)));
             $result = [
@@ -386,7 +392,11 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 'ad_id' => $ad->id,
                 'error' => $error->getMessage(),
             ]);
-            Cache::put('ai_moderation:provider_unavailable', 'private_gateway_failed', 60);
+            Cache::put(
+                'ai_moderation:provider_unavailable',
+                'private_gateway_failed',
+                max(60, (int) config('ai_moderation.provider_backoff_seconds', 600)),
+            );
 
             $this->leaveForManualReview(
                 $ad,
@@ -395,6 +405,13 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 array_merge([
                     'rollout_mode' => (string) config('ai_moderation.rollout.mode', 'assist'),
                     'technical_status' => 'failed',
+                    // Durable failure cause. The human-facing reason is
+                    // deliberately generic, so without this every failure looks
+                    // identical and cannot be diagnosed after logs rotate.
+                    'error' => [
+                        'class' => $error::class,
+                        'message' => mb_substr($error->getMessage(), 0, 500),
+                    ],
                     'runtime' => [
                         'provider' => 'private_gateway',
                         'adapter' => 'python_gateway',

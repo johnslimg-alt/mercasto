@@ -15,6 +15,12 @@ return [
     // Keep runtime bounded below the queue timeout.
     'max_runtime_seconds' => (int) env('AI_MODERATION_MAX_RUNTIME_SECONDS', 150),
 
+    // How long the scheduler stops queueing new moderation work after the
+    // private gateway fails. This MUST outlast the `ads:moderate-pending`
+    // schedule interval (five minutes): a shorter window expires before the
+    // next scheduled run, so the breaker would never suppress anything.
+    'provider_backoff_seconds' => max(60, (int) env('AI_MODERATION_PROVIDER_BACKOFF_SECONDS', 600)),
+
     'rollout' => [
         'mode' => 'assist',
         'human_authoritative' => true,
