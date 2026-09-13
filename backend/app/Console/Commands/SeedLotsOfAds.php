@@ -9,11 +9,22 @@ use Illuminate\Support\Str;
 
 class SeedLotsOfAds extends Command
 {
-    protected $signature = 'ads:seed-lots';
+    protected $signature = 'ads:seed-lots
+                            {--force : Allow seeding demo ads, including random view counters, in production}';
     protected $description = 'Seed empty categories and subcategories with 50 + 50 high-quality ads with different images';
 
     public function handle()
     {
+        // This command writes demo ads together with a random `views` counter.
+        // Running it against production is what produced a 12M view headline
+        // backed by only ~3k measured views (docs/analytics/views-provenance.md),
+        // so production now requires an explicit --force.
+        if (app()->environment('production') && ! $this->option('force')) {
+            $this->error('ads:seed-lots writes demo ads and synthetic view counters. Re-run with --force only if you really mean to seed production.');
+
+            return self::FAILURE;
+        }
+
         $user = User::where('role', 'business')->first() ?? User::where('role', 'admin')->first() ?? User::first();
         if (!$user) {
             $user = User::create([
