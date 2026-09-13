@@ -48,6 +48,11 @@
 #
 set -euo pipefail
 
+# Byte order, not locale order: migration names are compared lexicographically to
+# decide what precedes a target, and a locale-dependent collation would make that
+# machine-dependent.
+export LC_ALL=C
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 MIGRATIONS_DIR="$BACKEND_DIR/database/migrations"
@@ -97,6 +102,10 @@ for arg in "$@"; do
   case "$arg" in -h|--help) usage ;; esac
 done
 
+# Initialised BEFORE parsing: assigning defaults after the loop silently erased
+# --require-targets, so an explicit request to fail on an empty selection returned 0.
+REQUIRE_TARGETS=0
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --base=*)               BASE_REF="${1#*=}"; shift ;;
@@ -122,7 +131,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ "${#TARGETS[@]}" -gt 0 ] && MODE="files"
-REQUIRE_TARGETS=0
 
 # -------------------------------------------------------------- target selection
 
@@ -137,8 +145,14 @@ select_targets() {
       base="$(git -C "$ROOT_DIR" merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
       [ -n "$base" ] || die "cannot resolve --base=$BASE_REF; pass explicit files or use --all"
       while IFS= read -r f; do
-        [ -n "$f" ] && TARGETS+=("$ROOT_DIR/$f")
-      done < <(git -C "$ROOT_DIR" diff --name-only --diff-filter=AM "$base" HEAD -- \
+        if [ -n "$f" ]; then TARGETS+=("$ROOT_DIR/$f"); fi
+      # A renamed migration is classified R, which an AM filter drops: the workflow
+      # still fires because a migration path changed, but the verifier would select
+      # nothing and exit 0. Renaming a migration also changes its recorded name, so
+      # Laravel can execute it again -- exactly the case that must not be skipped.
+      # --no-renames turns a rename into D+A so the destination is selected as an add;
+      # R stays in the filter in case rename detection survives.
+      done < <(git -C "$ROOT_DIR" diff --name-only --no-renames --diff-filter=AMR "$base" HEAD -- \
                  backend/database/migrations 2>/dev/null | grep '\.php$' | sort || true)
       ;;
     files) : ;;
@@ -391,6 +405,24 @@ SELECT 'CON', c.relname, con.conname, con.contype, pg_get_constraintdef(con.oid)
 SELECT 'ENU', t.typname, e.enumlabel, e.enumsortorder::text
   FROM pg_type t JOIN pg_enum e ON e.enumtypid = t.oid ORDER BY t.typname, e.enumsortorder;
 SELECT 'SEQ', sequence_name FROM information_schema.sequences WHERE sequence_schema='public' ORDER BY sequence_name;
+-- Extensions, functions and triggers are schema objects a migration can create and a
+-- down() can fail to remove. Without them here, a rollback that leaves a function or
+-- trigger behind compared equal to the baseline and was reported as an exact restore.
+-- Objects owned by an extension are excluded: the extension row already describes them.
+SELECT 'EXT', e.extname, e.extversion, n.nspname
+  FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace
+ WHERE e.extname <> 'plpgsql' ORDER BY e.extname;
+SELECT 'FUN', n.nspname, p.proname, pg_get_function_identity_arguments(p.oid), p.prokind,
+       md5(coalesce(p.prosrc, ''))
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+ WHERE n.nspname = 'public'
+   AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')
+ ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid);
+SELECT 'TRG', c.relname, t.tgname, pg_get_triggerdef(t.oid)
+  FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace
+ WHERE n.nspname = 'public' AND NOT t.tgisinternal
+   AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = t.oid AND d.deptype = 'e')
+ ORDER BY c.relname, t.tgname;
 SQL
 
   # Deterministic synthetic rows, so data-dependent behaviour (backfills, deletes,
@@ -519,6 +551,40 @@ fingerprint_db() {
 row_snapshot() {
   psql_db "$1" "SELECT count(*)::text || '|' || coalesce(md5(string_agg(t::text, E'\n' ORDER BY t::text)),'empty') FROM public.\"$2\" t"
 }
+
+row_columns() { # db table -> comma-separated column names, in table order
+  psql_db "$1" "SELECT coalesce(string_agg(column_name, ',' ORDER BY ordinal_position),'') FROM information_schema.columns WHERE table_schema='public' AND table_name='$2'"
+}
+
+# Row identity over a subset of columns. Dropping a column changes what `t::text`
+# renders, so comparing the whole-row hash across a rollback that drops a column
+# reports every row as replaced when nothing happened to the rows at all. Comparing
+# over the columns present both before and after keeps that signal honest while still
+# catching a delete-and-reinsert, which changes the values that remain.
+row_snapshot_over() { # db table "col1,col2"
+  local db="$1" tbl="$2" cols="$3" expr="" c old_ifs="$IFS"
+  IFS=','
+  for c in $cols; do
+    expr="${expr:+$expr || '|' || }coalesce(\"$c\"::text, '~')"
+  done
+  IFS="$old_ifs"
+  if [ -z "$expr" ]; then
+    psql_db "$db" "SELECT count(*)::text || '|no-common-columns' FROM public.\"$tbl\""
+    return
+  fi
+  psql_db "$db" "SELECT count(*)::text || '|' || coalesce(md5(string_agg(x, E'\n' ORDER BY x)),'empty') FROM (SELECT $expr AS x FROM public.\"$tbl\") s"
+}
+
+# Intersection of two comma-separated lists, in the order of the first.
+list_intersect() {
+  local a="$1" b="$2" out="" x old_ifs="$IFS"
+  IFS=','
+  for x in $a; do
+    case ",$b," in *",$x,"*) out="${out:+$out,}$x" ;; esac
+  done
+  IFS="$old_ifs"
+  printf '%s' "$out"
+}
 table_exists() { [ "$(psql_db "$1" "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename='$2'")" = "1" ]; }
 
 # The table name is always the final capture group of the patterns below; indexing
@@ -531,6 +597,16 @@ static_candidate_tables() {
     grep -oE "Schema::(table|create|hasTable|hasColumn|drop|dropIfExists)\(\s*'[a-z0-9_]+'" "$file" \
       | grep -oE "'[a-z0-9_]+'" | tr -d "'"
     grep -oE "DB::table\(\s*'[a-z0-9_]+'" "$file" | grep -oE "'[a-z0-9_]+'" | tr -d "'"
+    # Raw SQL names tables the schema builder never sees. A down() written as
+    # DB::statement('DELETE FROM audit_logs') names a table nowhere else, so without
+    # this the table was outside the pre-down snapshot and its rows could be deleted
+    # with the run still reporting that down() destroyed nothing.
+    #
+    # `update` requires a following identifier, so `->update(['x' => 1])` and
+    # `->update($data)` do not match. Over-inclusion is harmless: an extra table is
+    # snapshotted, at worst.
+    grep -oiE "(delete[[:space:]]+from|truncate([[:space:]]+table)?|drop[[:space:]]+table([[:space:]]+if[[:space:]]+exists)?|insert[[:space:]]+into|alter[[:space:]]+table|update)[[:space:]]+[\"']?[a-z0-9_]+" "$file" \
+      | grep -oiE '[a-z0-9_]+$'
   done | sort -u
 }
 
@@ -803,10 +879,28 @@ MIG_IN_LIST="$(printf "'%s'," "${MIG_NAMES[@]}")"; MIG_IN_LIST="${MIG_IN_LIST%,}
 UP_ARGS=()
 for f in "${TARGETS[@]}"; do UP_ARGS+=(--path="database/migrations/$(basename "$f")"); done
 
-BASELINE_ARGS=()
+# The baseline is the schema the target originally ran against: every migration that
+# sorts BEFORE the earliest target. Later migrations are deliberately excluded, because
+# including them makes it impossible to verify a fix to a historical migration -- a
+# successor that alters what the target created fails during baseline construction, so
+# the target is never exercised at all.
+#
+# For the ordinary case, where a branch appends its migrations at the end, there are no
+# successors and this is exactly "everything except the targets".
+EARLIEST_TARGET=""
+for f in "${TARGETS[@]}"; do
+  b="$(basename "$f" .php)"
+  if [ -z "$EARLIEST_TARGET" ] || [[ "$b" < "$EARLIEST_TARGET" ]]; then EARLIEST_TARGET="$b"; fi
+done
+
+BASELINE_ARGS=(); SUCCESSORS_EXCLUDED=0
 while IFS= read -r mfile; do
   name="$(basename "$mfile" .php)"
   [ -n "${TARGET_SET[$name]:-}" ] && continue
+  if [[ "$name" > "$EARLIEST_TARGET" ]]; then
+    SUCCESSORS_EXCLUDED=$((SUCCESSORS_EXCLUDED + 1))
+    continue
+  fi
   BASELINE_ARGS+=(--path="database/migrations/$(basename "$mfile")")
 done < <(find "$MIGRATIONS_DIR" -maxdepth 1 -name '*.php' | sort)
 
@@ -825,63 +919,91 @@ if [ "${#BASELINE_ARGS[@]}" -gt 0 ] && [ "${BASE_TABLES:-0}" -lt 1 ]; then
 fi
 ok "baseline applied: ${#BASELINE_ARGS[@]} migration(s), $BASE_TABLES table(s) in the throwaway container"
 
+# Which tables the target set inherited. A table that disappears during rollback and
+# was NOT here is one the target set created, so removing it is the rollback working;
+# a table that WAS here and disappears is pre-existing data being removed.
+declare -A BASE_TABLE_PRESENT=()
+while IFS= read -r t; do
+  if [ -n "$t" ]; then BASE_TABLE_PRESENT[$t]=1; fi
+done < <(psql_db mc_base "SELECT tablename FROM pg_tables WHERE schemaname='public'")
+if [ "$SUCCESSORS_EXCLUDED" -gt 0 ]; then
+  info "$SUCCESSORS_EXCLUDED later migration(s) excluded from the baseline: a target that"
+  info "modifies history runs against the schema that preceded it, not the current tip"
+fi
+# Recorded for the summary, so a reader can tell which schema the target was proven on.
+printf 'baseline_migrations=%s\nsuccessors_excluded=%s\n' \
+  "${#BASELINE_ARGS[@]}" "$SUCCESSORS_EXCLUDED" >> "$OUT_DIR/baseline-scope.txt"
+
 # ---------------------------------------------------------------- 2. seed
 head1 "[2/8] Seed deterministic rows into the tables the migration names"
-SEED_REQUESTED=()
-while IFS= read -r t; do
-  [ -n "$t" ] || continue
-  table_exists mc_base "$t" && SEED_REQUESTED+=("$t")
-done < <(static_candidate_tables "${TARGETS[@]}")
 
-# Foreign keys must hold. The generator writes the same value range into every
-# integer column, so a parent seeded before its child satisfies the constraint; this
-# block closes over the parents of the requested tables and seeds them first. The
-# closure matters because a migration that re-creates a foreign key re-validates
-# every existing row, so orphaned seed rows would produce a failure production
-# cannot have. Integrity is never bypassed with session_replication_role.
-FK_PAIRS="$(psql_db mc_base "SELECT c.relname || '|' || p.relname FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid JOIN pg_class p ON p.oid=con.confrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND con.contype='f' AND c.relname <> p.relname")"
+psql_db_file mc_base "$ASSET_DIR/seed.sql" >/dev/null
+psql_db_file mc_base "$ASSET_DIR/column-state.sql" >/dev/null
+
+SEED_TABLES=()          # tables actually seeded, in the order they were seeded
+declare -A SEEDED=()
 
 fk_parents_of() { printf '%s\n' "$FK_PAIRS" | awk -F'|' -v c="$1" '$1 == c { print $2 }'; }
 in_list() { local needle="$1"; shift; local x; for x in ${@+"$@"}; do [ "$x" = "$needle" ] && return 0; done; return 1; }
 
-SEED_TABLES=(${SEED_REQUESTED[@]+"${SEED_REQUESTED[@]}"})
-changed=1
-while [ "$changed" = "1" ]; do
-  changed=0
-  for t in ${SEED_TABLES[@]+"${SEED_TABLES[@]}"}; do
-    while IFS= read -r parent; do
-      [ -n "$parent" ] || continue
-      table_exists mc_base "$parent" || continue
-      if ! in_list "$parent" ${SEED_TABLES[@]+"${SEED_TABLES[@]}"}; then
-        SEED_TABLES+=("$parent"); changed=1
-      fi
-    done < <(fk_parents_of "$t")
-  done
-done
+# Seeds a set of candidate tables: closes over foreign-key parents, orders parents
+# first, and seeds everything that exists and has not been seeded yet.
+#
+# Called before up() and again after each target migration, because a table an earlier
+# target creates does not exist when the baseline is built. Excluding it left a later
+# target's data, idempotency and row-loss checks vacuous: the table was in scope and
+# reported, but with zero rows in it, so nothing could be observed in it.
+seed_candidates() {
+  local t parent n
+  local -a closure=() remaining=() ordered=() next=()
+  local changed progressed blocked
 
-# Kahn ordering: repeatedly take any table that no remaining table references.
-SEED_REMAINING=(${SEED_TABLES[@]+"${SEED_TABLES[@]}"})
-SEED_TABLES=()
-while [ "${#SEED_REMAINING[@]}" -gt 0 ]; do
-  progressed=0; next=()
-  for t in "${SEED_REMAINING[@]}"; do
-    blocked=0
-    while IFS= read -r parent; do
-      [ -n "$parent" ] || continue
-      if in_list "$parent" ${SEED_REMAINING[@]+"${SEED_REMAINING[@]}"} && [ "$parent" != "$t" ]; then blocked=1; fi
-    done < <(fk_parents_of "$t")
-    if [ "$blocked" = "0" ]; then SEED_TABLES+=("$t"); progressed=1; else next+=("$t"); fi
-  done
-  SEED_REMAINING=(${next[@]+"${next[@]}"})
-  if [ "$progressed" = "0" ]; then
-    SEED_TABLES+=(${SEED_REMAINING[@]+"${SEED_REMAINING[@]}"}); SEED_REMAINING=()
-  fi
-done
+  # Foreign keys must hold. The generator writes the same value range into every
+  # integer column, so a parent seeded before its child satisfies the constraint.
+  # Integrity is never bypassed with session_replication_role: a migration that
+  # re-creates a foreign key re-validates every row, so orphaned seed rows would
+  # produce a failure production cannot have.
+  FK_PAIRS="$(psql_db mc_base "SELECT c.relname || '|' || p.relname FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid JOIN pg_class p ON p.oid=con.confrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND con.contype='f' AND c.relname <> p.relname")"
 
-psql_db_file mc_base "$ASSET_DIR/seed.sql" >/dev/null
-psql_db_file mc_base "$ASSET_DIR/column-state.sql" >/dev/null
-if [ "${#SEED_TABLES[@]}" -gt 0 ]; then
-  for t in "${SEED_TABLES[@]}"; do
+  for t in ${@+"$@"}; do
+    [ -n "$t" ] || continue
+    [ "$t" = "migrations" ] && continue   # Laravel's bookkeeping, never seeded
+    table_exists mc_base "$t" || continue
+    in_list "$t" ${closure[@]+"${closure[@]}"} || closure+=("$t")
+  done
+
+  changed=1
+  while [ "$changed" = "1" ]; do
+    changed=0
+    for t in ${closure[@]+"${closure[@]}"}; do
+      while IFS= read -r parent; do
+        [ -n "$parent" ] || continue
+        table_exists mc_base "$parent" || continue
+        if ! in_list "$parent" ${closure[@]+"${closure[@]}"}; then closure+=("$parent"); changed=1; fi
+      done < <(fk_parents_of "$t")
+    done
+  done
+
+  # Kahn ordering: repeatedly take any table that no remaining table references.
+  remaining=(${closure[@]+"${closure[@]}"})
+  while [ "${#remaining[@]}" -gt 0 ]; do
+    progressed=0; next=()
+    for t in "${remaining[@]}"; do
+      blocked=0
+      while IFS= read -r parent; do
+        [ -n "$parent" ] || continue
+        if in_list "$parent" ${remaining[@]+"${remaining[@]}"} && [ "$parent" != "$t" ]; then blocked=1; fi
+      done < <(fk_parents_of "$t")
+      if [ "$blocked" = "0" ]; then ordered+=("$t"); progressed=1; else next+=("$t"); fi
+    done
+    remaining=(${next[@]+"${next[@]}"})
+    if [ "$progressed" = "0" ]; then ordered+=(${remaining[@]+"${remaining[@]}"}); remaining=(); fi
+  done
+
+  for t in ${ordered[@]+"${ordered[@]}"}; do
+    [ -n "${SEEDED[$t]:-}" ] && continue
+    SEEDED[$t]=1
+    SEED_TABLES+=("$t")
     n="$(psql_db mc_base "SET client_min_messages TO warning; SELECT mc_seed('$t', $SEED_ROWS)")"
     if [ "${n:-0}" = "$SEED_ROWS" ]; then
       info "seeded $n row(s) into $t"
@@ -889,6 +1011,12 @@ if [ "${#SEED_TABLES[@]}" -gt 0 ]; then
       warn "seeded only ${n:-0} row(s) into $t (the generator could not satisfy its constraints)"
     fi
   done
+
+  return 0
+}
+
+seed_candidates $(static_candidate_tables "${TARGETS[@]}")
+if [ "${#SEED_TABLES[@]}" -gt 0 ]; then
   info "foreign keys were enforced while seeding; no referential integrity was bypassed"
 else
   info "the migration names no existing table; nothing to seed"
@@ -935,7 +1063,34 @@ psql_admin "CREATE DATABASE mc_preup TEMPLATE mc_base" >/dev/null
 # ---------------------------------------------------------------- 3. up()
 head1 "[3/8] up() on PostgreSQL"
 UP_LOG_START="$(log_lines)"
-if ! artisan mc_base migrate --force "${UP_ARGS[@]}" > "$OUT_DIR/up.log" 2>&1; then
+ALL_EMITTED=()
+
+# Applies the target set. When the lifecycle checks run, the targets are applied one
+# at a time and whatever each one creates is seeded before the next one runs: a later
+# target that backfills or deletes rows in a table an earlier target created would
+# otherwise be checked against an empty table. `--all` has no lifecycle checks and
+# applies the whole history in one call.
+apply_targets() { # logfile  seed(yes|no)
+  local log="$1" do_seed="$2" f name span_start t
+  if [ "$MODE" = "all" ]; then
+    artisan mc_base migrate --force "${UP_ARGS[@]}" >> "$log" 2>&1 || return 1
+    return 0
+  fi
+  for f in "${TARGETS[@]}"; do
+    name="$(basename "$f" .php)"
+    span_start="$(log_lines)"
+    artisan mc_base migrate --force --path="database/migrations/$name.php" >> "$log" 2>&1 || return 1
+    while IFS= read -r t; do
+      if [ -n "$t" ]; then ALL_EMITTED+=("$t"); fi
+    done < <(captured_sql "$span_start" | emitted_tables)
+    if [ "$do_seed" = "yes" ]; then
+      seed_candidates $(static_candidate_tables "$f") ${ALL_EMITTED[@]+"${ALL_EMITTED[@]}"}
+    fi
+  done
+  return 0
+}
+
+if ! apply_targets "$OUT_DIR/up.log" yes; then
   bad "up() failed on PostgreSQL"
   tail -30 "$OUT_DIR/up.log" | sed 's/^/        /'
   captured_sql "$UP_LOG_START" > "$OUT_DIR/up-sql.txt"
@@ -950,7 +1105,9 @@ fi
 ok "up() applied cleanly ($(wc -l < "$OUT_DIR/up-sql.txt") statements captured -> $OUT_DIR/up-sql.txt)"
 
 UP_TABLES=()
-while IFS= read -r t; do [ -n "$t" ] && UP_TABLES+=("$t"); done < <(emitted_tables < "$OUT_DIR/up-sql.txt")
+while IFS= read -r t; do
+  if [ -n "$t" ]; then UP_TABLES+=("$t"); fi
+done < <(emitted_tables < "$OUT_DIR/up-sql.txt")
 
 # Everything the migration touched, whether or not it existed before: a table the
 # migration creates is exactly where a non-idempotent write hides.
@@ -958,7 +1115,7 @@ SCOPE_TABLES=()
 while IFS= read -r t; do
   [ -n "$t" ] || continue
   [ "$t" = "migrations" ] && continue   # Laravel's own bookkeeping, not user data
-  table_exists mc_base "$t" && SCOPE_TABLES+=("$t")
+  if table_exists mc_base "$t"; then SCOPE_TABLES+=("$t"); fi
 done < <(printf '%s\n' ${UP_TABLES[@]+"${UP_TABLES[@]}"} ${SEED_TABLES[@]+"${SEED_TABLES[@]}"} | sed '/^$/d' | sort -u)
 
 : > "$OUT_DIR/rows-after-up.txt"
@@ -980,7 +1137,11 @@ fi
 # What did the backfill actually persist? A column whose NULL count fell was filled
 # by this migration; the sample shows the value it chose.
 column_state mc_base ${SCOPE_TABLES[@]+"${SCOPE_TABLES[@]}"} > "$OUT_DIR/columns-after-up.txt"
-if [ -s "$OUT_DIR/columns-baseline.txt" ]; then
+# Guarded on the AFTER snapshot, not the baseline one: when every table in scope was
+# created by the target set, nothing was seeded at baseline, the baseline file is empty,
+# and gating on it skipped the whole report -- including the new-column branch that
+# exists precisely for tables the migration created.
+if [ -s "$OUT_DIR/columns-after-up.txt" ]; then
   : > "$OUT_DIR/columns-filled.txt"
   # Pre-existing columns whose NULL count fell.
   while IFS='|' read -r key b_null b_total b_dist b_sample a_null a_total a_dist a_sample; do
@@ -995,9 +1156,12 @@ if [ -s "$OUT_DIR/columns-baseline.txt" ]; then
   # before up(), so no baseline row can show the transition.
   while IFS='|' read -r key after_n after_total after_d sample; do
     [ -n "$key" ] || continue
-    [ -n "${sample:-}" ] || continue
+    # "Was anything written" is after_total - after_n, not "is the sample non-empty":
+    # a backfill that writes '' makes the sample empty while populating every row, and
+    # treating that as absence hid the write entirely.
+    [ "$((after_total - after_n))" -gt 0 ] 2>/dev/null || continue
     printf '%s: new column, %s of %s row(s) populated; values include: %s\n' \
-      "$key" "$((after_total - after_n))" "$after_total" "$sample" >> "$OUT_DIR/columns-filled.txt"
+      "$key" "$((after_total - after_n))" "$after_total" "${sample:-<empty>}" >> "$OUT_DIR/columns-filled.txt"
   done < <(join -t'|' -j1 -v2 "$OUT_DIR/columns-baseline.txt" "$OUT_DIR/columns-after-up.txt")
   if [ -s "$OUT_DIR/columns-filled.txt" ]; then
     say "  columns this migration filled (was NULL, now set):"
@@ -1035,18 +1199,59 @@ UNMODELLED=0
 
 expect_set() { # kind table object want [fk_action]
   local key
-  if [ "$1" = "idx" ]; then key="idx||$3"; else key="$1|$2|$3"; fi
+  case "$1" in
+    idx|ext|fun|trg) key="$1||$3" ;;   # these names are unique per schema
+    *)               key="$1|$2|$3" ;;
+  esac
   [ -n "${EXPECT_KIND[$key]:-}" ] || EXPECT_ORDER+=("$key")
   EXPECT_KIND[$key]="$1"; EXPECT_TABLE[$key]="$2"; EXPECT_OBJECT[$key]="$3"
   EXPECT_WANT[$key]="$4"; EXPECT_FK[$key]="${5:-}"
 }
 
 # A rename retires the old name, so every pending expectation about it is wrong.
-expect_renamed() { # old
+#
+# Which field holds the name depends on the kind: a table expectation stores it in
+# EXPECT_TABLE with an empty EXPECT_OBJECT, so an object-only search left "table
+# old_name exists" standing and failed against the correct final catalog.
+expect_retired() { # kind name [table]
   local k
   for k in ${EXPECT_ORDER[@]+"${EXPECT_ORDER[@]}"}; do
-    if [ "${EXPECT_OBJECT[$k]}" = "$1" ]; then EXPECT_WANT[$k]=0; fi
+    case "$1" in
+      # A UNIQUE constraint and the index that backs it share one name in PostgreSQL,
+      # so `ALTER INDEX x RENAME TO y` also retires the constraint expectation for x.
+      idx) [ "${EXPECT_OBJECT[$k]}" = "$2" ] \
+             && { [ "${EXPECT_KIND[$k]}" = "idx" ] || [ "${EXPECT_KIND[$k]}" = "con" ]; } \
+             && EXPECT_WANT[$k]=0 ;;
+      tbl) [ "${EXPECT_KIND[$k]}" = "tbl" ] && [ "${EXPECT_TABLE[$k]}" = "$2" ] && EXPECT_WANT[$k]=0 ;;
+      col) [ "${EXPECT_KIND[$k]}" = "col" ] && [ "${EXPECT_TABLE[$k]}" = "$3" ] && [ "${EXPECT_OBJECT[$k]}" = "$2" ] && EXPECT_WANT[$k]=0 ;;
+      *)   [ "${EXPECT_KIND[$k]}" = "$1" ] && [ "${EXPECT_OBJECT[$k]}" = "$2" ] && EXPECT_WANT[$k]=0 ;;
+    esac
   done
+  return 0
+}
+
+# A table rename moves the table and everything on it. Re-keying keeps the column and
+# constraint expectations pointing at the new name, so they are still verified --
+# retiring them instead would silently drop coverage for the renamed table.
+expect_rekey_table() { # old new
+  local k kind obj want fk newkey
+  local -a rebuilt=()
+  for k in ${EXPECT_ORDER[@]+"${EXPECT_ORDER[@]}"}; do
+    if [ "${EXPECT_TABLE[$k]:-}" = "$1" ]; then
+      kind="${EXPECT_KIND[$k]}"; obj="${EXPECT_OBJECT[$k]}"
+      want="${EXPECT_WANT[$k]}"; fk="${EXPECT_FK[$k]:-}"
+      unset 'EXPECT_KIND[$k]' 'EXPECT_TABLE[$k]' 'EXPECT_OBJECT[$k]' 'EXPECT_WANT[$k]' 'EXPECT_FK[$k]'
+      newkey="$kind|$2|$obj"
+      EXPECT_KIND[$newkey]="$kind"; EXPECT_TABLE[$newkey]="$2"; EXPECT_OBJECT[$newkey]="$obj"
+      EXPECT_WANT[$newkey]="$want"; EXPECT_FK[$newkey]="$fk"
+      rebuilt+=("$newkey")
+    else
+      rebuilt+=("$k")
+    fi
+  done
+  # Rebuilt rather than appended: leaving the old key in EXPECT_ORDER would iterate an
+  # entry that no longer exists in the maps, which `set -u` turns into a hard crash.
+  EXPECT_ORDER=(${rebuilt[@]+"${rebuilt[@]}"})
   return 0
 }
 
@@ -1112,6 +1317,30 @@ rules_for_statement() {
         | sed -E 's/^drop table (if exists )?([a-z0-9_]+)$/tbl|\2||0|/' || true)"
   if [ -n "$out" ]; then printf '%s\n' "$out" >> "$RULE_TMP"; fi
 
+  # extensions, functions and triggers.
+  # `create or replace function public.f(...)` deliberately has no closing paren in the
+  # pattern: the argument list can contain parens of its own.
+  out="$(printf '%s' "$stmt" | grep -oE 'create extension (if not exists )?[a-z0-9_]+' \
+        | sed -E 's/^create extension (if not exists )?([a-z0-9_]+)$/ext||\2|1|/' || true)"
+  if [ -n "$out" ]; then printf '%s\n' "$out" >> "$RULE_TMP"; fi
+  out="$(printf '%s' "$stmt" | grep -oE 'drop extension (if exists )?[a-z0-9_]+' \
+        | sed -E 's/^drop extension (if exists )?([a-z0-9_]+)$/ext||\2|0|/' || true)"
+  if [ -n "$out" ]; then printf '%s\n' "$out" >> "$RULE_TMP"; fi
+
+  out="$(printf '%s' "$stmt" | grep -oE 'create (or replace )?function [a-z0-9_.]+' \
+        | sed -E 's/^create (or replace )?function ([a-z0-9_.]+)$/fun||\2|1|/' || true)"
+  if [ -n "$out" ]; then printf '%s\n' "$out" >> "$RULE_TMP"; fi
+  out="$(printf '%s' "$stmt" | grep -oE 'drop function (if exists )?[a-z0-9_.]+' \
+        | sed -E 's/^drop function (if exists )?([a-z0-9_.]+)$/fun||\2|0|/' || true)"
+  if [ -n "$out" ]; then printf '%s\n' "$out" >> "$RULE_TMP"; fi
+
+  out="$(printf '%s' "$stmt" | grep -oE 'create (or replace )?(constraint )?trigger [a-z0-9_]+' \
+        | sed -E 's/^create (or replace )?(constraint )?trigger ([a-z0-9_]+)$/trg||\3|1|/' || true)"
+  if [ -n "$out" ]; then printf '%s\n' "$out" >> "$RULE_TMP"; fi
+  out="$(printf '%s' "$stmt" | grep -oE 'drop trigger (if exists )?[a-z0-9_]+' \
+        | sed -E 's/^drop trigger (if exists )?([a-z0-9_]+)$/trg||\2|0|/' || true)"
+  if [ -n "$out" ]; then printf '%s\n' "$out" >> "$RULE_TMP"; fi
+
   # renames retire the old name, so they carry no expectation of their own
   printf '%s' "$stmt" | grep -oE 'alter index (if exists )?[a-z0-9_]+ rename to [a-z0-9_]+' \
     | sed -E 's/^alter index (if exists )?([a-z0-9_]+) rename to ([a-z0-9_]+)$/rename_idx|\2|\3/' >> "$RULE_TMP" || true
@@ -1137,9 +1366,9 @@ while IFS= read -r stmt; do
     [ -n "$kind" ] || continue
     matched=1
     case "$kind" in
-      rename_idx) expect_renamed "$a"; expect_set idx "" "$b" 1 ;;
-      rename_col) expect_renamed "$b"; expect_set col "$a" "$c" 1 ;;
-      rename_tbl) expect_renamed "$a"; expect_set tbl "$b" "" 1 ;;
+      rename_idx) expect_retired idx "$a"; expect_set idx "" "$b" 1 ;;
+      rename_col) expect_retired col "$b" "$a"; expect_set col "$a" "$c" 1 ;;
+      rename_tbl) expect_rekey_table "$a" "$b"; expect_set tbl "$b" "" 1 ;;
       con)
         fk=""
         if printf '%s' "$d" | grep -q 'foreign key'; then
@@ -1164,6 +1393,8 @@ set -e
 
 EXPECTATIONS=0
 for key in ${EXPECT_ORDER[@]+"${EXPECT_ORDER[@]}"}; do
+  # A key whose expectation was retired and re-keyed must not be dereferenced.
+  [ -n "${EXPECT_KIND[$key]:-}" ] || continue
   kind="${EXPECT_KIND[$key]}"; table="${EXPECT_TABLE[$key]}"
   object="${EXPECT_OBJECT[$key]}"; want="${EXPECT_WANT[$key]}"
   EXPECTATIONS=$((EXPECTATIONS + 1))
@@ -1176,9 +1407,16 @@ for key in ${EXPECT_ORDER[@]+"${EXPECT_ORDER[@]}"}; do
            got="$(psql_db mc_base "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND indexname='$object'")"
          fi ;;
     con) got="$(psql_db mc_base "SELECT count(*) FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid WHERE c.relname='$table' AND con.conname='$object'")" ;;
+    ext) got="$(psql_db mc_base "SELECT count(*) FROM pg_extension WHERE extname='$object'")" ;;
+    fun) got="$(psql_db mc_base "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='$object'")" ;;
+    trg) got="$(psql_db mc_base "SELECT count(*) FROM pg_trigger WHERE tgname='$object' AND NOT tgisinternal")" ;;
     *) continue ;;
   esac
-  label="$kind $table${object:+.$object}"; [ "$kind" = "tbl" ] && label="table $table"
+  label="$kind $table${object:+.$object}"
+  [ "$kind" = "tbl" ] && label="table $table"
+  [ "$kind" = "ext" ] && label="extension $object"
+  [ "$kind" = "fun" ] && label="function $object"
+  [ "$kind" = "trg" ] && label="trigger $object"
 
   if [ "$want" = "1" ] && [ "$got" != "1" ]; then
     bad "captured DDL says $label exists, but the catalog disagrees"
@@ -1217,7 +1455,10 @@ fi
 # is not a state production can reach. The idempotency, down() and round-trip checks are
 # scoped to the migrations a branch actually adds.
 LIFECYCLE_SKIPPED=0
+# Initialised here because --all skips the lifecycle and still prints the summary.
 DESTROYED_ROWS=0
+REPLACED_TABLES=0
+DROPPED_TABLES=0
 if [ "$MODE" = "all" ]; then
   LIFECYCLE_SKIPPED=1
   head1 "[5-7/8] Idempotency, down() and round trip"
@@ -1232,7 +1473,9 @@ info "removed ${#TARGETS[@]} row(s) from the migrations table and re-ran the sam
 info "this is what a re-apply after a failed deploy actually does"
 
 REAPPLY_LOG_START="$(log_lines)"
-if ! artisan mc_base migrate --force "${UP_ARGS[@]}" > "$OUT_DIR/reapply.log" 2>&1; then
+# seed=no: this must reproduce the apply exactly, and adding rows would look like the
+# migration mutated data.
+if ! apply_targets "$OUT_DIR/reapply.log" no; then
   bad "the second up() threw; the migration is not safely re-runnable"
   tail -30 "$OUT_DIR/reapply.log" | sed 's/^/        /'
   exit 1
@@ -1301,46 +1544,119 @@ SQL
   info "made ${NULLED_COLUMNS:-0} nullable column(s) NULL on up to 3 rows each, so down() faces the state up() created"
 fi
 
-: > "$OUT_DIR/rows-pre-down.txt"
-for t in ${DOWN_TABLES[@]+"${DOWN_TABLES[@]}"}; do
-  table_exists mc_base "$t" && printf '%s|%s\n' "$t" "$(row_snapshot mc_base "$t")" >> "$OUT_DIR/rows-pre-down.txt"
-done
+# `X && Y` as the last command of a loop body makes the loop return 1 when X is false,
+# which `set -e` turns into a silent abort -- here, whenever a rollback step drops a
+# table and the post-step snapshot finds it gone.
+snapshot_scope() { # outfile
+  local t
+  : > "$1"
+  for t in ${DOWN_TABLES[@]+"${DOWN_TABLES[@]}"}; do
+    if table_exists mc_base "$t"; then
+      printf '%s|%s|%s\n' "$t" "$(row_snapshot mc_base "$t")" "$(row_columns mc_base "$t")" >> "$1"
+    fi
+  done
+  return 0
+}
+
 COLS_PRE="$(psql_db mc_base "SELECT count(*) FROM information_schema.columns WHERE table_schema='public'")"
 FK_PRE="$(psql_db mc_base "SELECT count(*) FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND con.contype='f'")"
 
 DOWN_LOG_START="$(log_lines)"
-# No --step: the target set was applied as its own batch, and rolling back the
-# last batch rolls back exactly that set. `--step=1` would mean "one migration",
-# not "one batch", and would silently leave the earlier targets applied.
-if ! artisan mc_base migrate:rollback --force "${UP_ARGS[@]}" > "$OUT_DIR/down.log" 2>&1; then
-  bad "down() failed on PostgreSQL"
-  tail -30 "$OUT_DIR/down.log" | sed 's/^/        /'
-  exit 1
-fi
+DESTROYED_ROWS=0
+REPLACED_TABLES=0
+DROPPED_TABLES=0
+: > "$OUT_DIR/down.log"
+say "  destroyed by down():"
+
+# Rolled back one migration at a time, snapshotting between steps, for two reasons:
+#
+#   1. destruction is attributed to the migration that caused it, instead of being
+#      netted out across the batch; and
+#   2. a table that a target created and then removes is not confused with rows
+#      deleted from a table that survives. Dropping a table the target set created is
+#      what rolling back a CREATE means; deleting rows from a table that is still
+#      there is data loss. Comparing only the final state cannot tell them apart.
+STEP=$((${#TARGETS[@]} - 1))
+while [ "$STEP" -ge 0 ]; do
+  name="$(basename "${TARGETS[$STEP]}" .php)"
+  pre="$OUT_DIR/rows-pre-step-$STEP.txt"; post="$OUT_DIR/rows-post-step-$STEP.txt"
+  snapshot_scope "$pre"
+  if ! artisan mc_base migrate:rollback --force --step=1 --path="database/migrations/$name.php" >> "$OUT_DIR/down.log" 2>&1; then
+    bad "down() failed on PostgreSQL while rolling back $name"
+    tail -30 "$OUT_DIR/down.log" | sed 's/^/        /'
+    exit 1
+  fi
+  # `--step=1` rolls back whatever Laravel considers most recent, ordered by name. If
+  # that is not the migration this step intended, every attribution below would be
+  # wrong, so say so instead of reporting a plausible-looking audit.
+  if [ "$(psql_db mc_base "SELECT count(*) FROM migrations WHERE migration='$name'")" != "0" ]; then
+    bad "rollback step $STEP did not remove $name from the migrations table; the destruction audit below cannot be trusted"
+    exit 1
+  fi
+  snapshot_scope "$post"
+
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    t="${line%%|*}"; rest="${line#*|}"; before="${rest%%|*}"; rest="${rest#*|}"
+    before_hash="${rest%%|*}"; before_cols="${rest#*|}"
+    if table_exists mc_base "$t"; then
+      after_raw="$(row_snapshot mc_base "$t")"
+      after="${after_raw%%|*}"; after_hash="${after_raw#*|}"
+      after_cols="$(row_columns mc_base "$t")"
+      if [ "$before_cols" != "$after_cols" ]; then
+        common="$(list_intersect "$before_cols" "$after_cols")"
+        before_hash="$(row_snapshot_over mc_base "$t" "$common" | cut -d'|' -f2)"
+        after_hash="$(row_snapshot_over mc_base "$t" "$common" | cut -d'|' -f2)"
+      fi
+      if [ "$before" -gt "$after" ] 2>/dev/null; then
+        say "    rows    : $t $before -> $after (destroyed $((before - after)) by $name)"
+        DESTROYED_ROWS=$((DESTROYED_ROWS + before - after))
+      elif [ "$before" = "$after" ] && [ "$before_hash" != "$after_hash" ]; then
+        # Same cardinality, different content: a rollback that deletes the records and
+        # inserts replacements, or truncates and repopulates. Comparing counts alone
+        # reported this as "destroyed no rows" while every original record was gone.
+        say "    rows    : $t $before row(s), all replaced by different content (by $name)"
+        REPLACED_TABLES=$((REPLACED_TABLES + 1))
+      fi
+    elif [ -n "${BASE_TABLE_PRESENT[$t]:-}" ]; then
+      # A table that existed before the targets ran and is gone now: the rollback
+      # removed pre-existing data, whatever the row count was.
+      say "    table   : $t existed before the migration and was dropped by $name"
+      DESTROYED_ROWS=$((DESTROYED_ROWS + before))
+    else
+      # The target set created it; removing it is what rolling back a CREATE means.
+      say "    table   : $t (created by the target set) was dropped by $name"
+      DROPPED_TABLES=$((DROPPED_TABLES + 1))
+    fi
+  done < "$pre"
+  STEP=$((STEP - 1))
+done
+
 captured_sql "$DOWN_LOG_START" > "$OUT_DIR/down-sql.txt"
 ok "down() completed"
 
 COLS_POST="$(psql_db mc_base "SELECT count(*) FROM information_schema.columns WHERE table_schema='public'")"
 FK_POST="$(psql_db mc_base "SELECT count(*) FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND con.contype='f'")"
-
-DESTROYED_ROWS=0
-say "  destroyed by down():"
 say "    schema  : $((COLS_PRE - COLS_POST)) column(s) dropped, $((FK_PRE - FK_POST)) foreign key(s) removed"
-while IFS= read -r line; do
-  [ -n "$line" ] || continue
-  t="${line%%|*}"; rest="${line#*|}"; before="${rest%%|*}"
-  after_raw="$(row_snapshot mc_base "$t" 2>/dev/null || echo '0|gone')"; after="${after_raw%%|*}"
-  if [ "$before" != "$after" ]; then
-    say "    rows    : $t $before -> $after (destroyed $((before - after)))"
-    DESTROYED_ROWS=$((DESTROYED_ROWS + before - after))
-  fi
-done < "$OUT_DIR/rows-pre-down.txt"
-if [ "$DESTROYED_ROWS" = "0" ]; then
+
+# The audit is only as good as its scope. If down() touched a table that was never
+# snapshotted, "destroyed no rows" does not cover it, and staying quiet about that
+# would be precisely the silent under-report this tool exists to prevent.
+UNAUDITED=()
+while IFS= read -r t; do
+  [ -n "$t" ] || continue
+  [ "$t" = "migrations" ] && continue
+  in_list "$t" ${DOWN_TABLES[@]+"${DOWN_TABLES[@]}"} || UNAUDITED+=("$t")
+done < <(emitted_tables < "$OUT_DIR/down-sql.txt")
+if [ "${#UNAUDITED[@]}" -gt 0 ]; then
+  bad "down() touched table(s) outside the audited scope, so no destruction verdict covers them: ${UNAUDITED[*]}"
+fi
+if [ "$DESTROYED_ROWS" = "0" ] && [ "$REPLACED_TABLES" = "0" ]; then
   ok "down() destroyed no rows in the tables this migration touches"
 elif [ "$ALLOW_DOWN_DATA_LOSS" = "1" ]; then
-  warn "down() destroyed $DESTROYED_ROWS row(s) (accepted via --allow-down-data-loss)"
+  warn "down() destroyed $DESTROYED_ROWS row(s) and replaced the contents of $REPLACED_TABLES table(s) (accepted via --allow-down-data-loss)"
 else
-  bad "down() destroyed $DESTROYED_ROWS row(s); a rollback that deletes records is not reversible (re-run with --allow-down-data-loss once that is accepted)"
+  bad "down() destroyed $DESTROYED_ROWS row(s) and replaced the contents of $REPLACED_TABLES table(s); a rollback that deletes or rewrites records is not reversible (re-run with --allow-down-data-loss once that is accepted)"
 fi
 
 # -------------------------------------------------------- 7. schema round trip
@@ -1413,6 +1729,8 @@ for w in ${WARNINGS[@]+"${WARNINGS[@]}"}; do say "    - $w"; done
   printf 'failures=%s\n' "${#FAILURES[@]}"
   printf 'warnings=%s\n' "${#WARNINGS[@]}"
   printf 'down_destroyed_rows=%s\n' "$DESTROYED_ROWS"
+  printf 'down_replaced_tables=%s\n' "$REPLACED_TABLES"
+  printf 'down_dropped_target_tables=%s\n' "$DROPPED_TABLES"
   printf 'schema_after_up=%s\n' "$FP_AFTER_UP"
   printf 'schema_baseline=%s\n' "$BASE_FP"
   printf 'up_sql_statements=%s\n' "$(wc -l < "$OUT_DIR/up-sql.txt")"

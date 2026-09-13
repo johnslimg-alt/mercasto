@@ -67,10 +67,28 @@ jobs:
           MIGVERIFY_TEST_REQUIRE_DOCKER: '1'
         run: bash scripts/verify-migrations-postgres.test.sh
 
+      # On a push, checkout leaves origin/main AT the pushed commit, so the default
+      # --base=origin/main yields an empty diff and the job would pass without
+      # verifying the migration that triggered it. Compare against the pre-push
+      # commit instead, which is what `github.event.before` is.
+      - name: Resolve comparison base
+        id: base
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "push" ]; then
+            before='${{ github.event.before }}'
+            case "$before" in
+              ''|0000000000000000000000000000000000000000) echo "ref=origin/main" >> "$GITHUB_OUTPUT" ;;
+              *) echo "ref=$before" >> "$GITHUB_OUTPUT" ;;
+            esac
+          else
+            echo "ref=origin/${{ github.base_ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          fi
+
       # --no-production-counts: this runner has no access to the production database,
       # and the tool must never need it. Row counts degrade to "n/a" here.
       - name: Verify changed migrations on PostgreSQL
-        run: bash scripts/verify-migrations-postgres.sh --no-production-counts --out-dir=/tmp/migration-verify
+        run: bash scripts/verify-migrations-postgres.sh --no-production-counts --base="${{ steps.base.outputs.ref }}" --out-dir=/tmp/migration-verify
 
       - name: Upload migration verification evidence
         if: always()
