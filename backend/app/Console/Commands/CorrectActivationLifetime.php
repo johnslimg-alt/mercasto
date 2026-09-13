@@ -27,19 +27,36 @@ use Illuminate\Support\Facades\DB;
  * tasks move the rows to `expired` and the inventory is dark again, with no way back.
  *
  * What it writes. For each ad this command republishes, `expires_at` becomes the moment the
- * operator's activation published it (the activation decision's `created_at`) plus the
- * lifetime resolved NOW, and `status` becomes `active`. That is a correction of the original
- * grant, not a fresh grant: the visibility already served inside the wrong window is charged
- * against the intended lifetime. `status` is set because a row that already lapsed is
- * `expired`, and an `expired` row with a future `expires_at` is still invisible; the result
- * satisfies App\Support\ListingIndexability, the shared predicate the sitemap and the SEO
- * shell use, so "corrected" means genuinely indexable and not merely active.
+ * bulk activation that granted the row's CURRENT lifetime published it (that activation
+ * decision's `created_at`) plus the lifetime resolved NOW, and `status` becomes `active`. That
+ * is a correction of the original grant, not a fresh grant: the visibility already served
+ * inside the wrong window is charged against the intended lifetime. `status` is set because a
+ * row that already lapsed is `expired`, and an `expired` row with a future `expires_at` is
+ * still invisible; the result satisfies App\Support\ListingIndexability, the shared predicate
+ * the sitemap and the SEO shell use, so "corrected" means genuinely indexable and not merely
+ * active.
+ *
+ * What it CANNOT know, and says so. The command cannot tell an intended lifetime from a
+ * misconfigured one; it applies whatever the configuration resolves to. A value LARGER than
+ * the lifetime the rows already hold is therefore written. "0 changes" is not a safety net for
+ * a wrong setting — it happens only when the resolved lifetime does not exceed what the rows
+ * already hold (typically: the env was never changed at all). The preflight prints the resolved
+ * value and its provenance, and that line is what the operator must confirm before `--apply`.
  *
  * Why the anchor makes it idempotent. The target is a pure function of two immutable inputs
- * (the activation instant and the resolved lifetime), never of `now()`. A second `--apply`
- * computes the same instants, and the write is conditional on the row still differing, so it
- * reports 0 changes. Anchoring on `now()` instead would make every re-run silently extend the
- * window, which is the one failure mode an operator tool must not have.
+ * (the granting activation instant and the resolved lifetime), never of `now()`. A second
+ * `--apply` computes the same instants, and the write is conditional on the row still differing,
+ * so it reports 0 changes. Anchoring on `now()` instead would make every re-run silently extend
+ * the window, which is the one failure mode an operator tool must not have. Anchoring on a
+ * SUPERSEDED activation would be the mirror error: an ad can be activated more than once (the
+ * seller archives it, an operator republishes it with `--include-owner-archived`), and measuring
+ * from the older activation under-extends the row or skips it outright.
+ *
+ * --limit is a budget for WRITES, not for rows inspected. A corrected row remains in the
+ * candidate set for ever — its `expires_at` no longer matches its recorded grant, which is
+ * precisely what makes it ineligible — and permanent safety exclusions stay there too. If either
+ * consumed the budget, a later limited run would start at the same ids, correct nothing and never
+ * reach the remaining ads, so batching a large correction could never finish.
  *
  * THE SAFETY CORE — which lifetimes are eligible.
  * Only rows whose `expires_at` is still EXACTLY the instant an operator command recorded are
@@ -117,7 +134,7 @@ class CorrectActivationLifetime extends Command
         // and the change-lifetime remedy.
         $this->printActivationPreflight([
             'SCOPE' => 'only ads whose expires_at is still exactly the instant a previous run of ads:reconcile-moderation-visibility (or of this command) recorded. Ads with a paid payment, a later republished_at, any status other than active/expired, or no recorded operator grant are reported and never touched.',
-            'DIRECTION' => 'this command only ever EXTENDS a lifetime, and never past activation + the lifetime above. If the printed lifetime is not the intended one, fix the env, rebuild the cache and re-run the dry run first: applying with the wrong value here reports 0 changes rather than writing a wrong date.',
+            'DIRECTION' => 'this command only ever EXTENDS a lifetime, and it writes activation time + the lifetime above - never now + that lifetime. It cannot know whether that value is the one you intend: a resolved lifetime LARGER than the one the rows already hold IS applied, so confirm the ad_lifetime_days line above before --apply. A run reports 0 changes only when the resolved lifetime does not exceed what those rows already hold.',
         ]);
 
         if (! $apply) {
@@ -125,12 +142,17 @@ class CorrectActivationLifetime extends Command
         }
 
         $this->line(sprintf(
-            'Anchor: activation decision created_at, + %d day(s) resolved now (never now + %d day(s)).',
+            'Anchor: the bulk activation that granted each row\'s current lifetime (created_at), + %d day(s) resolved now (never now + %d day(s)).',
             Ad::lifetimeDays(),
             Ad::lifetimeDays()
         ));
 
-        $matched = 0;
+        // --limit is a budget for WRITES, not for rows inspected. A corrected row stays in the
+        // candidate set for ever (its expires_at no longer matches its recorded grant, which is
+        // exactly what makes it ineligible), and so do permanent safety exclusions; if either
+        // consumed the budget, every later limited run would start at the same ids, correct
+        // nothing and never reach the remaining ads — batching a large correction would stall.
+        $actionable = 0;
         $changed = 0;
         $skipped = 0;
         $rows = [];
@@ -142,7 +164,7 @@ class CorrectActivationLifetime extends Command
             ->chunkById(200, function (Collection $ads) use (
                 $apply,
                 $limit,
-                &$matched,
+                &$actionable,
                 &$changed,
                 &$skipped,
                 &$rows,
@@ -153,7 +175,7 @@ class CorrectActivationLifetime extends Command
                 $paidAdIds = $this->paidAdIds($ads->pluck('id')->all());
 
                 foreach ($ads as $ad) {
-                    if ($limit > 0 && $matched >= $limit) {
+                    if ($limit > 0 && $actionable >= $limit) {
                         return false;
                     }
 
@@ -162,8 +184,6 @@ class CorrectActivationLifetime extends Command
                         $decisions->get($ad->id, collect()),
                         $paidAdIds->has($ad->id)
                     );
-
-                    $matched++;
 
                     if ($verdict['reason'] !== null) {
                         $exclusions[] = [$ad->id, $verdict['reason']];
@@ -182,6 +202,9 @@ class CorrectActivationLifetime extends Command
                         $verdict['current']->toDateTimeString(),
                         $verdict['target']->toDateTimeString(),
                     ];
+
+                    // Counts against --limit only now that the row is known to be actionable.
+                    $actionable++;
 
                     if (! $apply) {
                         $rows[] = $row;
@@ -378,14 +401,6 @@ class CorrectActivationLifetime extends Command
             'reason' => $reason, 'current' => null, 'target' => null, 'anchor' => null, 'grant' => null,
         ];
 
-        $activation = $decisions
-            ->filter(fn (AdModerationDecision $decision): bool => ActivationLifetimeProvenance::isBulkActivation($decision))
-            ->first();
-
-        if ($activation?->created_at === null) {
-            return $skip(self::REASON_UNVERIFIABLE);
-        }
-
         // The most recent operator grant decides what the row's expires_at is expected to hold.
         $grant = $decisions
             ->filter(fn (AdModerationDecision $decision): bool => ActivationLifetimeProvenance::isOperatorGrant($decision))
@@ -394,6 +409,23 @@ class CorrectActivationLifetime extends Command
         $recorded = $grant ? ActivationLifetimeProvenance::grantedExpiresAt($grant) : null;
 
         if ($grant === null || $recorded === null) {
+            return $skip(self::REASON_UNVERIFIABLE);
+        }
+
+        // The anchor is the bulk activation that granted THIS row's current lifetime: the most
+        // recent activation at or before the decision that recorded the current grant. An ad can
+        // be bulk-activated more than once — the seller archives it and an operator republishes
+        // it with --include-owner-archived, which writes a second grant and a second decision —
+        // and the intended lifetime has to be measured from the activation the ad is actually
+        // holding. Anchoring on a superseded activation under-extends the correction, and skips
+        // the row outright once the old anchor plus the intended lifetime is no longer ahead of
+        // the current expiry. $decisions is ordered by id, so last() is the most recent one.
+        $activation = $decisions
+            ->filter(fn (AdModerationDecision $decision): bool => ActivationLifetimeProvenance::isBulkActivation($decision))
+            ->filter(fn (AdModerationDecision $decision): bool => (int) $decision->getKey() <= (int) $grant->getKey())
+            ->last();
+
+        if ($activation?->created_at === null) {
             return $skip(self::REASON_UNVERIFIABLE);
         }
 

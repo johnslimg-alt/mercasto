@@ -302,6 +302,70 @@ class CorrectActivationLifetimeTest extends TestCase
         $this->assertSame(3, Ad::query()->where('expires_at', now()->subDays(3)->addDays(90))->count());
     }
 
+    /**
+     * --limit is a budget for WRITES, not for rows inspected. A corrected row stays in the
+     * candidate set (its expires_at no longer matches its recorded grant, which is what makes it
+     * permanently ineligible), and so do permanent safety exclusions — if either consumes the
+     * budget, every later limited run starts at the same ids, corrects nothing and never reaches
+     * the remaining ads. Batching a large correction would stall forever.
+     */
+    public function test_batched_limited_runs_advance_past_already_resolved_rows(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ads = [$this->hiddenApprovedAd($seller), $this->hiddenApprovedAd($seller), $this->hiddenApprovedAd($seller)];
+        $this->activate($ads, 7);
+
+        Carbon::setTestNow('2026-08-08 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $target = now()->subDays(3)->addDays(90);
+
+        for ($run = 1; $run <= 3; $run++) {
+            $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--limit' => 1, '--apply' => true]));
+            $this->assertStringContainsString(
+                'Applied: 1 ad(s) corrected',
+                Artisan::output(),
+                "limited run {$run} made no progress"
+            );
+            $this->assertSame($run, Ad::query()->where('expires_at', $target)->count(), "after run {$run}");
+        }
+
+        $this->assertSame(3, Ad::query()->where('expires_at', $target)->count());
+    }
+
+    public function test_a_limited_dry_run_plans_the_next_row_and_never_consumes_the_work(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $first = $this->hiddenApprovedAd($seller);
+        $second = $this->hiddenApprovedAd($seller);
+        $this->activate([$first, $second], 7);
+
+        Carbon::setTestNow('2026-08-08 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 90]);
+
+        // Correct the first row, so the next limited run faces a resolved row before it.
+        Artisan::call('ads:correct-activation-lifetime', ['--limit' => 1, '--apply' => true]);
+        $this->assertStringContainsString('Applied: 1 ad(s) corrected', Artisan::output());
+
+        // The dry run must move PAST the resolved row and plan the remaining one. Reporting
+        // "0" here is the stalled state: the resolved row ate the batch budget.
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--limit' => 1]));
+        $planned = Artisan::output();
+        $this->assertStringContainsString('Would correct 1 ad(s)', $planned);
+        $this->assertStringContainsString('| '.$second->id.' ', $planned, 'The remaining row is the one planned.');
+
+        // A dry run never consumes the work: the same single row is still the next one.
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--limit' => 1]));
+        $this->assertStringContainsString('Would correct 1 ad(s)', Artisan::output());
+        $this->assertSame($second->id, (int) $second->fresh()->id);
+        $this->assertNotSame(
+            now()->subDays(3)->addDays(90)->toDateTimeString(),
+            $second->fresh()->expires_at?->toDateTimeString(),
+            'A dry run must not write.'
+        );
+    }
+
     // ---------------------------------------------------------------------
     // NEGATIVE CONTROLS: lifetimes that are not the operator's
     // ---------------------------------------------------------------------
@@ -567,6 +631,60 @@ class CorrectActivationLifetimeTest extends TestCase
         $this->assertStringContainsString('Applied: 0 ad(s) corrected', Artisan::output());
     }
 
+    /**
+     * An ad can be bulk-activated more than once: the seller archives it, and an operator
+     * republishes it with `--include-owner-archived`, which writes a SECOND grant and a second
+     * activation decision. The intended lifetime must then be measured from the activation that
+     * granted the window the ad is actually holding — anchoring on the superseded one
+     * under-extends it, and skips the row entirely once the old anchor plus the intended
+     * lifetime is no longer ahead of the current expiry.
+     */
+    public function test_the_anchor_follows_the_activation_that_granted_the_current_lifetime(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);                                  // first activation
+
+        // The next day the seller archives it, while its window is still running.
+        Carbon::setTestNow('2026-08-06 12:00:00');
+        $this->actingAs($seller, 'sanctum')
+            ->patchJson("/api/ads/{$ad->id}/status", ['status' => 'archived'])
+            ->assertOk();
+        $this->assertSame('archived', $ad->fresh()->status);
+
+        // A month later an operator republishes it with --include-owner-archived: a SECOND
+        // bulk activation, with its own grant, and its own (later) anchor.
+        Carbon::setTestNow('2026-09-04 12:00:00');
+        $secondAnchor = Carbon::parse(now()->toDateTimeString());
+        $this->assertSame(0, Artisan::call('ads:reconcile-moderation-visibility', [
+            '--apply' => true,
+            '--include-owner-archived' => true,
+        ]));
+        $ad->refresh();
+        $this->assertSame('active', $ad->status, 'The second reconciliation must republish the ad.');
+        $this->assertTrue($ad->expires_at->equalTo($secondAnchor->copy()->addDays(7)));
+        $this->assertSame(
+            2,
+            AdModerationDecision::query()
+                ->where('ad_id', $ad->id)
+                ->where('metadata->reconciliation->command', ActivationLifetimeProvenance::RECONCILE_COMMAND)
+                ->count(),
+            'The ad must carry two recorded activations for this control to mean anything.'
+        );
+
+        Carbon::setTestNow('2026-09-06 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+
+        $this->assertStringContainsString('Applied: 1 ad(s) corrected', Artisan::output());
+        $this->assertSame(
+            $secondAnchor->copy()->addDays(90)->toDateTimeString(),
+            $ad->fresh()->expires_at?->toDateTimeString(),
+            'The anchor must be the most recent activation that granted the current lifetime.'
+        );
+    }
+
     public function test_the_resolved_lifetime_governs_and_a_wrong_one_writes_nothing_rather_than_a_clamped_date(): void
     {
         Carbon::setTestNow('2026-08-05 12:00:00');
@@ -582,6 +700,44 @@ class CorrectActivationLifetimeTest extends TestCase
 
         $this->assertSame($before, $this->adRow($ad->id));
         $this->assertStringContainsString('Applied: 0 ad(s) corrected', Artisan::output());
+    }
+
+    /**
+     * The "0 changes" outcome is NOT a guarantee that a wrong resolved value is harmless. A
+     * resolved lifetime LARGER than the one the rows already hold is written: the command cannot
+     * know it was unintended. The apply-time guidance must say that, because an operator who
+     * believes the opposite will persist a second wrong lifetime instead of fixing the env.
+     */
+    public function test_a_larger_resolved_lifetime_is_applied_and_the_preflight_says_so(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $anchor = $this->activate([$ad], 7);
+
+        // A stale/incorrect configuration resolves 180 days when 90 was intended.
+        Carbon::setTestNow('2026-08-08 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 180]);
+
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime'));
+        $preflight = Artisan::output();
+        $text = (string) preg_replace('/\s+/', ' ', $preflight);
+
+        $this->assertStringContainsString(
+            'It cannot know whether that value is the one you intend',
+            $text,
+            'The preflight must not promise a no-op it cannot deliver.'
+        );
+        $this->assertStringContainsString('IS applied', $text);
+        $this->assertStringNotContainsString('reports 0 changes rather than writing a wrong date', $text);
+
+        // And the behaviour the corrected text describes: the larger value really is written.
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+        $this->assertStringContainsString('Applied: 1 ad(s) corrected', Artisan::output());
+        $this->assertSame(
+            $anchor->copy()->addDays(180)->toDateTimeString(),
+            $ad->fresh()->expires_at?->toDateTimeString()
+        );
     }
 
     public function test_it_writes_an_audit_row_and_clears_the_public_caches_on_apply(): void
