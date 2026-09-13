@@ -58,6 +58,9 @@ const AdCard = memo(({
   const isCatalogFiller = isCatalogReference(ad);
   const isFav = favoriteIds.includes(ad.id);
   const imageWidth = Number.isFinite(options.imageWidth) ? options.imageWidth : 520;
+  // Catalogue results nest card titles directly under the results h1, so the grid
+  // passes headingLevel=2; every other surface keeps the default h3 under its section h2.
+  const CardTitle = `h${[2, 3, 4].includes(options.headingLevel) ? options.headingLevel : 3}`;
   const safeImage = sizedImage(options.displayImageUrl || getImageUrl(ad.image_url, ad.image), imageWidth);
 
   if (options.priority) {
@@ -104,16 +107,16 @@ const AdCard = memo(({
             onError={handleImageError}
             alt={localizedText(ad.title, lang)}
           />
-          {isCatalogFiller && <span className="badge absolute left-1.5 top-1.5 z-10 bg-slate-900/90 text-[9px] text-white">{detailCopy.catalogTitle}</span>}
           {!isCatalogFiller && isDestacado && <span className="badge absolute left-1.5 top-1.5 z-10 bg-blue-600 text-[9px] text-white">{t.featured_status}</span>}
           {!isCatalogFiller && !isDestacado && isUrgente && <span className="badge absolute left-1.5 top-1.5 z-10 bg-amber-500 text-[9px] text-white">{t.urgent_badge}</span>}
         </div>
         <div className="ad-result-body pointer-events-none flex min-w-0 flex-1 flex-col px-3 py-2.5 pr-12 text-[#0F172A] dark:text-white sm:px-4 sm:py-3">
-          <h3 className="line-clamp-2 text-[13px] font-bold leading-snug text-slate-800 dark:text-slate-100 sm:text-[14px]">{localizedText(ad.title, lang)}</h3>
+          <CardTitle className="line-clamp-2 text-[13px] font-bold leading-snug text-slate-800 dark:text-slate-100 sm:text-[14px]">{localizedText(ad.title, lang)}</CardTitle>
           <div className="mt-1 text-[16px] font-black leading-none text-slate-950 dark:text-white sm:text-[18px]">
             ${formatNumber(ad.price, lang)} <span className="text-[9px] font-semibold text-slate-400">MXN</span>
           </div>
           <div className="mt-auto flex min-w-0 items-center gap-2 pt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+            {isCatalogFiller && <span className="badge min-w-0 max-w-full truncate bg-slate-900 text-[11px] text-white dark:bg-slate-700" data-testid="catalog-reference-badge">{detailCopy.catalogTitle}</span>}
             <span className="truncate">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || t.all_mexico)}</span>
             {ad.condition && <span className="hidden shrink-0 rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600 sm:inline dark:bg-slate-800 dark:text-slate-300">{ad.condition}</span>}
           </div>
@@ -156,7 +159,6 @@ const AdCard = memo(({
             <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
           </span>
         </button>
-        {isCatalogFiller && <span className="badge absolute top-2.5 left-2.5 bg-slate-900/90 text-white z-10">{detailCopy.catalogTitle}</span>}
         {!isCatalogFiller && isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">{t.featured_status}</span>}
         {!isCatalogFiller && !isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">{t.urgent_badge}</span>}
         {!isCatalogFiller && !isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] z-10" style={{ color: '#0F172A' }}>{t.highlighted_badge}</span>}
@@ -166,7 +168,8 @@ const AdCard = memo(({
         <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">
           ${formatNumber(ad.price, lang)} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span>
         </div>
-        <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{localizedText(ad.title, lang)}</h3>
+        <CardTitle className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{localizedText(ad.title, lang)}</CardTitle>
+        {isCatalogFiller && <span className="badge mt-1.5 w-fit max-w-full bg-slate-900 text-[11px] leading-snug text-white dark:bg-slate-700" data-testid="catalog-reference-badge">{detailCopy.catalogTitle}</span>}
         <div className="mt-1.5"><AdRatingStars ad={ad} compact /></div>
         <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500 dark:text-slate-400">
           <span className="truncate pr-2">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || t.all_mexico)}</span>

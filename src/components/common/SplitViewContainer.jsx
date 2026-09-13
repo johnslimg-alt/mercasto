@@ -213,6 +213,9 @@ export default function SplitViewContainer({
           displayImageUrl: getAdImage(ad),
           compact: viewLayout === 'list',
           layout: viewLayout,
+          // Catalogue card titles sit directly under the results h1 (no intermediate
+          // section heading), so they are h2 here instead of the default h3.
+          headingLevel: 2,
           priority: index < (isMobileCatalog ? 2 : 4),
           imageWidth: isMobileCatalog ? 400 : 520,
           onActivate: () => handleAdClick(ad),
@@ -289,10 +292,14 @@ export default function SplitViewContainer({
       {/* TOOLBAR — Результаты + переключатель Grid / List              */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <div data-testid="catalog-results-toolbar" className="sticky top-[calc(var(--mc-site-header-offset)+0.5rem)] z-30 mb-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:px-4 sm:py-3">
+        {/* Page h1 from sm up. Below sm the toolbar belongs to the 48px view toggle
+            (see catalog-map-responsive.spec.js) and the phone header row in
+            CatalogScreen carries the visible h1 instead — the two never render
+            visible at the same width, so each viewport has exactly one visible h1. */}
         <div className="hidden min-w-0 items-center gap-3 sm:flex">
-          <h2 data-testid="catalog-results-title" className="shrink-0 text-[16px] font-bold text-slate-900 dark:text-white md:text-[18px]">
+          <h1 data-testid="catalog-results-title" className="shrink-0 text-[16px] font-bold text-slate-900 dark:text-white md:text-[18px]">
             {t.search_results}
-          </h2>
+          </h1>
           <span className="min-w-0 truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
             {genuineAds.length} {t.real_listings}{catalogReferenceCount > 0 ? ` · ${catalogReferenceCount} ${t.catalog_references}` : ''}
           </span>
