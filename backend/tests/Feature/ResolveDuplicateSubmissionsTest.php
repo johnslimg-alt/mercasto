@@ -412,4 +412,96 @@ class ResolveDuplicateSubmissionsTest extends TestCase
         $this->assertSame(Ad::MODERATION_APPROVED, $recent->fresh()->ai_moderation_status);
         $this->assertSame(Ad::MODERATION_APPROVED, $keeper->fresh()->ai_moderation_status);
     }
+
+    // ---------------------------------------------------------------------
+    // Preflight: what this sweep changes, and what it can never undo
+    // ---------------------------------------------------------------------
+
+    /**
+     * Whole-table snapshot of the surface this command can write, so "the dry run writes
+     * nothing" is asserted against every column of every row rather than one field.
+     *
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private function writeSurfaceSnapshot(): array
+    {
+        $dump = fn (string $table): array => DB::table($table)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (object $row): array => (array) $row)
+            ->all();
+
+        return [
+            'ads' => $dump('ads'),
+            'ad_moderation_decisions' => $dump('ad_moderation_decisions'),
+        ];
+    }
+
+    /**
+     * The preflight block is wrapped at a fixed width, so sentence-level assertions are made
+     * with the line breaks collapsed.
+     */
+    private function preflightText(string $output): string
+    {
+        return (string) preg_replace('/\s+/', ' ', $output);
+    }
+
+    public function test_dry_run_preflight_reports_the_lifetime_size_and_ordering_without_writing(): void
+    {
+        $this->freezeTime();
+        $seller = User::factory()->create();
+        $this->createAd($seller);
+        $this->createAd($seller);
+        $this->createAd($seller);
+        $before = $this->writeSurfaceSnapshot();
+        $this->assertCount(3, $before['ads'], 'The read-only assertion must not be vacuous.');
+
+        $this->assertSame(0, $this->resolve());
+        $output = Artisan::output();
+        $text = $this->preflightText($output);
+
+        // The lifetime the following activation step grants, and the expiry it stamps.
+        $this->assertStringContainsString(sprintf('ad_lifetime_days : %d day(s)', Ad::lifetimeDays()), $output);
+        $this->assertStringContainsString('expires_at       : '.Ad::freshExpiry()->format('Y-m-d H:i:s T'), $output);
+
+        // The size of the change and the ordering key that picks the survivor, both stated
+        // before anything is written.
+        $this->assertStringContainsString('ONE-SHOT', $output);
+        $this->assertStringContainsString(
+            'a following --apply would change 2 row(s) (--action=manual_review, --keep=earliest)',
+            $output
+        );
+        $this->assertStringContainsString(
+            'survivors are kept by submission order (created_at, then id as tiebreaker), not by ad id',
+            $text
+        );
+
+        // A dry run is read-only, on every row of every table this command writes.
+        $this->assertSame($before, $this->writeSurfaceSnapshot(), 'A dry run must not write.');
+        $this->assertSame(3, Ad::query()->where('ai_moderation_status', Ad::MODERATION_APPROVED)->count());
+    }
+
+    public function test_apply_preflight_change_size_matches_the_rows_actually_changed(): void
+    {
+        $this->freezeTime();
+        $seller = User::factory()->create();
+        $keeper = $this->createAd($seller);
+        $copyA = $this->createAd($seller);
+        $copyB = $this->createAd($seller);
+
+        $this->assertSame(0, $this->resolve(['--apply' => true]));
+        $output = Artisan::output();
+
+        $this->assertStringContainsString('PREFLIGHT', $output);
+        $this->assertStringContainsString(
+            'this run will change 2 row(s) (--action=manual_review, --keep=earliest)',
+            $output
+        );
+        $this->assertStringContainsString('Applied. 2 row(s) changed.', $output);
+
+        $this->assertSame(Ad::MODERATION_APPROVED, $keeper->fresh()->ai_moderation_status);
+        $this->assertSame('archived', $keeper->fresh()->status);
+        $this->assertSame('manual_review', $copyA->fresh()->ai_moderation_status);
+        $this->assertSame('manual_review', $copyB->fresh()->ai_moderation_status);
+    }
 }

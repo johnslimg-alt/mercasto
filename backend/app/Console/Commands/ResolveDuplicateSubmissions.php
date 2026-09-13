@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Services\ListingDuplicateDetector;
+use App\Traits\ReportsAdLifetimePreflight;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -45,9 +46,17 @@ use Illuminate\Support\Facades\DB;
  * app/Console/Commands automatically (there is no app/Console/Kernel.php), so this
  * is run as `php artisan ads:resolve-duplicate-submissions ...`. It is deliberately
  * NOT scheduled in routes/console.php — it is an operator action, not a cron.
+ *
+ * Irreversibility: the "second --apply is a no-op" property is not an undo. Only rows
+ * with `ai_moderation_status = 'approved'` are changed, so after a run a second --apply
+ * selects none of the rows it changed, and the command never returns a row to
+ * 'approved'. The preflight block below states that, plus the exact size of the change
+ * and the ordering key that decides which member survives, before any write.
  */
 class ResolveDuplicateSubmissions extends Command
 {
+    use ReportsAdLifetimePreflight;
+
     protected $signature = 'ads:resolve-duplicate-submissions
         {--action=manual_review : What to do with the duplicates: manual_review or reject}
         {--keep=earliest : Which member of each group to keep, by submission order (created_at, then id as tiebreaker): earliest or latest}
@@ -86,6 +95,14 @@ class ResolveDuplicateSubmissions extends Command
                 return self::FAILURE;
             }
         }
+
+        // Printed in both modes, before the first write: the lifetime the FOLLOWING
+        // activation step will stamp, and the fact that this sweep cannot be re-run as an
+        // undo. Additive output only - the command's contract is unchanged.
+        $this->printActivationPreflight([
+            'NEXT STEP' => 'ads:reconcile-moderation-visibility --apply runs after this one and activates the rows still approved, each with expires_at = the date above; the rows changed here are not activated by it.',
+            'ONE-SHOT' => "only rows with ai_moderation_status='approved' are changed, so a later --apply selects none of the rows changed here: re-running is not an undo, and this command never returns a row to 'approved'.",
+        ]);
 
         if (! $apply) {
             $this->info('DRY RUN: no changes will be written. Re-run with --apply to persist.');
@@ -207,6 +224,18 @@ class ResolveDuplicateSubmissions extends Command
         if ($truncated) {
             $toChange = array_slice($toChange, 0, $limit);
         }
+
+        // Preflight for the write that follows, so the operator sees the exact size of the
+        // change and the ordering key that picks the survivor before anything is written.
+        // In dry-run it is the projection of what --apply would do. Additive output only.
+        $this->line(sprintf(
+            'Preflight: %s %d row(s) (--action=%s, --keep=%s); survivors are kept by %s, not by ad id.',
+            $apply ? 'this run will change' : 'a following --apply would change',
+            count($toChange),
+            $action,
+            $keep,
+            ListingDuplicateDetector::ORDER_DESCRIPTION
+        ));
 
         if ($tableRows !== []) {
             $this->newLine();
