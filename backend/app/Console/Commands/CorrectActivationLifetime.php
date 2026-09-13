@@ -61,8 +61,11 @@ use Illuminate\Support\Facades\DB;
  * THE SAFETY CORE — which lifetimes are eligible.
  * Only rows whose `expires_at` is still EXACTLY the instant an operator command recorded are
  * touched. Every other lifetime belongs to someone else and is left alone:
- *   - a `payments` row with `status = 'paid'` for the ad (any product code: deliberately
- *     broader than renewals, so money changing hands for an ad excludes it) — never touched;
+ *   - ANY `payments` row for the ad that is not provably unsettled (i.e. anything outside
+ *     `pending` / `failed` / `expired`) — never touched. That is a whitelist rather than a list of
+ *     paid statuses because a blacklist fails open: `paid_review` (money received, promotion
+ *     fulfilment parked for manual remediation) was not on it, and `payments.status` has no
+ *     database constraint, so a status added later would reopen the hole silently;
  *   - `republished_at` later than the operator's grant (paid renewal, `republish`, seller
  *     confirmation reactivation) — never touched;
  *   - any status other than `active` / `expired` (archived, paused, inactive, rejected: the
@@ -79,6 +82,9 @@ use Illuminate\Support\Facades\DB;
  * `republish_count`, so a guard built on those signals alone would overwrite a seller's own
  * renewal. It also survives the natural end of the granted lifetime, because every expiry path
  * flips `status` and leaves `expires_at` untouched — which is exactly the case being repaired.
+ * The instant compared against is the one the grant recorded, and the anchor is derived from that
+ * same record rather than from the audit row's timestamp, so the guard and the target always read
+ * one second: see ActivationLifetimeProvenance::grantedAnchor().
  *
  * Two further one-way guards:
  *   - it only ever EXTENDS. If the intended lifetime resolves to an instant at or before the
@@ -150,7 +156,7 @@ class CorrectActivationLifetime extends Command
         // runbook uses: the resolved lifetime, where it came from, the env-layer desync warning
         // and the change-lifetime remedy.
         $this->printActivationPreflight([
-            'SCOPE' => 'only ads whose expires_at is still exactly the instant a previous run of ads:reconcile-moderation-visibility (or of this command) recorded. Ads with a paid payment, a later republished_at, any status other than active/expired, or no recorded operator grant are reported and never touched.',
+            'SCOPE' => 'only ads whose expires_at is still exactly the instant a previous run of ads:reconcile-moderation-visibility (or of this command) recorded. Ads with any payment that is not a provably unsettled attempt (pending/failed/expired), a later republished_at, any status other than active/expired, or no recorded operator grant are reported and never touched.',
             'DIRECTION' => 'this command only ever EXTENDS a lifetime, and it writes activation time + the lifetime above - never now + that lifetime. It cannot know whether that value is the one you intend: a resolved lifetime LARGER than the one the rows already hold IS applied, so confirm the ad_lifetime_days line above before --apply. A run reports 0 changes only when the resolved lifetime does not exceed what those rows already hold.',
         ]);
 
@@ -159,7 +165,7 @@ class CorrectActivationLifetime extends Command
         }
 
         $this->line(sprintf(
-            'Anchor: the bulk activation that granted each row\'s current lifetime (created_at), + %d day(s) resolved now (never now + %d day(s)).',
+            'Anchor: the instant each row\'s recorded grant was measured from (recorded expiry - recorded lifetime), + %d day(s) resolved now (never now + %d day(s)).',
             Ad::lifetimeDays(),
             Ad::lifetimeDays()
         ));
@@ -189,7 +195,7 @@ class CorrectActivationLifetime extends Command
                 &$unverifiable
             ): bool {
                 $decisions = $this->operatorDecisionsFor($ads->pluck('id')->all());
-                $paidAdIds = $this->paidAdIds($ads->pluck('id')->all());
+                $blockingPayments = $this->blockingPaymentStatuses($ads->pluck('id')->all());
 
                 foreach ($ads as $ad) {
                     if ($limit > 0 && $actionable >= $limit) {
@@ -199,7 +205,7 @@ class CorrectActivationLifetime extends Command
                     $verdict = $this->evaluate(
                         $ad,
                         $decisions->get($ad->id, collect()),
-                        $paidAdIds->has($ad->id)
+                        $blockingPayments->get($ad->id)
                     );
 
                     if ($verdict['reason'] !== null) {
@@ -340,6 +346,27 @@ class CorrectActivationLifetime extends Command
     }
 
     /**
+     * The payment statuses that provably mean NO money was received.
+     *
+     * This is a whitelist, not a list of paid statuses, and that inversion is the point. A
+     * blacklist fails OPEN: `paid_review` — money received, promotion fulfilment parked for manual
+     * remediation (PaymentController.php:373, and counted as revenue by EconomicsMetrics, the
+     * monthly accounting export and PaymentController's own summary) — was not on it, so an ad the
+     * seller had paid for stayed eligible. `payments.status` carries no database constraint, so a
+     * provider-side status added later would reopen the same hole silently. Anything not provably
+     * unsettled therefore disqualifies the ad and is reported for a human decision, which is the
+     * fail-closed direction this command already documents: money changed hands ⇒ a human decides.
+     *
+     *   - `pending`  the checkout row exists and was never paid;
+     *   - `failed`   the checkout could not be created or was rejected by the provider;
+     *   - `expired`  an abandoned `pending` attempt closed by payments:expire-pending.
+     *
+     * `refunded` and chargebacks are deliberately NOT here: money was taken, and the case deserves
+     * a human rather than a silent correction.
+     */
+    private const UNSETTLED_PAYMENT_STATUSES = ['pending', 'failed', 'expired'];
+
+    /**
      * Ads that could possibly carry an operator-granted lifetime: real, still approved, and in a
      * status a bulk activation can leave behind, with a recorded activation on the audit trail.
      *
@@ -398,24 +425,37 @@ class CorrectActivationLifetime extends Command
     }
 
     /**
-     * Ads with a paid payment, which this command never touches.
+     * Ads carrying at least one payment that is NOT provably unsettled — i.e. any row that may
+     * represent money received — mapped to the status that blocks them.
      *
-     * Deliberately ANY paid payment linked to the ad rather than only renewal product codes: the
-     * narrowest safe subset is "money changed hands for this ad, so a human decides". A false
-     * exclusion is reported by ad id and costs a manual decision; a false inclusion would
-     * overwrite something a seller paid for.
+     * Deliberately any such payment rather than only renewal product codes or only the statuses
+     * known to mean "paid": the narrowest safe subset is "money may have changed hands for this ad,
+     * so a human decides". A false exclusion is reported with its status and costs a manual
+     * decision; a false inclusion would overwrite something a seller paid for.
      *
      * @param  list<int>  $adIds
-     * @return Collection<int, int>
+     * @return Collection<int, string> ad id => the blocking payment status
      */
-    private function paidAdIds(array $adIds): Collection
+    private function blockingPaymentStatuses(array $adIds): Collection
     {
         return DB::table('payments')
             ->whereIn('ad_id', $adIds)
-            ->where('status', 'paid')
-            ->pluck('ad_id')
-            ->map(fn ($id): int => (int) $id)
-            ->flip();
+            ->whereNotIn('status', self::UNSETTLED_PAYMENT_STATUSES)
+            ->orderBy('id')
+            ->get(['ad_id', 'status'])
+            ->mapWithKeys(fn (object $row): array => [(int) $row->ad_id => (string) $row->status]);
+    }
+
+    /**
+     * Single-source the per-row predicate so the batched scan above and the locked re-check in
+     * applyCorrection() can never drift apart.
+     */
+    private function blockingPaymentExists(int $adId): bool
+    {
+        return DB::table('payments')
+            ->where('ad_id', $adId)
+            ->whereNotIn('status', self::UNSETTLED_PAYMENT_STATUSES)
+            ->exists();
     }
 
     /**
@@ -424,37 +464,27 @@ class CorrectActivationLifetime extends Command
      * @param  Collection<int, AdModerationDecision>  $decisions
      * @return array{reason: ?string, current: ?Carbon, target: ?Carbon, anchor: ?Carbon, grant: ?AdModerationDecision}
      */
-    private function evaluate(Ad $ad, Collection $decisions, bool $hasPaidPayment): array
+    private function evaluate(Ad $ad, Collection $decisions, ?string $blockingPaymentStatus): array
     {
         $skip = fn (string $reason): array => [
             'reason' => $reason, 'current' => null, 'target' => null, 'anchor' => null, 'grant' => null,
         ];
 
-        // The most recent operator grant decides what the row's expires_at is expected to hold.
+        // The most recent operator grant decides what the row's expires_at is expected to hold,
+        // what instant that window began, and — for the republished_at comparison — when the
+        // operator wrote it.
         $grant = $decisions
             ->filter(fn (AdModerationDecision $decision): bool => ActivationLifetimeProvenance::isOperatorGrant($decision))
             ->last();
 
         $recorded = $grant ? ActivationLifetimeProvenance::grantedExpiresAt($grant) : null;
 
-        if ($grant === null || $recorded === null) {
-            return $skip(self::REASON_UNVERIFIABLE);
-        }
+        // Derived from the recorded grant, NOT from the decision's created_at: see
+        // ActivationLifetimeProvenance::grantedAnchor(). A grant whose lifetime was not recorded
+        // cannot yield an anchor, and is refused rather than guessed.
+        $anchor = $grant ? ActivationLifetimeProvenance::grantedAnchor($grant) : null;
 
-        // The anchor is the bulk activation that granted THIS row's current lifetime: the most
-        // recent activation at or before the decision that recorded the current grant. An ad can
-        // be bulk-activated more than once — the seller archives it and an operator republishes
-        // it with --include-owner-archived, which writes a second grant and a second decision —
-        // and the intended lifetime has to be measured from the activation the ad is actually
-        // holding. Anchoring on a superseded activation under-extends the correction, and skips
-        // the row outright once the old anchor plus the intended lifetime is no longer ahead of
-        // the current expiry. $decisions is ordered by id, so last() is the most recent one.
-        $activation = $decisions
-            ->filter(fn (AdModerationDecision $decision): bool => ActivationLifetimeProvenance::isBulkActivation($decision))
-            ->filter(fn (AdModerationDecision $decision): bool => (int) $decision->getKey() <= (int) $grant->getKey())
-            ->last();
-
-        if ($activation?->created_at === null) {
+        if ($grant === null || $recorded === null || $anchor === null) {
             return $skip(self::REASON_UNVERIFIABLE);
         }
 
@@ -468,15 +498,21 @@ class CorrectActivationLifetime extends Command
         // BOTH expires_at and republished_at, so the instant check below would also exclude it —
         // but the operator needs the reason that says money changed hands, because that is the
         // fact that makes the row someone else's to decide rather than a bug to investigate.
-        if ($hasPaidPayment) {
-            return $skip('a payment for this ad is marked paid, so a human decides its lifetime');
+        if ($blockingPaymentStatus !== null) {
+            return $skip(sprintf(
+                "a payment for this ad is '%s', which is not a provably unsettled attempt, so a human decides its lifetime",
+                $blockingPaymentStatus
+            ));
         }
 
-        if ($ad->republished_at !== null && $grant->created_at !== null && $ad->republished_at->gt($grant->created_at)) {
+        // Compared against the grant's own instant (the derived anchor), not the audit decision's
+        // timestamp, so every guard here reads the same second as the eligibility check above.
+        // The anchor is never later than that timestamp, so this is the stricter comparison.
+        if ($ad->republished_at !== null && $ad->republished_at->gt($anchor)) {
             return $skip(sprintf(
                 'republished_at (%s) is later than the operator grant (%s): a seller action or a paid renewal set this lifetime',
                 $ad->republished_at->toDateTimeString(),
-                $grant->created_at->toDateTimeString()
+                $anchor->toDateTimeString()
             ));
         }
 
@@ -491,10 +527,8 @@ class CorrectActivationLifetime extends Command
             ));
         }
 
-        // The activation instant is the anchor, never the previous correction's: the intended
-        // lifetime is measured from when the operator published the ad, so repeated runs cannot
-        // creep the expiry forward.
-        $anchor = Carbon::parse($activation->created_at->toDateTimeString());
+        // The intended lifetime is measured from the recorded grant's instant, so repeated runs
+        // cannot creep the expiry forward and an unchanged lifetime reports 0 changes exactly.
         $target = $anchor->copy()->addDays(Ad::lifetimeDays());
 
         if ($target->lessThanOrEqualTo($current)) {
@@ -544,16 +578,25 @@ class CorrectActivationLifetime extends Command
                 ->get()
                 ->first(fn (AdModerationDecision $decision): bool => ActivationLifetimeProvenance::isOperatorGrant($decision));
 
+            // Re-derived from the locked row's own grant, and re-checked against the SAME instant
+            // the target was built from, so a grant recorded between evaluation and this write can
+            // only make the guard stricter.
+            $grantAnchor = $grant ? ActivationLifetimeProvenance::grantedAnchor($grant) : null;
+
             if ($grant === null
+                || $grantAnchor === null
                 || ! ActivationLifetimeProvenance::matches($fresh->expires_at, ActivationLifetimeProvenance::grantedExpiresAt($grant))) {
                 return 0;
             }
 
-            if ($fresh->republished_at !== null && $grant->created_at !== null && $fresh->republished_at->gt($grant->created_at)) {
+            if ($fresh->republished_at !== null && $fresh->republished_at->gt($grantAnchor)) {
                 return 0;
             }
 
-            if (DB::table('payments')->where('ad_id', $fresh->id)->where('status', 'paid')->exists()) {
+            // Any payment that is not provably unsettled blocks, re-read inside the lock so a
+            // payment that lands between evaluation and this write still stops the correction.
+            // Paid-family must match the family the row was excluded by above.
+            if ($this->blockingPaymentExists($fresh->id)) {
                 return 0;
             }
 

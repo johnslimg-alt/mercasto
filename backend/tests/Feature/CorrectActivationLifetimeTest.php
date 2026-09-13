@@ -404,8 +404,9 @@ class CorrectActivationLifetimeTest extends TestCase
 
         $this->assertSame($paidRow, $this->adRow($ad->id), 'A paid renewal must be byte-identical after the run.');
         $this->assertStringContainsString(
-            sprintf('SKIPPED ad #%d: a payment for this ad is marked paid', $ad->id),
-            $output
+            sprintf("SKIPPED ad #%d: a payment for this ad is 'paid'", $ad->id),
+            $output,
+            'The reason must name the payment status that blocked the row.'
         );
     }
 
@@ -941,6 +942,204 @@ class CorrectActivationLifetimeTest extends TestCase
         $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime'));
 
         Cache::shouldNotHaveReceived('forget');
+    }
+
+    // ---------------------------------------------------------------------
+    // Review round 4
+    // ---------------------------------------------------------------------
+
+    /**
+     * `paid_review` is money received, not an unsettled attempt.
+     *
+     * PaymentController::decideWebhook() writes it after Clip's payment has been confirmed and
+     * verified, when promotion fulfilment needs manual remediation (PaymentController.php:373),
+     * and the seller is told "Pago recibido — promoción en revisión". The codebase counts it as
+     * revenue in four further places: EconomicsMetrics::PAID_STATUSES, the monthly accounting
+     * export and PaymentController's own revenue summary all use ['paid', 'paid_review'].
+     *
+     * In exactly this state the ad is left untouched — still active with the operator's recorded
+     * expiry — so a guard that only matched `status = 'paid'` would hand the correction an ad the
+     * seller has paid for.
+     */
+    public function test_a_payment_awaiting_manual_remediation_is_never_touched(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);
+
+        DB::table('payments')->insert([
+            'user_id' => $seller->id,
+            'ad_id' => $ad->id,
+            'clip_checkout_id' => 'clip_review_'.$ad->id,
+            'amount' => 99,
+            'description' => 'Impulso',
+            'product_code' => 'boost_1_day',
+            'status' => 'paid_review',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $before = $this->adRow($ad->id);
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+
+        $this->assertSame(
+            $before,
+            $this->adRow($ad->id),
+            'An ad whose payment is awaiting remediation must not have its lifetime changed.'
+        );
+        $this->assertStringContainsString('paid_review', Artisan::output());
+    }
+
+    /**
+     * The guard is a whitelist of provably unsettled attempts, not a blacklist of paid statuses.
+     *
+     * A blacklist fails open: any status nobody enumerated — a refund, a chargeback, a status the
+     * payment provider adds later — reads as "no money changed hands" and the ad gets corrected.
+     * `payments.status` has no database constraint, so new statuses can appear without any schema
+     * change. An unrecognised status must therefore block and be reported for a human.
+     */
+    public function test_an_unrecognised_payment_status_blocks_rather_than_being_ignored(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);
+
+        DB::table('payments')->insert([
+            'user_id' => $seller->id,
+            'ad_id' => $ad->id,
+            'clip_checkout_id' => 'clip_unknown_'.$ad->id,
+            'amount' => 49,
+            'description' => 'Renovación',
+            'product_code' => 'ad_renewal_7_days',
+            'status' => 'refunded',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $before = $this->adRow($ad->id);
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+
+        $this->assertSame($before, $this->adRow($ad->id));
+        $this->assertStringContainsString('refunded', Artisan::output());
+    }
+
+    /**
+     * The other half of the same design: an abandoned payment attempt must NOT block, or the
+     * guard would be over-broad and refuse legitimate corrections. A seller who starts a renewal
+     * checkout and walks away leaves `pending`/`failed`/`expired` rows on an ad the operator
+     * activated, and no money was taken for any of them.
+     */
+    public function test_provably_unsettled_payments_do_not_block_a_correction(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);
+
+        foreach (['pending', 'failed', 'expired'] as $status) {
+            DB::table('payments')->insert([
+                'user_id' => $seller->id,
+                'ad_id' => $ad->id,
+                'clip_checkout_id' => 'clip_'.$status.'_'.$ad->id,
+                'amount' => 49,
+                'description' => 'Renovación',
+                'product_code' => 'ad_renewal_7_days',
+                'status' => $status,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+
+        $this->assertStringContainsString('Applied: 1 ad(s) corrected', Artisan::output());
+        $this->assertSame(
+            Carbon::parse('2026-08-05 12:00:00')->addDays(90)->toDateTimeString(),
+            $ad->fresh()->expires_at?->toDateTimeString()
+        );
+    }
+
+    /**
+     * The activation computes `expires_at` from one `now()`, then writes the row, then creates the
+     * audit decision from a SECOND `now()`. When the update waits on a lock or simply crosses a
+     * whole-second boundary, the decision's `created_at` is later than the instant that was
+     * actually granted, so using it as the anchor makes every row look one lifetime-fraction
+     * older than it is: a correction with an UNCHANGED lifetime stops reporting "0 changes" and
+     * writes a small extension instead. The anchor must come from the recorded grant itself, which
+     * is also the instant the eligibility check compares against, so both agree by construction.
+     */
+    public function test_the_anchor_comes_from_the_recorded_grant_not_the_decision_timestamp(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+
+        // Advance the clock as the activation's UPDATE completes, i.e. after `expires_at` was
+        // computed and before the audit decision's `created_at` is generated.
+        $advanced = false;
+        DB::listen(function ($query) use (&$advanced): void {
+            if (! $advanced
+                && str_contains($query->sql, 'update "ads"')
+                && str_contains($query->sql, 'reminder_sent_at')) {
+                $advanced = true;
+                Carbon::setTestNow(Carbon::now()->addSecond());
+            }
+        });
+
+        config(['marketplace.ad_lifetime_days' => 7]);
+        $this->assertSame(0, Artisan::call('ads:reconcile-moderation-visibility', ['--apply' => true]));
+        $this->assertTrue($advanced, 'The control must actually have straddled the boundary.');
+
+        $ad->refresh();
+        $granted = $ad->expires_at->copy();
+        $this->assertSame('2026-08-12 12:00:00', $granted->toDateTimeString());
+
+        $decision = AdModerationDecision::query()
+            ->where('ad_id', $ad->id)
+            ->where('metadata->reconciliation->command', ActivationLifetimeProvenance::RECONCILE_COMMAND)
+            ->firstOrFail();
+        $this->assertSame(
+            '2026-08-05 12:00:01',
+            $decision->created_at->toDateTimeString(),
+            'The audit timestamp must really be one second after the granted instant.'
+        );
+        $this->assertTrue(ActivationLifetimeProvenance::grantedExpiresAt($decision)->equalTo($granted));
+
+        // The lifetime has NOT changed, so the correction must report 0 changes and write nothing.
+        $before = $this->adRow($ad->id);
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+        $this->assertStringContainsString('Applied: 0 ad(s) corrected', Artisan::output());
+        $this->assertSame($before, $this->adRow($ad->id));
+        $this->assertTrue(ActivationLifetimeProvenance::grantedAnchor($decision)->equalTo(Carbon::parse('2026-08-05 12:00:00')));
+    }
+
+    /**
+     * A grant whose recorded lifetime is missing cannot yield an anchor, and the command must say
+     * so rather than fall back to the audit timestamp it exists to distrust.
+     */
+    public function test_a_grant_without_a_recorded_lifetime_is_unverifiable_rather_than_guessed(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);
+
+        $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->firstOrFail();
+        $metadata = $decision->metadata;
+        unset($metadata['reconciliation']['granted_lifetime_days']);
+        DB::table('ad_moderation_decisions')->where('id', $decision->id)->update(['metadata' => json_encode($metadata)]);
+
+        $before = $this->adRow($ad->id);
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+
+        $this->assertSame($before, $this->adRow($ad->id));
+        $this->assertStringContainsString('did not record the granted instant', Artisan::output());
     }
 
     public function test_it_writes_an_audit_row_and_clears_the_public_caches_on_apply(): void
