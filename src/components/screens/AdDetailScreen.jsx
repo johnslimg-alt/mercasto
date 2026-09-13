@@ -8,6 +8,7 @@ import { canonicalAdCondition, formatAdDetailCopy, getAdDetailCopy } from '../..
 import { publicListingAttributeEntries } from '../../utils/publicListingAttributes';
 import { listingUrl } from '../../utils/seoIndexability';
 import { isCatalogReference } from '../../utils/catalogInventory';
+import { QR_CODE_OPTIONS, buildCanonicalListingUrl, buildShareTargets } from '../../utils/shareLinks';
 import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
 
@@ -324,7 +325,7 @@ function RatingStars({ rating }) {
 export default function AdDetailScreen({
   ad, API_URL, getImageUrl, getImageUrls, getCatName, t, lang, favoriteIds, categoriesData,
   sliderAutoplay, handleShareAd, handleToggleFavorite, setReportingAd, setShowReportModal,
-  handleViewCompany, handleWhatsAppClick, allAds, setViewedAd, onBack, MediaSlider, renderAdCard, AdSenseBanner,
+  handleViewCompany, allAds, setViewedAd, onBack, MediaSlider, renderAdCard, AdSenseBanner,
   currentUser,
   handleRenewAd
 }) {
@@ -402,14 +403,16 @@ export default function AdDetailScreen({
       .catch(() => setPriceHistory([]));
   }, [API_URL, ad?.id]);
 
-  // Dynamic OG tags for social sharing
+  // Dynamic OG tags for social sharing. The canonical listing URL (never the current
+  // URL, which may carry a legacy #ad-<id> fragment or tracking params) is the single
+  // source of truth, matching the server-rendered share card.
   useDocumentMeta({
     title: localizedText(ad?.title, lang) || 'Mercasto',
     description: ad?.description
       ? localizedText(ad.description, lang).substring(0, 160)
       : (t.ai_brand_description || ''),
     image: ad ? getImageUrl(ad.image_url || ad.image?.[0]) : '',
-    url: typeof window !== 'undefined' ? window.location.href : ''
+    url: ad ? buildCanonicalListingUrl(ad.id, typeof window !== 'undefined' ? window.location.origin : undefined) : ''
   });
 
   if (!ad) return null;
@@ -438,18 +441,25 @@ export default function AdDetailScreen({
   const whatsappNumber = getSafeWhatsAppNumber(ad);
   const whatsappMessage = encodeURIComponent(whatsappInterestMessage(localizedText(ad.title, lang), lang));
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
-  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/#ad-${ad.id}` : '';
-  const shareText = `${t.check_this_ad || 'Mira este anuncio en Mercasto'}: ${localizedText(ad.title, lang) || ''}`;
-  const encodedShareUrl = encodeURIComponent(shareUrl);
-  const encodedShareText = encodeURIComponent(shareText);
-  const shareOptions = [
-    { label: 'WhatsApp', href: `https://wa.me/?text=${encodedShareText}%20${encodedShareUrl}` },
-    { label: 'Telegram', href: `https://t.me/share/url?url=${encodedShareUrl}&text=${encodedShareText}` },
-    { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedShareUrl}` },
-    { label: 'X / Twitter', href: `https://twitter.com/intent/tweet?text=${encodedShareText}&url=${encodedShareUrl}` },
-    { label: 'Email', href: `mailto:?subject=${encodeURIComponent(localizedText(ad.title, lang) || 'Mercasto')}&body=${encodedShareText}%0A${encodedShareUrl}` },
-  ];
+  // Single source of truth for every share surface (channels, native sheet, clipboard, QR).
+  // The share URL is a real, crawler-visible server route carrying per-channel UTMs —
+  // never a `#ad-<id>` fragment (fragments are stripped before the request leaves the device,
+  // so crawlers only ever saw the generic home card).
+  const shareTargets = buildShareTargets({
+    id: ad.id,
+    origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+    title: localizedText(ad.title, lang) || '',
+    message: `${t.check_this_ad || 'Mira este anuncio en Mercasto'}: ${localizedText(ad.title, lang) || ''}`,
+    content: 'ad_detail',
+  });
+  const shareOptions = shareTargets.options;
   const ratingStats = getAdRatingStats(ad);
+
+  // Sharing is an engagement event, never a contact conversion: each share surface
+  // emits exactly one `share` event (see src/utils/analytics.js) and never `contact_opened`.
+  const emitShare = (channel) => {
+    events.share(channel, ad.id, ad.category, { share_surface: 'ad_detail' });
+  };
 
   const internalMessagePath = () => {
     const sellerId = Number(ad.user_id || ad.user?.id || 0);
@@ -487,9 +497,11 @@ export default function AdDetailScreen({
   const handleShowQR = async () => {
     try {
       const { default: QRCode } = await import('qrcode');
-      const url = await QRCode.toDataURL(shareUrl, { width: 300, margin: 2 });
+      // The qrcode encoder mutates the options object it receives, so hand it a copy.
+      const url = await QRCode.toDataURL(shareTargets.qr.url, { ...QR_CODE_OPTIONS });
       setQrDataUrl(url);
       setShowQR(true);
+      emitShare('qr');
     } catch (err) {
       console.error('QR generation failed', err);
     } finally {
@@ -497,27 +509,39 @@ export default function AdDetailScreen({
     }
   };
 
+  // Native share sheet (falls back to the clipboard). Returns the channel that
+  // actually completed so the caller can emit exactly one share event.
+  const nativeShare = async () => {
+    const result = await handleShareAd(ad, shareTargets.native.url);
+    if (result === 'native' || result === 'clipboard') {
+      emitShare(result === 'clipboard' ? 'copy' : 'native');
+    }
+    setShowShareMenu(false);
+  };
+
   const copyShareLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(shareTargets.copy.url);
+      emitShare('copy');
     } catch (error) {
-      handleShareAd(ad);
-    } finally {
-      handleWhatsAppClick(ad, 'share');
-      setShowShareMenu(false);
+      await nativeShare();
+      return;
     }
+    setShowShareMenu(false);
+  };
+
+  // A channel button is a share, not a contact click: mark it share-only for the
+  // delegated click tracker and emit one `share` event with its channel.
+  const handleChannelShare = (channel) => {
+    emitShare(channel);
+    setShowShareMenu(false);
   };
 
   // Handle share button click — use native share API on mobile if available
   const handleShareClick = async () => {
     const isMobile = window.innerWidth < 768;
     if (isMobile && navigator.share) {
-      try {
-        await navigator.share({ title: localizedText(ad.title, lang), text: shareText, url: shareUrl });
-        handleWhatsAppClick(ad, 'share');
-      } catch (err) {
-        // User cancelled native share or not supported
-      }
+      await nativeShare();
       return;
     }
     setShowShareMenu(prev => !prev);
@@ -790,7 +814,8 @@ export default function AdDetailScreen({
                     {navigator.share && (
                       <button
                         type="button"
-                        onClick={() => { handleShareAd(ad); handleWhatsAppClick(ad, 'share'); setShowShareMenu(false); }}
+                        data-analytics-ignore="true"
+                        onClick={nativeShare}
                         className="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
                         {t.share_from_device || 'Compartir desde el dispositivo'}
@@ -802,7 +827,9 @@ export default function AdDetailScreen({
                         href={option.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={() => { handleWhatsAppClick(ad, option.label === 'Email' ? 'email' : 'share'); setShowShareMenu(false); }}
+                        data-analytics-ignore="true"
+                        data-share-channel={option.channel}
+                        onClick={() => handleChannelShare(option.channel)}
                         className="block px-4 py-2.5 text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
                         {option.label}
@@ -810,6 +837,7 @@ export default function AdDetailScreen({
                     ))}
                     <button
                       type="button"
+                      data-analytics-ignore="true"
                       onClick={handleShowQR}
                       className="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
@@ -817,6 +845,7 @@ export default function AdDetailScreen({
                     </button>
                     <button
                       type="button"
+                      data-analytics-ignore="true"
                       onClick={copyShareLink}
                       className="block w-full border-t border-slate-100 px-4 py-3 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
@@ -851,7 +880,9 @@ export default function AdDetailScreen({
                             href={option.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={() => { handleWhatsAppClick(ad, option.label === 'Email' ? 'email' : 'share'); setShowShareMenu(false); }}
+                            data-analytics-ignore="true"
+                            data-share-channel={option.channel}
+                            onClick={() => handleChannelShare(option.channel)}
                             className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                           >
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[11px] ${colors[option.label] || 'bg-slate-500 text-white'}`}>
@@ -864,6 +895,7 @@ export default function AdDetailScreen({
                     </div>
                     <button
                       type="button"
+                      data-analytics-ignore="true"
                       onClick={handleShowQR}
                       className="w-full py-3 text-center text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors mb-3"
                     >
@@ -871,6 +903,7 @@ export default function AdDetailScreen({
                     </button>
                     <button
                       type="button"
+                      data-analytics-ignore="true"
                       onClick={copyShareLink}
                       className="w-full py-3 text-center text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
                     >

@@ -658,9 +658,17 @@ function inferClickEvent(el, meta) {
   const href = el.getAttribute('href') || '';
   const lowerHref = href.toLowerCase();
   const lowerText = String(meta.element_text || '').toLowerCase();
-  if (lowerHref.startsWith('tel:') || lowerText.includes('teléfono') || lowerText.includes('llamar')) return 'phone_click';
-  if (lowerHref.startsWith('mailto:')) return 'email_click';
-  if (lowerHref.includes('wa.me') || lowerHref.includes('whatsapp') || lowerText.includes('whatsapp')) return 'whatsapp_click';
+  // Share intents reuse the WhatsApp/Telegram/email URL schemes without addressing a
+  // seller (wa.me/?text=…, t.me/share/url, mailto:?subject=…). Those are shares, never
+  // contact conversions, so they must not be classified as contact clicks.
+  const isShareIntent = /wa\.me\/(\?|$)/.test(lowerHref)
+    || lowerHref.startsWith('https://t.me/share/')
+    || /^mailto:\?/i.test(href);
+  if (!isShareIntent) {
+    if (lowerHref.startsWith('tel:') || lowerText.includes('teléfono') || lowerText.includes('llamar')) return 'phone_click';
+    if (lowerHref.startsWith('mailto:')) return 'email_click';
+    if (lowerHref.includes('wa.me') || lowerHref.includes('whatsapp') || lowerText.includes('whatsapp')) return 'whatsapp_click';
+  }
   if (href) return 'link_click';
   if (el.getAttribute('type') === 'submit') return 'form_submit_click';
   if (meta.ad_id) return 'ad_card_click';
@@ -999,6 +1007,18 @@ export const events = {
 
   contactOpened,
   contactClick: contactOpened,
+
+  /**
+   * Outbound share of a listing. Deliberately its own event: a share is reach, not a
+   * contact conversion, so it must never be counted as one (no Contact/contact_opened,
+   * no /api/meta/events/contact, no `/ads/{id}/click` contact counter).
+   */
+  share: (channel, listingId, category, params = {}) =>
+    trackEvent('share', listingAnalyticsParams(listingId, category, {
+      share_channel: channel,
+      channel,
+      ...params,
+    })),
 
   offerMade: (amount, params = {}) =>
     trackEvent('offer_made', { value: amount, currency: 'MXN', ...params }),

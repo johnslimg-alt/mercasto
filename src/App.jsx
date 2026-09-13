@@ -11,6 +11,7 @@ import { isOpenAIAdsMeasurementAllowed } from './utils/trackingConsent';
 import { clearPublishDraft } from './utils/publishDraft';
 import { isAdCreditPromotionEligible } from './utils/adBulkEligibility';
 import { isCatalogReference } from './utils/catalogInventory';
+import { buildShareUrl } from './utils/shareLinks';
 import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
 import { getVerticalCanonicalAlias, getVerticalSeo } from './constants/verticalSeo';
@@ -3664,13 +3665,31 @@ function App() {
   };
 
   // --- ПОДЕЛИТЬСЯ ОБЪЯВЛЕНИЕМ ---
-  const handleShareAd = (ad) => {
+  // Single share implementation: the URL always comes from src/utils/shareLinks.js
+  // (crawler-visible /share/ads/{id} card + per-channel UTMs), never window.location.href
+  // which pointed at a `#ad-<id>` fragment crawlers cannot see.
+  // Returns 'native' | 'clipboard' | null so callers can emit exactly one share event.
+  const handleShareAd = async (ad, shareUrl) => {
     const adTitle = localizedText(ad.title, lang);
+    const url = shareUrl || buildShareUrl({ id: ad.id, channel: 'native' });
+    if (!url) return null;
+    const text = t.listing_action_share_text.replace('{title}', adTitle);
     if (navigator.share) {
-      navigator.share({ title: adTitle, text: t.listing_action_share_text.replace('{title}', adTitle), url: window.location.href }).catch(console.error);
-    } else {
-      navigator.clipboard.writeText(window.location.href);
+      try {
+        await navigator.share({ title: adTitle, text, url });
+        return 'native';
+      } catch (err) {
+        // User cancelled the native share sheet — nothing was shared.
+        return null;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
       showToast(t.copied);
+      return 'clipboard';
+    } catch (err) {
+      showToast(t.connection_error, 'error');
+      return null;
     }
   };
 
