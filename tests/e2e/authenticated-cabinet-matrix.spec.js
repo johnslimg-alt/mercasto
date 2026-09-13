@@ -117,7 +117,7 @@ async function expectDarkThemeIntegrity(page) {
     };
     const parseColor = value => {
       const color = String(value || '').trim().toLowerCase();
-      const rgb = color.match(/^rgba?\(\s*([\d.]+)(%)?[\s,]+([\d.]+)(%)?[\s,]+([\d.]+)(%)?(?:\s*[,/]\s*([\d.]+)(%)?)?\s*\)$/);
+      const rgb = color.match(/^rgba?\(\s*([\d.]+(?:[eE][-+]?\d+)?)(%)?[\s,]+([\d.]+(?:[eE][-+]?\d+)?)(%)?[\s,]+([\d.]+(?:[eE][-+]?\d+)?)(%)?(?:\s*[,/]\s*([\d.]+(?:[eE][-+]?\d+)?)(%)?)?\s*\)$/);
       if (rgb) {
         const channel = (raw, percent) => percent ? Number(raw) * 2.55 : Number(raw);
         return {
@@ -125,7 +125,7 @@ async function expectDarkThemeIntegrity(page) {
           alpha: alphaValue(rgb[7], rgb[8]),
         };
       }
-      const oklch = color.match(/^oklch\(\s*([\d.]+)(%)?\s+([\d.]+)(%)?\s+([-\d.]+)(?:deg)?(?:\s*\/\s*([\d.]+)(%)?)?\s*\)$/);
+      const oklch = color.match(/^oklch\(\s*([\d.]+(?:[eE][-+]?\d+)?)(%)?\s+([\d.]+(?:[eE][-+]?\d+)?)(%)?\s+([-\d.]+(?:[eE][-+]?\d+)?)(?:deg)?(?:\s*\/\s*([\d.]+(?:[eE][-+]?\d+)?)(%)?)?\s*\)$/);
       if (oklch) {
         const lightness = oklch[2] ? Number(oklch[1]) / 100 : Number(oklch[1]);
         const chroma = oklch[4] ? Number(oklch[3]) * 0.004 : Number(oklch[3]);
@@ -135,14 +135,14 @@ async function expectDarkThemeIntegrity(page) {
           alpha: alphaValue(oklch[6], oklch[7]),
         };
       }
-      const oklab = color.match(/^oklab\(\s*([\d.]+)(%)?\s+([-\d.]+)(%)?\s+([-\d.]+)(%)?(?:\s*\/\s*([\d.]+)(%)?)?\s*\)$/);
+      const oklab = color.match(/^oklab\(\s*([\d.]+(?:[eE][-+]?\d+)?)(%)?\s+([-\d.]+(?:[eE][-+]?\d+)?)(%)?\s+([-\d.]+(?:[eE][-+]?\d+)?)(%)?(?:\s*\/\s*([\d.]+(?:[eE][-+]?\d+)?)(%)?)?\s*\)$/);
       if (oklab) {
         const lightness = oklab[2] ? Number(oklab[1]) / 100 : Number(oklab[1]);
         const a = oklab[4] ? Number(oklab[3]) * 0.004 : Number(oklab[3]);
         const b = oklab[6] ? Number(oklab[5]) * 0.004 : Number(oklab[5]);
         return { rgb: oklabToRgb(lightness, a, b), alpha: alphaValue(oklab[7], oklab[8]) };
       }
-      const srgb = color.match(/^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+)(%)?)?\s*\)$/);
+      const srgb = color.match(/^color\(srgb\s+([\d.]+(?:[eE][-+]?\d+)?)\s+([\d.]+(?:[eE][-+]?\d+)?)\s+([\d.]+(?:[eE][-+]?\d+)?)(?:\s*\/\s*([\d.]+(?:[eE][-+]?\d+)?)(%)?)?\s*\)$/);
       if (srgb) {
         return {
           rgb: [Number(srgb[1]) * 255, Number(srgb[2]) * 255, Number(srgb[3]) * 255],
