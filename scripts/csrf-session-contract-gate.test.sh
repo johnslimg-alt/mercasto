@@ -16,6 +16,15 @@ set -euo pipefail
 # many handlers, so mutating a single call site leaves the gate satisfied by the
 # others and would prove nothing. The claim tested is "the contract is gone".
 #
+# The wiring half is controlled the same way, and in both directions: the entry
+# must IMPORT ./App.jsx and must RENDER its component on the element index.html
+# serves. Import-only mutations were not enough -- keeping the import while the
+# render tree stops using the component (or while the mount is moved behind a
+# condition, a function that never runs, or an element the served HTML does not
+# contain) left this gate green, which is RC-3 again: a claim about reachability
+# asserted by import instead of by execution. Cases that still render are kept
+# alongside them, so the gate cannot drift into an exact-string match.
+#
 # Everything happens in a temporary directory; the repository is never modified.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -211,5 +220,143 @@ src = src.replace("import AppWrapper from './App.jsx'", "// import AppWrapper fr
 open(path, 'w', encoding='utf-8').write(src)
 PY
 check "main.jsx comments out the App.jsx import" 1
+
+# --- importing the module is not the same claim as MOUNTING it ---------------
+# RC-3 on the client wire: an entry-point migration can keep the active import
+# while the render tree stops using the component. Every token-lifecycle
+# assertion above then describes code the browser never executes -- and lint does
+# not catch it, because `no-unused-vars` is configured with
+# `varsIgnorePattern: '^[A-Z_]'`, which exempts an unused `AppWrapper` import.
+# Each case below was verified to leave the gate green before this was added.
+seed
+mutate "src/main.jsx" "<AppWrapper />" "<SomethingElse />"
+check "entry imports App.jsx but renders a different component" 1
+
+seed
+mutate "src/main.jsx" "<AppWrapper />" "{/* <AppWrapper /> */}"
+check "AppWrapper is commented out of the render tree" 1
+
+seed
+mutate "src/main.jsx" "<AppWrapper />" "{false && <AppWrapper />}"
+check "AppWrapper sits behind a condition that is never true" 1
+
+seed
+mutate "src/main.jsx" "getElementById('root')" "getElementById('app')"
+check "entry mounts on an element index.html does not serve" 1
+
+seed
+mutate "index.html" 'id="root"' 'id="app"'
+check "index.html stops serving the mount element" 1
+
+seed
+mutate "src/main.jsx" "if (rootElement) {" "if (false) {"
+check "the mount is gated behind a condition that is never true" 1
+
+seed
+mutate "src/main.jsx" "if (rootElement) {" "if (!rootElement) {"
+check "the mount guard is inverted" 1
+
+seed
+mutate "src/main.jsx" "createRoot(rootElement)" "createRoot(document.createElement('div'))"
+check "the mount is pointed at a detached element" 1
+
+# The mount moved into a function that is never called: the render still exists as
+# text in the module, but nothing executes it.
+seed
+python3 - "$TMP/tree/src/main.jsx" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+old = "if (rootElement) {\n  createRoot(rootElement).render("
+assert old in src, 'mount guard not found'
+src = src.replace(old, "function mountApp() {\n  createRoot(rootElement).render(", 1)
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "the mount is moved into a function that is never called" 1
+
+# The mount statement removed entirely (import and token lifecycle untouched).
+seed
+python3 - "$TMP/tree/src/main.jsx" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+assert 'createRoot(rootElement).render(' in src, 'mount not found'
+src = src.replace('createRoot(rootElement).render(', '// createRoot(rootElement).render(', 1)
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "the mount call is commented out entirely" 1
+
+# The realistic migration: render a different component that IS imported and
+# defined, so neither the build nor lint has anything to complain about.
+seed
+python3 - "$TMP/tree/src/main.jsx" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+src = src.replace("import AppWrapper from './App.jsx'",
+                  "import AppWrapper from './App.jsx'\nimport MigratedApp from './MigratedApp.jsx'", 1)
+assert '<AppWrapper />' in src
+src = src.replace('<AppWrapper />', '<MigratedApp />', 1)
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "entry renders a migrated replacement component instead" 1
+
+# The component is used in the module, but OUTSIDE the render tree: the text
+# exists and the file would still lint, yet nothing mounts it. The assertion must
+# be about the render tree, not about the file.
+seed
+python3 - "$TMP/tree/src/main.jsx" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+src = src.replace("import AppWrapper from './App.jsx'",
+                  "import AppWrapper from './App.jsx'\nimport MigratedApp from './MigratedApp.jsx'", 1)
+assert '<AppWrapper />' in src
+src = src.replace('<AppWrapper />', '<MigratedApp />', 1)
+marker = "const rootElement = document.getElementById('root');"
+assert marker in src
+src = src.replace(marker, "const renderedButUnmounted = <AppWrapper />;\n" + marker, 1)
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "AppWrapper is used in the module but not in the render tree" 1
+
+# The gate must stay structural, not name- or quote-brittle: shapes that still
+# render the component on the served element have to pass, or the control would
+# be locking in an exact-string match instead of the contract.
+seed
+mutate "src/main.jsx" "import AppWrapper from './App.jsx'" 'import AppWrapper from "./App.jsx"'
+check "the same wiring with double quotes still passes" 0
+
+seed
+mutate "src/main.jsx" "import AppWrapper from './App.jsx'" "import { default as AppWrapper } from './App.jsx'"
+check "the same wiring via a named default import still passes" 0
+
+seed
+python3 - "$TMP/tree/src/main.jsx" "$TMP/tree/index.html" <<'PY'
+import sys
+main_path, index_path = sys.argv[1], sys.argv[2]
+main_src = open(main_path, encoding='utf-8').read()
+assert "getElementById('root')" in main_src
+open(main_path, 'w', encoding='utf-8').write(main_src.replace("getElementById('root')", "getElementById('app')", 1))
+index_src = open(index_path, encoding='utf-8').read()
+assert 'id="root"' in index_src
+open(index_path, 'w', encoding='utf-8').write(index_src.replace('id="root"', 'id="app"', 1))
+PY
+check "a consistently renamed mount element still passes" 0
+
+# A different lookup (a portal or modal root) inserted before the mount must not
+# be mistaken for the mount element: the gate resolves the element the mount
+# actually uses, not the first one in the file.
+seed
+python3 - "$TMP/tree/src/main.jsx" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+marker = "const rootElement = document.getElementById('root');"
+assert marker in src
+src = src.replace(marker, "const portalRoot = document.getElementById('portal');\n" + marker, 1)
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "an unrelated element lookup before the mount still passes" 0
 
 echo "csrf-session-contract-gate negative control OK"
