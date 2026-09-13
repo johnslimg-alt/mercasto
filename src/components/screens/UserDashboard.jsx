@@ -285,7 +285,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
     const loadMeasuredSellerStats = async () => {
       try {
         const token = localStorage.getItem('auth_token');
-        const base = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+        const base = import.meta.env.VITE_API_BASE_URL || '/api';
         const res = await fetch(`${base}/seller/stats`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
