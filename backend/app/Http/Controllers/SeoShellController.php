@@ -392,11 +392,7 @@ class SeoShellController extends Controller
         $html = $frontend->body();
 
         if ($seoOwner !== null) {
-            $html = $this->replaceFirst(
-                $html,
-                '#<html([^>]*)>#i',
-                '<html$1 data-mercasto-seo-owner="' . e($seoOwner) . '">',
-            );
+            $html = $this->addHtmlAttribute($html, 'data-mercasto-seo-owner="' . e($seoOwner) . '"');
         }
 
         $html = $this->replaceFirst($html, '#<title>.*?</title>#si', '<title>' . e($meta['title']) . '</title>');
@@ -440,6 +436,35 @@ class SeoShellController extends Controller
         $replacement = '<meta ' . $attribute . '="' . e($key) . '" content="' . e($content) . '" />';
 
         return $this->replaceFirst($html, $pattern, $replacement);
+    }
+
+    /**
+     * Append an attribute to the document's `<html>` element, keeping whatever attributes the
+     * shell already declared (`lang`, `class`, `dir`) in their original order.
+     *
+     * Deliberately not routed through {@see replaceFirst()}. That helper inserts its replacement
+     * verbatim — `preg_replace_callback` never expands `$1` — which is exactly what keeps the
+     * title/description/meta call sites safe from a literal `$` in listing copy (a price like
+     * "$500" or a title containing "$1" must be inserted as-is, never treated as a
+     * backreference). The `<html>` case is the one caller that needs the captured attributes, so
+     * it rebuilds the tag from the match instead of relying on substitution. Passing
+     * '<html$1 …>' to replaceFirst shipped a literal `$1` and silently dropped lang/class.
+     */
+    private function addHtmlAttribute(string $html, string $attribute): string
+    {
+        $updated = preg_replace_callback(
+            '#<html([^>]*)>#i',
+            static fn (array $matches): string => '<html' . rtrim($matches[1]) . ' ' . $attribute . '>',
+            $html,
+            1,
+            $count,
+        );
+
+        if ($updated === null || $count !== 1) {
+            throw new RuntimeException('Frontend shell metadata contract is missing.');
+        }
+
+        return $updated;
     }
 
     private function replaceFirst(string $html, string $pattern, string $replacement): string

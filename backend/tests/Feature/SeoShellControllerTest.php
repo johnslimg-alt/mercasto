@@ -203,6 +203,117 @@ class SeoShellControllerTest extends TestCase
             ->assertDontSee('data-mercasto-seo-owner="listing"', false);
     }
 
+    /**
+     * Assert the SERVED document's `<html>` tag, not the replacement string the controller
+     * built. The previous version of this test only asserted that the attribute text appeared
+     * somewhere in the response, which the malformed `html$1` tag satisfied: the marker was
+     * "present" while the element was not the document element and hydration never saw it.
+     */
+    private function assertRenderedHtmlTag(string $html, string $expectedTag): void
+    {
+        preg_match('/<html\b[^>]*>/i', $html, $matches);
+
+        $this->assertNotEmpty($matches, 'the served document has no <html> element');
+        $this->assertSame($expectedTag, $matches[0]);
+        // A verbatim replacement that contained a backreference would leak it into the document.
+        $this->assertStringNotContainsString('$', $matches[0]);
+        $this->assertStringNotContainsString('html$1', $html);
+    }
+
+    /**
+     * Serve a variant of the frontend shell. Uses its own URL and config so it cannot collide
+     * with the fake registered in setUp().
+     */
+    private function fakeShell(string $shell): void
+    {
+        config(['app.frontend_shell_url' => 'http://shell-variant.test/index.html']);
+        Http::fake(['http://shell-variant.test/index.html' => Http::response($shell, 200)]);
+    }
+
+    private function shellWithHtmlTag(string $htmlTag): string
+    {
+        return str_replace('<!doctype html><html lang="es">', '<!doctype html>' . $htmlTag, $this->frontendShell());
+    }
+
+    public function test_listing_shell_html_element_keeps_its_attributes_and_gains_the_marker(): void
+    {
+        $this->fakeShell($this->shellWithHtmlTag('<html lang="es-MX" class="scroll-smooth" dir="ltr">'));
+
+        $user = User::factory()->create();
+        $ad = Ad::create([
+            'user_id' => $user->id,
+            'title' => 'Bicicleta urbana',
+            'description' => 'Bicicleta urbana lista para rodar por toda la ciudad, frenos revisados.',
+            'price' => 3500,
+            'location' => 'Guadalajara',
+            'category' => 'deportes',
+            'condition' => 'usado',
+            'image_url' => 'ads/bicicleta.webp',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+
+        $response = $this->get("https://mercasto.test/ads/{$ad->id}");
+        $response->assertOk();
+
+        // Every attribute the shell declared survives, in its original order, with the marker
+        // appended — and no unexpanded backreference anywhere in the served document.
+        $this->assertRenderedHtmlTag(
+            $response->getContent(),
+            '<html lang="es-MX" class="scroll-smooth" dir="ltr" data-mercasto-seo-owner="listing">',
+        );
+    }
+
+    public function test_listing_shell_marker_survives_a_shell_whose_html_tag_has_no_attributes(): void
+    {
+        $this->fakeShell($this->shellWithHtmlTag('<html>'));
+
+        $response = $this->get('https://mercasto.test/ads/404404');
+        $response->assertNotFound();
+
+        $this->assertRenderedHtmlTag($response->getContent(), '<html data-mercasto-seo-owner="listing">');
+    }
+
+    public function test_every_seo_shell_renders_a_well_formed_html_element(): void
+    {
+        // The marker is injected into `<html>`, so the substitution mechanism itself is part of
+        // the served contract: a page whose document element is malformed cannot be trusted for
+        // any of the metadata the shell writes.
+        $user = User::factory()->create();
+        $ad = Ad::create([
+            'user_id' => $user->id,
+            'title' => 'Bicicleta urbana',
+            'description' => 'Bicicleta urbana lista para rodar por toda la ciudad, frenos revisados.',
+            'price' => 3500,
+            'location' => 'Guadalajara',
+            'category' => 'deportes',
+            'condition' => 'usado',
+            'image_url' => 'ads/bicicleta.webp',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+
+        $paths = [
+            '/listings',
+            '/motor',
+            '/como-funciona',
+            "/ads/{$ad->id}",
+            '/ads/404404',
+        ];
+
+        foreach ($paths as $path) {
+            $html = $this->get("https://mercasto.test{$path}")->getContent();
+
+            preg_match('/<html\b[^>]*>/i', $html, $matches);
+
+            $this->assertNotEmpty($matches, "{$path} served no <html> element");
+            $this->assertStringContainsString('lang="es"', $matches[0], "{$path} dropped lang");
+            $this->assertStringNotContainsString('$', $matches[0], "{$path} served a malformed <html> tag");
+        }
+    }
+
     public function test_catalog_reference_is_noindex_and_never_claims_product_availability(): void
     {
         $user = User::factory()->create();
