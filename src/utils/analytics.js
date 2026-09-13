@@ -562,10 +562,12 @@ export function trackEvent(eventName, params = {}) {
   // GA4 receives nothing that happened before a grant. The gtag() queue is
   // flushed by gtag.js when it loads, so queueing pre-consent events would
   // deliver them retroactively; a dropped page_view is re-emitted at grant time
-  // instead (see activateAnalyticsVendors).
+  // instead (see activateAnalyticsVendors). A page_view that is already granted
+  // clears that flag, so the grant is measured once and never twice.
   if (consentState === 'granted') {
     const gtag = getGtag();
     if (gtag) gtag('event', name, payload);
+    if (name === 'page_view') preConsentPageViewDropped = false;
   } else if (name === 'page_view') {
     preConsentPageViewDropped = true;
   }

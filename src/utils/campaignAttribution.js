@@ -165,10 +165,24 @@ function flushPendingAttribution() {
   if (last && last !== first) persistAttribution(last);
 }
 
-// A refusal erases campaign storage written by an earlier session; the
-// in-memory capture is kept so a change of mind in the same page session can
-// still be flushed on grant, but nothing reaches the browser's storage.
+// A refusal erases campaign storage written by an earlier session. The values
+// are moved into the in-memory capture first (memory only, never persisted), so
+// withdrawing and then granting again on the same landing page keeps its
+// attribution instead of losing the campaign context.
+function preservePendingFromStorage() {
+  if (!pendingFirstTouch) {
+    const storedFirst = safeRead(localStorage, FIRST_TOUCH_KEY);
+    if (storedFirst) pendingFirstTouch = storedFirst;
+  }
+  if (!pendingLastTouch) {
+    const storedLast = safeRead(sessionStorage, SESSION_TOUCH_KEY) || safeRead(localStorage, LAST_TOUCH_KEY);
+    if (storedLast) pendingLastTouch = storedLast;
+  }
+}
+
 function clearStoredAttribution() {
+  preservePendingFromStorage();
+
   try {
     localStorage.removeItem(FIRST_TOUCH_KEY);
     localStorage.removeItem(LAST_TOUCH_KEY);

@@ -194,8 +194,10 @@ function handleDataLayerItem(item = {}) {
   const normalizedEvent = String(item.event || '').trim().toLowerCase();
   const metaConfig = EVENT_MAP[normalizedEvent];
   if (!metaConfig) return;
-  // Live handling only: an item stamped before a grant is dead for vendors.
-  if (item.consent_state && !isReplayableConsentState(item)) return;
+  // No consent check on this path on purpose: the browser Pixel copy is consent
+  // gated inside sendBrowserEvent(), while the server CAPI relay must keep
+  // receiving mapped funnel events for every visitor. Only deferred browser
+  // replay (replayMetaBrowserEvents) filters on the consent stamp.
   sendMappedEvent(metaConfig, item);
 }
 
