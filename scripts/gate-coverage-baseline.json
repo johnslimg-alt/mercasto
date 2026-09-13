@@ -149,10 +149,6 @@
     },
     {
       "check": "no-negative-control",
-      "gate": "scripts/csrf-session-contract-gate.sh"
-    },
-    {
-      "check": "no-negative-control",
       "gate": "scripts/dependency-update-audit.sh"
     },
     {

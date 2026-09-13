@@ -16,13 +16,6 @@
   "waivers": [
     {
       "check": "asserted-orphan",
-      "gate": "scripts/csrf-session-contract-gate.sh",
-      "target": "src/contexts/AuthContext.jsx",
-      "owner": "gate-maintenance",
-      "reason": "REAL FINDING, awaiting fix (retrospective-2 RC-3). AuthContext.jsx is imported only by src/contexts/AppProviders.jsx, which nothing imports, and `useAuth` has no consumers -- so this gate asserts the CSRF/session contract inside a file that never executes in the browser. Declared rather than fixed because retargeting it means identifying the live session surface, which is a gate rewrite outside this task's scope. Re-verified 2026-09-13."
-    },
-    {
-      "check": "asserted-orphan",
       "gate": "scripts/fixed-period-plan-copy-gate.sh",
       "target": "src/components/screens/legal/ReembolsosScreen.jsx",
       "owner": "gate-maintenance",
