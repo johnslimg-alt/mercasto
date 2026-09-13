@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\GoogleAnalyticsService;
+use App\Support\AnalyticsTrackingConsent;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -84,6 +86,15 @@ class TrackGoogleAnalyticsPurchase
                 return;
             }
 
+            // GA4 is a third-party vendor: the explicit checkout decision is cached
+            // here (and only here) so the Clip webhook can honour it with a gate
+            // that fails closed when the decision is missing or not affirmative.
+            Cache::put(
+                $this->consentKey((int) $payment->id),
+                AnalyticsTrackingConsent::allowsVendorEgress($request, $user),
+                now()->addDay(),
+            );
+
             $measurementId = (string) config('services.google_analytics.measurement_id', '');
             $sessionCookie = GoogleAnalyticsService::sessionCookieName($measurementId);
             $context = array_filter([
@@ -133,6 +144,20 @@ class TrackGoogleAnalyticsPurchase
             }
 
             if (! $payment || $payment->status !== 'paid') {
+                return;
+            }
+
+            // Server-to-server callback: require the explicit decision captured at
+            // checkout, re-verified against the account. Blocked before the
+            // deduplication key is reserved so a consented retry can still deliver.
+            if (! AnalyticsTrackingConsent::allowsDeferredVendorEgress(
+                $this->cachedCheckoutConsent((int) $payment->id),
+                User::find($payment->user_id),
+            )) {
+                Log::info('GA4 Purchase egress blocked: no verifiable analytics consent', [
+                    'payment_id' => $payment->id,
+                ]);
+
                 return;
             }
 
@@ -221,6 +246,25 @@ class TrackGoogleAnalyticsPurchase
     private function contextKey(int $paymentId): string
     {
         return 'ga4_purchase_context:' . $paymentId;
+    }
+
+    private function consentKey(int $paymentId): string
+    {
+        return 'ga4_checkout_consent:' . $paymentId;
+    }
+
+    private function cachedCheckoutConsent(int $paymentId): mixed
+    {
+        try {
+            return Cache::get($this->consentKey($paymentId), false);
+        } catch (\Throwable $e) {
+            Log::warning('Unable to read GA4 checkout consent', [
+                'payment_id' => $paymentId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function sentKey(int $paymentId): string

@@ -43,54 +43,60 @@ class UserMetaRegistrationObserver
         $eventSourceUrl = $request->headers->get('referer');
         $registrationMethod = $this->registrationMethod($request);
 
-        app(MetaCapiService::class)->send(
-            'CompleteRegistration',
-            $request,
-            $user,
-            ['registration_method' => $registrationMethod],
-            $eventId,
-            $eventSourceUrl
-        );
+        // The account preference is persisted later in the same registration
+        // request (AuthController::recordRegistrationConsent), so every vendor send
+        // is deferred until after commit and re-checks consent against the freshly
+        // persisted user. Without consent nothing leaves the server.
+        DB::afterCommit(function () use ($request, $user, $eventId, $eventSourceUrl, $registrationMethod): void {
+            $userId = (int) $user->id;
+            defer(function () use ($request, $userId, $eventId, $eventSourceUrl, $registrationMethod): void {
+                $persistedUser = User::find($userId);
 
-        app(TikTokEventsApiService::class)->send(
-            'CompleteRegistration',
-            $request,
-            $user,
-            [
-                'content_type' => 'product',
-                'content_ids' => ['mercasto_account'],
-                'contents' => [[
-                    'content_id' => 'mercasto_account',
-                    'content_type' => 'product',
-                    'content_name' => 'Mercasto account registration',
-                    'quantity' => 1,
-                ]],
-                'status' => 'completed',
-                'registration_method' => $registrationMethod,
-            ],
-            $eventId,
-            $eventSourceUrl
-        );
-
-        if ($request->boolean('openai_measurement_consent')) {
-            DB::afterCommit(function () use ($request, $user, $eventId, $eventSourceUrl): void {
-                $userId = (int) $user->id;
-                defer(function () use ($request, $userId, $eventId, $eventSourceUrl): void {
-                    $persistedUser = User::find($userId);
-                    if (! AnalyticsTrackingConsent::current($persistedUser)) {
-                        return;
-                    }
-                    app(OpenAiAdsCapiService::class)->send(
-                        'registration_completed',
+                if (AnalyticsTrackingConsent::allowsVendorEgress($request, $persistedUser)) {
+                    app(MetaCapiService::class)->send(
+                        'CompleteRegistration',
                         $request,
                         $persistedUser,
-                        ['type' => 'customer_action'],
+                        ['registration_method' => $registrationMethod],
                         $eventId,
                         $eventSourceUrl
                     );
-                })->always();
-            });
-        }
+
+                    app(TikTokEventsApiService::class)->send(
+                        'CompleteRegistration',
+                        $request,
+                        $persistedUser,
+                        [
+                            'content_type' => 'product',
+                            'content_ids' => ['mercasto_account'],
+                            'contents' => [[
+                                'content_id' => 'mercasto_account',
+                                'content_type' => 'product',
+                                'content_name' => 'Mercasto account registration',
+                                'quantity' => 1,
+                            ]],
+                            'status' => 'completed',
+                            'registration_method' => $registrationMethod,
+                        ],
+                        $eventId,
+                        $eventSourceUrl
+                    );
+                }
+
+                if (! AnalyticsTrackingConsent::allowsOpenAiEgress($request, $persistedUser)) {
+                    return;
+                }
+
+                app(OpenAiAdsCapiService::class)->send(
+                    'registration_completed',
+                    $request,
+                    $persistedUser,
+                    ['type' => 'customer_action'],
+                    $eventId,
+                    $eventSourceUrl
+                );
+            })->always();
+        });
     }
     private function registrationMethod($request): string
     {

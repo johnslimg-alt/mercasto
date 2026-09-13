@@ -60,6 +60,10 @@ function buildPayload(dataLayerItem = {}) {
     city: clean(dataLayerItem.city || dataLayerItem.location_city || ''),
     url: clean(dataLayerItem.page_location || window.location.href),
     event_id: clean(dataLayerItem.event_id || dataLayerItem.meta_event_id || ''),
+    // Explicit per-request consent signals. The server cannot read localStorage, so
+    // they must travel with every call that may cause third-party egress; the server
+    // treats anything other than an explicit affirmative as "no consent".
+    analytics_tracking_consent: hasVendorConsent(),
     openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
   };
 }
@@ -99,7 +103,10 @@ async function sendServerEvent(endpoint, payload) {
 
 function sendBrowserEvent(metaConfig, payload, eventID) {
   // The browser Pixel copy is a tracking vendor: it may only receive data while
-  // consent is granted. The server-side CAPI relay stays untouched.
+  // consent is granted. The server relay is a separate hop: Mercasto may always
+  // receive the event, but it forwards it to Meta/TikTok/OpenAI only when the
+  // request carries an explicit affirmative consent signal and the account still
+  // allows measurement. See backend App\Support\AnalyticsTrackingConsent.
   if (!hasVendorConsent()) return false;
   if (typeof window.fbq !== 'function') return false;
 
@@ -197,6 +204,7 @@ function registrationRequestWithEventId(input, init = {}) {
         body: JSON.stringify({
           ...payload,
           meta_event_id: sharedEventId,
+          analytics_tracking_consent: hasVendorConsent(),
           openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
         }),
       },

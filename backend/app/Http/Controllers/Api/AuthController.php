@@ -162,6 +162,7 @@ class AuthController extends Controller
             'consent_accepted_at' => ['required', 'date'],
             'consent_source' => ['required', 'string', Rule::in(['web', 'mobile', 'api'])],
             'meta_event_id' => ['nullable', 'string', 'max:120', 'regex:/^[A-Za-z0-9._:-]+$/'],
+            'analytics_tracking_consent' => ['nullable', 'boolean'],
             'openai_measurement_consent' => ['nullable', 'boolean'],
         ]);
 
@@ -188,6 +189,7 @@ class AuthController extends Controller
             'meta_event_id' => isset($validated['meta_event_id'])
                 ? (string) $validated['meta_event_id']
                 : null,
+            'analytics_tracking_consent' => (bool) ($validated['analytics_tracking_consent'] ?? false),
             'openai_measurement_consent' => (bool) ($validated['openai_measurement_consent'] ?? false),
         ];
     }
@@ -250,9 +252,14 @@ class AuthController extends Controller
             'user_agent_hash' => $userAgentHash,
         ];
 
+        // The persisted account preference is the server-side half of every vendor
+        // egress gate. Either explicit browser affirmative records it: the
+        // vendor-neutral signal and the OpenAI-scoped signal both express the same
+        // registration-time decision, and an absent signal records nothing.
         AnalyticsTrackingConsent::persist(
             $user,
-            (bool) ($consent['openai_measurement_consent'] ?? false),
+            (bool) ($consent['analytics_tracking_consent'] ?? false)
+                || (bool) ($consent['openai_measurement_consent'] ?? false),
         );
 
         UserConsent::insert([
@@ -835,6 +842,7 @@ class AuthController extends Controller
                     $request->merge(['meta_event_id' => $registrationConsent['meta_event_id']]);
                 }
                 $request->merge([
+                    'analytics_tracking_consent' => (bool) ($registrationConsent['analytics_tracking_consent'] ?? false),
                     'openai_measurement_consent' => (bool) ($registrationConsent['openai_measurement_consent'] ?? false),
                 ]);
 
@@ -985,6 +993,7 @@ class AuthController extends Controller
                     $request->merge(['meta_event_id' => $registrationConsent['meta_event_id']]);
                 }
                 $request->merge([
+                    'analytics_tracking_consent' => (bool) ($registrationConsent['analytics_tracking_consent'] ?? false),
                     'openai_measurement_consent' => (bool) ($registrationConsent['openai_measurement_consent'] ?? false),
                 ]);
                 $user = DB::transaction(function () use ($socialUser, $request, $registrationConsent) {

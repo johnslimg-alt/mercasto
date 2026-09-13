@@ -1,5 +1,5 @@
 import { registrationEventId } from './funnelAnalytics.js';
-import { isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
+import { hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 export const LEGAL_DOCUMENT_VERSIONS = Object.freeze({
   terms: '2026-08-03',
@@ -28,7 +28,10 @@ export function createRegistrationConsentPayload(
     consent_accepted_at: instant.toISOString(),
     consent_source: normalizedSource,
     ...(normalizedSource === 'web'
-      ? { openai_measurement_consent: isOpenAIAdsMeasurementAllowed() }
+      ? {
+        analytics_tracking_consent: hasVendorConsent(),
+        openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
+      }
       : {}),
     ...(resolvedEventId ? { meta_event_id: resolvedEventId } : {}),
   };

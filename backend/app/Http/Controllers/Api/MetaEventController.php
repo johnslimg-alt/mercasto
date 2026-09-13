@@ -99,40 +99,49 @@ class MetaEventController extends Controller
             'value' => 0,
         ], fn ($value) => $value !== null && $value !== '');
 
-        $metaResult = $meta->send(
-            $metaEventName,
-            $request,
-            $request->user(),
-            $customData,
-            $validated['event_id'],
-            $eventSourceUrl
-        );
+        // Receiving this event from the browser is first-party and stays ungated:
+        // the relay is a stateless pass-through and stores nothing. Forwarding it
+        // to a third party is egress and requires consent for that vendor.
+        $vendorEgressAllowed = AnalyticsTrackingConsent::allowsVendorEgress($request, $request->user());
 
-        $tiktokResult = $tiktok->send(
-            $tiktokEventName,
-            $request,
-            $request->user(),
-            [
-                'content_type' => 'product',
-                'content_ids' => ['ad_' . $listingId],
-                'contents' => [[
-                    'content_id' => 'ad_' . $listingId,
+        $metaResult = ['ok' => false, 'skipped' => true, 'reason' => 'consent_required'];
+        $tiktokResult = ['ok' => false, 'skipped' => true, 'reason' => 'consent_required'];
+
+        if ($vendorEgressAllowed) {
+            $metaResult = $meta->send(
+                $metaEventName,
+                $request,
+                $request->user(),
+                $customData,
+                $validated['event_id'],
+                $eventSourceUrl
+            );
+
+            $tiktokResult = $tiktok->send(
+                $tiktokEventName,
+                $request,
+                $request->user(),
+                [
                     'content_type' => 'product',
-                    'content_name' => 'Mercasto classified listing',
+                    'content_ids' => ['ad_' . $listingId],
+                    'contents' => [[
+                        'content_id' => 'ad_' . $listingId,
+                        'content_type' => 'product',
+                        'content_name' => 'Mercasto classified listing',
+                        'content_category' => $category,
+                        'quantity' => 1,
+                    ]],
                     'content_category' => $category,
-                    'quantity' => 1,
-                ]],
-                'content_category' => $category,
-                'status' => $status,
-            ],
-            $validated['event_id'],
-            $eventSourceUrl
-        );
+                    'status' => $status,
+                ],
+                $validated['event_id'],
+                $eventSourceUrl
+            );
+        }
 
         $openAiResult = ['ok' => false, 'skipped' => true, 'reason' => 'not_requested'];
         if ($openAiEventType
-            && $request->boolean('openai_measurement_consent')
-            && AnalyticsTrackingConsent::current($request->user())) {
+            && AnalyticsTrackingConsent::allowsOpenAiEgress($request, $request->user())) {
             $openAiData = $openAiEventType === 'custom'
                 ? [
                     'type' => 'custom',
