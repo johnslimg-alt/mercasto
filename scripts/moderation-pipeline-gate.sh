@@ -18,6 +18,12 @@ DUPLICATE_SERVICE="backend/app/Services/ListingDuplicateDetector.php"
 RESOLVE_DUPLICATES="backend/app/Console/Commands/ResolveDuplicateSubmissions.php"
 UI="src/components/screens/MyAdsScreen.jsx"
 
+# The guards below can only see their subject if these paths resolve; a missing
+# path makes grep exit non-zero and the guard pass while observing nothing.
+for file in "$CONTROLLER" "$JOB"; do
+  test -f "$file" || { echo "FAIL: missing observed file $file" >&2; exit 1; }
+done
+
 if grep -qF 'dispatch(function () use ($ad)' "$CONTROLLER"; then
   echo "Legacy inline ad AI closure returned" >&2
   exit 1

@@ -8,6 +8,9 @@ ENV_WORKFLOW=".github/workflows/env-readiness.yml"
 DOC="docs/production-runtime-security.md"
 
 echo "== Runtime host privilege and session gate =="
+# The four host-privilege guards below all read $COMPOSE; if it is missing they
+# see nothing and pass, so assert the file they observe.
+test -f "$COMPOSE" || { echo "FAIL: missing observed file $COMPOSE" >&2; exit 1; }
 if grep -qE '^  autoheal:' "$COMPOSE"; then
   echo "FAIL: autoheal service must not regain Docker host control" >&2; exit 1
 fi
