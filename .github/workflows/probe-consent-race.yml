@@ -1,0 +1,79 @@
+name: Probe consent withdrawal race
+
+# TEMPORARY diagnostic workflow (branch-only, never merged).
+# Measures the real failure rate of the consent-withdrawal test on GitHub-hosted
+# runners and uploads full traces for any failing iteration, so the mechanism can
+# be read from a genuine CI failure instead of a local approximation.
+
+on:
+  push:
+    branches:
+      - probe/consent-withdraw-race-20260913
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    name: Measure consent withdrawal flake
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: E5 build identity (lockfile-faithful vendor chunk)
+        run: |
+          ls dist/assets | grep -E '^vendor-react-.*\.js$'
+          ls dist/assets | grep -E '^CookieBanner-.*\.js$'
+      - name: Stabilize Playwright apt sources
+        run: bash scripts/stabilize-playwright-apt.sh
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start preview server
+        run: |
+          ./node_modules/.bin/vite preview --host 127.0.0.1 --port 4181 --strictPort >/tmp/consent-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 2 http://127.0.0.1:4181/ >/dev/null 2>&1; then echo "preview ready"; exit 0; fi
+            sleep 1
+          done
+          cat /tmp/consent-preview.log; exit 1
+
+      - name: Repeated critical-shard consent spec (full file, retries=0)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          BASE_URL=http://127.0.0.1:4181 CI=1 npx playwright test \
+            tests/e2e/consent-gated-vendors.spec.js \
+            --project=chromium-desktop --workers=1 --retries=0 --repeat-each=12 \
+            --trace=on --screenshot=on --reporter=list 2>&1 | tee /tmp/consent-repeat.log
+
+      - name: Summarize
+        if: always()
+        run: |
+          echo "=== outcome counts ==="
+          grep -cE "✓" /tmp/consent-repeat.log || true
+          grep -cE "✘" /tmp/consent-repeat.log || true
+          echo "=== withdrawal test results ==="
+          grep -E "withdrawing consent" /tmp/consent-repeat.log | tail -20 || true
+          echo "=== failures ==="
+          grep -E "✘|Error:|element\(s\) not found|toBeVisible|passed \(|failed" /tmp/consent-repeat.log | tail -25 || true
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: consent-race-evidence
+          path: |
+            test-results/**
+            /tmp/consent-repeat.log
+          if-no-files-found: warn
+          retention-days: 14
