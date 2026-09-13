@@ -1368,7 +1368,11 @@ while IFS= read -r stmt; do
     case "$kind" in
       rename_idx) expect_retired idx "$a"; expect_set idx "" "$b" 1 ;;
       rename_col) expect_retired col "$b" "$a"; expect_set col "$a" "$c" 1 ;;
-      rename_tbl) expect_rekey_table "$a" "$b"; expect_set tbl "$b" "" 1 ;;
+      # Re-key the children AND keep verifying that the old name is gone. Re-keying
+      # alone silently dropped that check: the "table old exists" expectation was
+      # moved to the new name, so nothing asserted that the rename happened. The
+      # control for this case caught exactly that regression.
+      rename_tbl) expect_rekey_table "$a" "$b"; expect_set tbl "$a" "" 0; expect_set tbl "$b" "" 1 ;;
       con)
         fk=""
         if printf '%s' "$d" | grep -q 'foreign key'; then
