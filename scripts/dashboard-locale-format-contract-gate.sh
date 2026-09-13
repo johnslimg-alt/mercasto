@@ -40,10 +40,12 @@ fi
 #      line control with a quote on line 1 and 20,000 matching lines after:
 #      pipeline rc=141 under pipefail, rc=0 without. The guard missed a real match.
 #
-# One grep matching "a {t.x} expression AND a quote on the same line", in either
-# order, has no pipeline and therefore no SIGPIPE. Verified: it fires on that
-# control and still does not fire on the current sources.
-if grep -Eq "(\{t\.[A-Za-z0-9_]+\}[^']*')|('[^']*\{t\.[A-Za-z0-9_]+\})" "$DASH"; then
+# One grep, no pipeline, therefore no SIGPIPE. The quote must be IMMEDIATELY
+# adjacent to the expression, because that is what stringification is: '{t.x}' or
+# "{t.x}". An earlier attempt required only "a quote somewhere on the same line",
+# which rejected legitimate JSX such as <span className='label'>{t.trust_score}</span>
+# -- a false positive that would have blocked CI on ordinary formatting.
+if grep -Eq "(['\"]\{t\.[A-Za-z0-9_]+\})|(\{t\.[A-Za-z0-9_]+\}['\"])" "$DASH"; then
   echo "Dashboard must not contain stringified translation expressions" >&2
   exit 1
 fi

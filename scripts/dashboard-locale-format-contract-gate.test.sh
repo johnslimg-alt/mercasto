@@ -57,6 +57,15 @@ seed
 printf "\nconst stringified = '{t.trust_score}';\n" >> "$TMP/tree/src/components/screens/UserDashboard.jsx"
 check "stringified {t.x} expression detected" 1
 
+# --- legitimate JSX must NOT be rejected ------------------------------------
+# A quote elsewhere on the line is not stringification: the quote must be adjacent
+# to the expression. An earlier pattern matched any quote on the line and rejected
+# <span className='label'>{t.x}</span>, a false positive that would block CI on
+# ordinary formatting.
+seed
+printf "\nconst el = <span className='label'>{t.trust_score}</span>;\n" >> "$TMP/tree/src/components/screens/UserDashboard.jsx"
+check "legitimate JSX with a quote elsewhere is not rejected" 0
+
 # --- and it must still fire when the input is large enough to fill the pipe --
 # This is the SIGPIPE/pipefail case: a quote early, thousands of matches after.
 # Under the piped form this returned rc=141 and the guard was skipped.

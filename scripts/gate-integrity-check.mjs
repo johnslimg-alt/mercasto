@@ -55,7 +55,7 @@
  *     `const`/`VAR=` assignments only.
  */
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -87,7 +87,7 @@ const KNOWN_CHECKS = new Set([
 /** Checks whose existing population is grandfathered through the baseline file. */
 const BASELINE_CHECKS = new Set(['no-negative-control']);
 /** Checks whose identity needs a target, not just a gate. */
-const TARGETED_CHECKS = new Set(['dead-code-assertion', 'asserted-orphan', 'never-fails']);
+const TARGETED_CHECKS = new Set(['dead-code-assertion', 'gate-not-triggered', 'asserted-orphan', 'never-fails']);
 
 function readRepoFile(path) {
   return readFileSync(join(ROOT, path), 'utf8');
@@ -273,13 +273,23 @@ function extractAssertedTargets(gatePath, source) {
   // `path`, not `path;`. Capturing `\S+` swallowed the semicolon, so existsSync
   // failed and the target was silently dropped -- which is how the funnel gate's
   // negative guard on the dead AuthContext stayed invisible to this check.
-  const grepPattern = /grep\s+-[A-Za-z]*q[A-Za-z]*F?\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/;
+  // EVERY grep in the logical command, not just the first: a gate that chains
+  // assertions (`grep -qF x src/live.jsx && grep -qF y src/orphan.jsx`, or several
+  // negative greps joined by `||`) makes a claim about each target, and stopping at
+  // the first left the others invisible to `asserted-orphan`.
+  const grepPattern = /grep\s+-[A-Za-z]*q[A-Za-z]*F?\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/g;
+  const altGrepPattern = /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/g;
   for (const { text } of logicalShellLines(source)) {
-    const grep = grepPattern.exec(text)
-      ?? /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/.exec(text);
-    if (!grep) continue;
-    const target = resolveTarget(grep[3]);
-    if (target) targets.add(target);
+    const found = new Set();
+    for (const pattern of [grepPattern, altGrepPattern]) {
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const target = resolveTarget(match[3]);
+        if (target) found.add(target);
+      }
+    }
+    for (const target of found) targets.add(target);
   }
   return targets;
 }
@@ -325,7 +335,67 @@ function isRepoTarget(target) {
 const FRONTEND_EXTENSIONS = ['', '.js', '.jsx', '.ts', '.tsx', '.mjs', '/index.js', '/index.jsx', '/index.ts', '/index.tsx'];
 /** Module extensions `asserted-orphan` will judge. Must match what the graph resolves. */
 const FRONTEND_MODULE_TARGET = /^src\/.*\.(jsx?|tsx?|mjs|cjs)$/;
-const IMPORT_PATTERN = /(?:import\s[^'"`]*?from\s*|import\s*|export\s[^'"`]*?from\s*|require\(\s*|import\(\s*)['"`]([^'"`]+)['"`]/g;
+/**
+ * Replaces string, template and regex bodies with spaces, preserving length and the
+ * quote characters themselves.
+ *
+ * The import scan reads source text, so a path mentioned INSIDE a string is not an
+ * import: `const help = "import './orphan.jsx'"` used to mark that orphan reachable
+ * and hide it from `asserted-orphan` -- the same false negative the check exists to
+ * prevent. Masking bodies keeps every other offset intact, so a real specifier can
+ * still be read from the original text at the same index.
+ */
+function maskStringBodies(source) {
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const char = source[i];
+    if (char === "'" || char === '"' || char === '`') {
+      const quote = char;
+      out += char;
+      i += 1;
+      while (i < source.length) {
+        if (source[i] === '\\') {
+          out += '  ';
+          i += 2;
+          continue;
+        }
+        const isEnd = source[i] === quote;
+        out += isEnd ? quote : ' ';
+        i += 1;
+        if (isEnd) break;
+      }
+      continue;
+    }
+    out += char;
+    i += 1;
+  }
+  return out;
+}
+
+/**
+ * Import specifiers from EXECUTABLE syntax only.
+ *
+ * Masking string bodies first means a keyword inside a string is invisible, while a
+ * real specifier -- which lives inside quotes -- is still matched, because the
+ * opening quote survives masking. The specifier text is then read from the original
+ * source at the same offset.
+ */
+function extractImportSpecifiers(source) {
+  const masked = maskStringBodies(source);
+  const specifiers = [];
+  const opener = /\b(?:from|import|require|export)\b[^'"`\n]{0,200}?(['"`])/g;
+  let match;
+  while ((match = opener.exec(masked)) !== null) {
+    const quote = match[1];
+    const start = match.index + match[0].length;
+    const end = source.indexOf(quote, start);
+    if (end < 0) continue;
+    specifiers.push(source.slice(start, end));
+    opener.lastIndex = end;
+  }
+  return specifiers;
+}
 
 /**
  * Removes JavaScript comments while leaving string, template and regex-ish text intact.
@@ -380,6 +450,33 @@ function stripJsComments(source) {
   return out;
 }
 
+/**
+ * Alias prefixes from the project's bundler config, if any.
+ *
+ * This repository configures none (verified: `vite.config.js` has no `resolve.alias`
+ * and there is no `jsconfig.json`/`tsconfig.json` paths block), so no module is
+ * reachable only through an alias today. If one is ever added, a module imported
+ * that way would be absent from the graph and a gate asserting it would be falsely
+ * reported as an orphan -- so alias usage is detected and turns orphan verdicts off
+ * for the run rather than producing a false accusation.
+ */
+function configuredAliasPrefixes() {
+  for (const file of ['vite.config.js', 'vite.config.mjs', 'vite.config.ts']) {
+    if (!existsSync(join(ROOT, file))) continue;
+    let source;
+    try {
+      source = readRepoFile(file);
+    } catch {
+      continue;
+    }
+    const block = /alias\s*:\s*\{([\s\S]{0,600}?)\}/.exec(source);
+    if (!block) continue;
+    const keys = [...block[1].matchAll(/['"]([^'"]+)['"]\s*:/g)].map((m) => m[1]);
+    if (keys.length > 0) return keys;
+  }
+  return [];
+}
+
 let frontendGraphCache = null;
 
 /**
@@ -411,12 +508,30 @@ function frontendReachableModules() {
     return reachable;
   }
 
+  // Aliases are configuration, not code: a specifier such as `@/components/Screen`
+  // is local but unresolvable without the project's config. If aliases are
+  // configured and one is used, orphan verdicts are skipped for the whole run
+  // rather than risking a false accusation -- see configuredAliasPrefixes().
+  const aliasPrefixes = configuredAliasPrefixes();
+  let sawUnresolvedAlias = false;
+
   const resolveSpecifier = (fromFile, specifier) => {
     if (!specifier.startsWith('.')) return null; // package or alias import
     const base = join(dirname(fromFile), specifier);
     for (const extension of FRONTEND_EXTENSIONS) {
       const candidate = `${base}${extension}`;
-      if (existsSync(join(ROOT, candidate))) return candidate;
+      const full = join(ROOT, candidate);
+      // A FILE, not a directory: `import './feature'` must resolve to
+      // `src/feature/index.jsx`, and `src/feature` itself is a directory that
+      // exists. Accepting it made the index module look unreachable -- a false
+      // orphan for a module the browser actually loads.
+      if (!existsSync(full)) continue;
+      try {
+        if (!statSync(full).isFile()) continue;
+      } catch {
+        continue;
+      }
+      return candidate;
     }
     return null;
   };
@@ -452,8 +567,11 @@ function frontendReachableModules() {
     } catch {
       continue;
     }
-    for (const match of source.matchAll(IMPORT_PATTERN)) {
-      const specifier = match[1];
+    for (const specifier of extractImportSpecifiers(source)) {
+      if (aliasPrefixes.some((prefix) => specifier === prefix || specifier.startsWith(`${prefix}/`))) {
+        sawUnresolvedAlias = true;
+        continue;
+      }
 
       if (specifier.includes('${')) {
         // Computed specifier: the code can load any file the static prefix can
@@ -475,6 +593,17 @@ function frontendReachableModules() {
       const resolved = resolveSpecifier(file, specifier);
       if (resolved !== null && !reachable.has(resolved)) queue.push(resolved);
     }
+  }
+
+  if (sawUnresolvedAlias) {
+    // Fail safe: an alias-resolved module cannot be distinguished from an orphan
+    // without the project's alias config, and a false orphan accusation is worse
+    // than a missed one. Report the skip instead of guessing.
+    notes.push(
+      'a configured import alias was used; RC-3 orphan analysis skipped (cannot distinguish an alias-resolved module from an orphan)'
+    );
+    frontendGraphCache = new Set();
+    return frontendGraphCache;
   }
 
   frontendGraphCache = reachable;
@@ -557,9 +686,32 @@ function logicalShellLines(source) {
  * reproduced: with a file containing both a `{t.x}` expression and a quote, the
  * piped form does not fire while the same pipeline without the left `-q` does.
  */
+/**
+ * True only when a quiet grep feeds a DOWNSTREAM quiet grep that reads stdin.
+ *
+ * `grep -q x a | grep -q y b` is NOT a dead pipeline: the consumer names its own
+ * file operand, so it reads `b` rather than the empty stream, and with pipefail the
+ * pipeline succeeds when both files match. Reporting that shape was a false
+ * positive.
+ */
+function quietGrepPipelineCannotFail(text) {
+  const segments = text.split('|');
+  if (segments.length < 2) return false;
+  const left = segments[0];
+  const right = segments[segments.length - 1];
+  if (!/(?:^|[;&(]\s*|\s)(?:if\s+|elif\s+|while\s+)?grep\s+-[A-Za-z]*q[A-Za-z]*/.test(left)) return false;
+  if (!/grep\s+-[A-Za-z]*q[A-Za-z]*/.test(right)) return false;
+  // Trailing shell syntax (`; then`, `; fi`, `&& echo`) is not a grep operand, so
+  // cut the consumer at the first statement separator before counting.
+  const consumer = right.split(/;|&&|\|\|/)[0];
+  // Positional arguments after `grep`: one is the pattern, a second is a FILE.
+  const afterGrep = consumer.trim().replace(/^.*?\bgrep\b/, '').trim();
+  const positional = afterGrep.split(/\s+/).filter((part) => part !== '' && !part.startsWith('-'));
+  return positional.length < 2;
+}
+
 function checkNeverFails() {
   const hits = [];
-  const pipedQuietGrep = /(?:^|[;&|(]\s*|\s)(?:if\s+|elif\s+|while\s+)?grep\s+-[A-Za-z]*q[A-Za-z]*[^|]*\|[^|]*grep\s+-[A-Za-z]*q/;
   for (const gate of gateFiles()) {
     // Shell pipelines are a shell shape. Applying this scan to `.mjs` gates means
     // parsing JavaScript as shell, which produced a false positive on this very
@@ -568,7 +720,7 @@ function checkNeverFails() {
     if (!gate.endsWith('.sh')) continue;
     // Logical commands, so a pipeline continued with `\` cannot escape the check.
     for (const { text, line } of logicalShellLines(readRepoFile(gate))) {
-      if (!pipedQuietGrep.test(text)) continue;
+      if (!quietGrepPipelineCannotFail(text)) continue;
       hits.push({
         check: 'never-fails',
         gate,
@@ -605,19 +757,45 @@ function gateHasControlEvidence(gate) {
     if (existsSync(join(ROOT, `scripts/${stem}${extension}`))) return `scripts/${stem}${extension}`;
   }
 
+  // Recursive, matching the documented `tests/**/*.test.mjs` proxy: a control in
+  // `tests/gates/x.test.mjs` is a control, and a non-recursive listing reported its
+  // gate as having none.
   const testsDir = join(ROOT, 'tests');
   if (existsSync(testsDir)) {
-    for (const name of readdirSync(testsDir)) {
-      if (!name.endsWith('.test.mjs')) continue;
+    const walkTests = (dir) => {
+      let entries;
       try {
-        if (readRepoFile(`tests/${name}`).includes(base)) return `tests/${name}`;
+        entries = readdirSync(join(ROOT, dir), { withFileTypes: true });
       } catch {
-        continue;
+        return null;
       }
-    }
+      for (const entry of entries) {
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          const found = walkTests(path);
+          if (found) return found;
+          continue;
+        }
+        if (!entry.name.endsWith('.test.mjs')) continue;
+        try {
+          if (readRepoFile(path).includes(base)) return path;
+        } catch {
+          continue;
+        }
+      }
+      return null;
+    };
+    const control = walkTests('tests');
+    if (control) return control;
   }
 
-  const source = readRepoFile(gate);
+  // Inactive text proves nothing: `# run node --test ...` in a comment, or a
+  // commented-out `// assert(...)`, must not satisfy the control requirement --
+  // otherwise a gate could leave the finding population without ever being able to
+  // fail. Comments are stripped before any evidence is read, exactly as the import
+  // graph and the dashboard gate now do.
+  const raw = readRepoFile(gate);
+  const source = gate.endsWith('.sh') ? stripShellComments(raw) : stripJsComments(raw);
   if (/\bnode --test\b/.test(source)) return 'in-gate node --test';
 
   const assertsProgrammatically = /\bassert\s*[.(]|\bdeepStrictEqual\b|\bdeepEqual\b|\bstrictEqual\b|\bsys\.exit\(/.test(source);
@@ -932,10 +1110,12 @@ function enclosingMethod(source, offset) {
  */
 function validateWaivers(waivers) {
   const problems = [];
+  const invalid = new Set();
   if (!Array.isArray(waivers)) {
-    return ['waivers file must contain a "waivers" array'];
+    return { problems: ['waivers file must contain a "waivers" array'], invalid };
   }
   waivers.forEach((waiver, index) => {
+    const before = problems.length;
     const where = `waivers[${index}]`;
     if (waiver === null || typeof waiver !== 'object' || Array.isArray(waiver)) {
       problems.push(`${where} must be an object`);
@@ -971,8 +1151,9 @@ function validateWaivers(waivers) {
         );
       }
     }
+    if (problems.length > before) invalid.add(index);
   });
-  return problems;
+  return { problems, invalid };
 }
 
 /**
@@ -1032,7 +1213,8 @@ function loadWaivers() {
     return { waivers: [], problems: [`${WAIVER_FILE} is not valid JSON: ${error.message}`], file: WAIVER_FILE };
   }
   const waivers = Array.isArray(parsed?.waivers) ? parsed.waivers : [];
-  return { waivers, problems: validateWaivers(parsed?.waivers), file: WAIVER_FILE };
+  const { problems, invalid } = validateWaivers(parsed?.waivers);
+  return { waivers, problems, invalid, file: WAIVER_FILE };
 }
 
 function checkDeadCodeAssertions() {
@@ -1343,7 +1525,7 @@ function applyWaivers(hits, waivers) {
  * Main
  * ------------------------------------------------------------------ */
 
-const { waivers, problems: waiverProblems, file: waiverFile } = loadWaivers();
+const { waivers, problems: waiverProblems, invalid: invalidWaivers, file: waiverFile } = loadWaivers();
 for (const problem of waiverProblems) {
   violations.push({ check: 'invalid-waiver', detail: `${problem} in ${waiverFile}` });
 }
@@ -1391,7 +1573,11 @@ for (const entry of baselineEntries) {
 
 const { surviving, stale } = applyWaivers(afterBaseline, waivers);
 
-for (const waiver of stale) {
+// A waiver that failed validation is already an `invalid-waiver` failure and could
+// never have been applied, so also calling it stale is redundant noise -- and it
+// obscured the real message when a `gate-not-triggered` waiver omitted its target.
+const reportingStale = stale.filter((waiver) => !invalidWaivers.has(waivers.indexOf(waiver)));
+for (const waiver of reportingStale) {
   violations.push({
     check: 'stale-waiver',
     detail: `waiver for ${waiver.gate} -> ${waiver.target} matches no current violation; remove it from ${waiverFile} (owner ${waiver.owner})`,

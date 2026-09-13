@@ -225,6 +225,10 @@ test('negative control: a waiver that no longer matches a violation fails the ch
       check: 'dead-code-assertion',
       gate: 'scripts/sample-gate.mjs',
       target: 'backend/app/Http/Controllers/Api/FooController.php',
+      // Fully specified, so it is a VALID waiver that matches nothing -- which is
+      // what "stale" means. An under-specified waiver is rejected as
+      // invalid-waiver instead, and that case is covered separately.
+      literalContains: "orderBy('foo.dead'",
       owner: 'nobody',
       reason: 'stale by construction',
     }],
@@ -1349,4 +1353,224 @@ test('in-gate assertion programs count as control evidence', () => {
       assert.equal(status, 0, `a standalone .mjs assertion gate is a control:\n${output}`);
     }
   );
+});
+
+/* ------------------------------------------------------------------ *
+ * Review round 3: executable-syntax-only detection and false positives
+ * ------------------------------------------------------------------ */
+
+test('negative control: an import written inside a STRING is not an import', () => {
+  const gate = { 'scripts/str-orphan-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/orphan.jsx\n' };
+
+  // A path inside a string literal is data, not an edge. Raw-text scanning counted
+  // it and hid the orphan -- the exact false negative this check exists to prevent.
+  withRepo(
+    {
+      'src/main.jsx': 'import "./used.jsx";\nconst help = "import \'./orphan.jsx\'";\n',
+      'src/used.jsx': 'export default 1;\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      ...gate,
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a string mentioning an import must not create reachability');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+
+  // Positive control: a real import still counts.
+  withRepo(
+    {
+      'src/main.jsx': 'import "./orphan.jsx";\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      ...gate,
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a real import must keep the module reachable:\n${output}`);
+    }
+  );
+});
+
+test('negative control: a commented-out control is not control evidence', () => {
+  const emptyBaseline = {
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [],
+    }, null, 2),
+  };
+
+  // `# run node --test ...` proves nothing: the gate cannot fail.
+  withRepo(
+    {
+      'src/used.jsx': 'export default 1;\n',
+      'scripts/commented-control.sh': '#!/usr/bin/env bash\n# run node --test tests/nothing.test.mjs\necho ok\n',
+      ...emptyBaseline,
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a commented-out control must not satisfy the requirement');
+      assert.match(output, /no-negative-control/);
+    }
+  );
+
+  // The same for a commented-out JS assertion.
+  withRepo(
+    {
+      'src/used.jsx': 'export default 1;\n',
+      'scripts/commented-contract.mjs': "// import assert from 'node:assert';\n// assert.deepStrictEqual(1, 1);\nconsole.log('ok');\n",
+      ...emptyBaseline,
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a commented-out assertion must not satisfy the requirement');
+      assert.match(output, /no-negative-control/);
+    }
+  );
+
+  // Positive control: an ACTIVE in-gate program is evidence.
+  withRepo(
+    {
+      'src/used.jsx': 'export default 1;\n',
+      'scripts/live-control.sh': '#!/usr/bin/env bash\nset -euo pipefail\nnode --test tests/gate-integrity-contract.test.mjs >/dev/null\n',
+      ...emptyBaseline,
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a real in-gate control must be accepted:\n${output}`);
+    }
+  );
+});
+
+test('negative control: every grep target in a chained shell command is collected', () => {
+  withRepo(
+    {
+      'src/main.jsx': 'import "./live.jsx";\n',
+      'src/live.jsx': 'export default 1;\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      'scripts/chained-gate.sh': [
+        '#!/usr/bin/env bash',
+        'grep -qF "export default" src/live.jsx && grep -qF "export default" src/orphan.jsx',
+        '',
+      ].join('\n'),
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'the second target in a chained command must be audited');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+});
+
+test('a pipeline whose consumer names a file is not a never-failing pipeline', () => {
+  const base = { 'src/used.jsx': 'export default 1;\n', 'first.txt': 'a\n', 'second.txt': 'b\n' };
+
+  // The consumer reads second.txt, so the pipeline can succeed.
+  withRepo(
+    { ...base, 'scripts/file-consumer.sh': '#!/usr/bin/env bash\nif grep -qF a first.txt | grep -qF b second.txt; then exit 1; fi\n' },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a consumer with its own file must not be reported:\n${output}`);
+    }
+  );
+
+  // Positive control: a stdin consumer is still reported.
+  withRepo(
+    { ...base, 'scripts/stdin-consumer.sh': '#!/usr/bin/env bash\nif grep -qF a src/used.jsx | grep -qF b; then exit 1; fi\n' },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a stdin consumer must still be reported');
+      assert.match(output, /never-fails/);
+    }
+  );
+});
+
+test('a control in a nested tests directory is found', () => {
+  const files = {
+    'src/used.jsx': 'export default 1;\n',
+    'scripts/nested-control.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/used.jsx\n',
+    // No auto baseline: an explicit empty one, so a missing control would be reported.
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [],
+    }, null, 2),
+  };
+
+  withRepo(
+    { ...files, 'tests/gates/nested-control.test.mjs': '// control for scripts/nested-control.sh\n' },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a nested tests/ control must satisfy the requirement:\n${output}`);
+    }
+  );
+
+  // Positive control: with no control anywhere, the gate is still reported.
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'a gate with no control anywhere must be reported');
+    assert.match(output, /no-negative-control/);
+  });
+});
+
+test('an extensionless import resolving to a directory index is reachable', () => {
+  withRepo(
+    {
+      'src/main.jsx': 'import "./feature";\n',
+      'src/feature/index.jsx': 'export default 1;\n',
+      'scripts/index-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/feature/index.jsx\n',
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a directory index module must be reachable:\n${output}`);
+    }
+  );
+});
+
+test('alias usage disables orphan verdicts instead of inventing one', () => {
+  const files = {
+    'src/main.jsx': "import Screen from '@/screens/Screen.jsx';\n",
+    'src/screens/Screen.jsx': 'export default 1;\n',
+    'scripts/alias-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/screens/Screen.jsx\n',
+  };
+
+  // With an alias configured, the aliased module cannot be resolved from the
+  // repository alone: skip verdicts with a note rather than accuse.
+  withRepo(
+    { ...files, 'vite.config.js': "export default { resolve: { alias: { '@': '/src' } } };\n" },
+    ({ status, output }) => {
+      assert.equal(status, 0, `alias usage must not produce a false orphan:\n${output}`);
+      assert.match(output, /RC-3 orphan analysis skipped/);
+    }
+  );
+
+  // Positive control: without the alias the orphan analysis runs and reports.
+  withRepo(
+    {
+      'src/main.jsx': 'import "./used.jsx";\n',
+      'src/used.jsx': 'export default 1;\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      'scripts/no-alias-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/orphan.jsx\n',
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'without aliases the orphan must still be reported');
+      assert.match(output, /asserted-orphan/);
+    }
+  );
+});
+
+test('negative control: a gate-not-triggered waiver must name its target', () => {
+  const files = {
+    'backend/routes/api.php': '<?php\n',
+    [GUARD_PATH]: guardAsserting('<?php', 'backend/routes/api.php'),
+    '.github/workflows/guard.yml': [
+      'name: Fixture', 'on:', '  pull_request:', '    paths:', "      - 'scripts/**'",
+      'jobs:', '  check:', '    steps:', `      - run: node ${GUARD_PATH}`, '',
+    ].join('\n'),
+    'scripts/gate-integrity-waivers.json': JSON.stringify({
+      waivers: [{
+        check: 'gate-not-triggered',
+        gate: GUARD_PATH,
+        owner: 'owner',
+        reason: 'no target supplied',
+      }],
+    }, null, 2),
+  };
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'a gate-not-triggered waiver without a target must be rejected');
+    assert.match(output, /invalid-waiver/);
+    assert.match(output, /target is required for a gate-not-triggered waiver/);
+    // The redundant stale-waiver line is suppressed: the waiver never applied.
+    assert.doesNotMatch(output, /stale-waiver/);
+    // And the underlying violation must still surface.
+    assert.match(output, /gate-not-triggered/);
+  });
 });
