@@ -1,0 +1,82 @@
+name: Migration PostgreSQL Gate
+
+# Runs the migration verification tool on the engine production actually runs.
+#
+# Why a separate workflow: the check is only meaningful when a migration changed, and
+# GitHub Actions cannot path-filter a single job. Keeping it in its own file also keeps
+# it clear of the shared backend test workflow.
+#
+# Runner cost (see the PR that added this): this job runs on a GitHub-hosted runner,
+# which is free for this public repository, and it is NOT dispatched to the single
+# self-hosted runner that serialises the merge queue (D-121). The only required check
+# that uses that runner is "Live server gate verify_quick". Measured cold cost of this
+# job is on the order of a minute, and it runs in parallel with the rest of the PR.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/database/migrations/**'
+      - 'scripts/verify-migrations-postgres.sh'
+      - 'scripts/verify-migrations-postgres.test.sh'
+      - '.github/workflows/migration-postgres-gate.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/database/migrations/**'
+      - 'scripts/verify-migrations-postgres.sh'
+      - '.github/workflows/migration-postgres-gate.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-postgres-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  migration-postgres:
+    name: Verify migrations on PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The tool diffs the migration directory against origin/main to decide what
+          # to verify, so the base ref has to be present. A missing base fails loudly
+          # rather than verifying nothing.
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, pdo_pgsql, pgsql, gd, zip, bcmath, pcntl
+          coverage: none
+
+      - name: Install Composer dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # The control runs first on purpose: if the gate cannot fail, a PASS from it
+      # means nothing. This is the RC-4 rule from docs/architecture/gate-assertion-policy.md.
+      - name: Prove the migration gate can fail
+        env:
+          MIGVERIFY_TEST_REQUIRE_DOCKER: '1'
+        run: bash scripts/verify-migrations-postgres.test.sh
+
+      # --no-production-counts: this runner has no access to the production database,
+      # and the tool must never need it. Row counts degrade to "n/a" here.
+      - name: Verify changed migrations on PostgreSQL
+        run: bash scripts/verify-migrations-postgres.sh --no-production-counts --out-dir=/tmp/migration-verify
+
+      - name: Upload migration verification evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: migration-postgres-evidence
+          path: /tmp/migration-verify
+          if-no-files-found: ignore
+          retention-days: 14
