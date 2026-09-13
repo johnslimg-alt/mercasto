@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cookie, X } from 'lucide-react';
 import {
   OPEN_COOKIE_PREFERENCES_EVENT,
+  registerCookiePreferencesOpener,
   persistAnalyticsTrackingConsent,
   readCookieConsent,
 } from '../utils/trackingConsent';
@@ -12,27 +13,30 @@ export default function CookieBanner({ t, lang }) {
   const [decision, setDecision] = useState(() => readCookieConsent());
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let timer;
-
-    // Show the banner only if no consent has been stored yet.
-    if (!readCookieConsent()) {
-      // Small delay so it doesn't flash on first paint
-      timer = setTimeout(() => setVisible(true), 800);
-    }
-
-    // Consent must stay withdrawable: any "cookie settings" entry point can
-    // bring this dialog back, even after a decision was stored.
+  // Consent must stay withdrawable: every "cookie settings" entry point can bring
+  // this dialog back, even after a decision was stored. The opener is registered
+  // with the shared intent registry, so a request that arrives before this dialog
+  // mounted is flushed when it does instead of being dropped; the raw event listener
+  // is kept for any dispatcher that does not go through the registry.
+  useLayoutEffect(() => {
     const openPreferences = () => {
       setDecision(readCookieConsent());
       setVisible(true);
     };
     window.addEventListener(OPEN_COOKIE_PREFERENCES_EVENT, openPreferences);
-
+    const unregisterOpener = registerCookiePreferencesOpener(openPreferences);
     return () => {
-      clearTimeout(timer);
       window.removeEventListener(OPEN_COOKIE_PREFERENCES_EVENT, openPreferences);
+      unregisterOpener();
     };
+  }, []);
+
+  useEffect(() => {
+    // Show the banner only if no consent has been stored yet.
+    if (readCookieConsent()) return undefined;
+    // Small delay so it doesn't flash on first paint
+    const timer = setTimeout(() => setVisible(true), 800);
+    return () => clearTimeout(timer);
   }, []);
 
   const accept = () => {
