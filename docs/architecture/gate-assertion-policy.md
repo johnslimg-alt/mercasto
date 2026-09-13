@@ -145,6 +145,9 @@ verifies behaviour.
 | Assertion **literals** held in a variable resolve only for simple `const`/`VAR=` bindings. | Computed or concatenated literals are not resolved. |
 | Glob targets (e.g. `backend/database/migrations/*payments*`) are skipped. | A glob has no single subject to reason about; deciding whether a gate over a glob is dead requires different logic. |
 | Frontend reachability is not modelled. | An asserted `.jsx`/`.js` file that no entry point imports passes. |
+| RC-3 misses **negative** shell guards. | `if grep -qF "literal" path; then fail; fi` is a claim about `path`, but only positive assertions are collected as asserted targets, so a target referenced solely by a negative guard is not reported as an orphan. Live instance found while retargeting the CSRF/session gate: `funnel-analytics-contract-gate.sh:58` asserts the dead `src/contexts/AuthContext.jsx`. |
+| RC-3 audits `scripts/` only. | `tests/**/*.test.mjs` assert file contents too — `tests/funnel-analytics-contract.test.mjs:62` reads the dead `src/contexts/AuthContext.jsx`. Widening the audit to the test suite is a separate change, not a bigger regex. |
+| A **missing** asserted file silently hollows an `if grep` guard. | `grep` exits 2 on a missing file and `if` treats non-zero as false, so the guard passes without evaluating anything. Verified by deleting the file in a scratch copy: `funnel-analytics-contract-gate.sh:58` reports no error and the gate continues. A `test -f` over the asserted targets is the cheap mitigation. |
 | Custom assertion helpers are not parsed. | `assertFirstOrderingKey(...)`-style helpers in `check-recovery-guards.mjs` are outside the two recognised shapes. |
 
 The **policy** above, not this checker, is the primary control. The checker is a backstop

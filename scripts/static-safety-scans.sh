@@ -79,6 +79,9 @@ node --test scripts/hosted-workflow-timeout-guard.test.mjs
 node --test scripts/workflow-concurrency-guard.test.mjs
 node --test scripts/seo-audit-request.test.mjs
 bash scripts/csrf-session-contract-gate.sh
+# Runs with the gate it covers: scripts/*.test.sh are not auto-discovered by
+# anything, so an unwired control is a control that never runs.
+bash scripts/csrf-session-contract-gate.test.sh
 bash scripts/origin-edge-security-gate.sh
 bash scripts/offsite-backup-contract-gate.sh
 bash scripts/backup-permission-contract-gate.sh
