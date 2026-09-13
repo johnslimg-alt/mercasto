@@ -54,7 +54,7 @@ export function CitiesSection({ t, applyCityFilter, onViewAllMexico }) {
     <section className="col-span-12">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-[17px]">{t.explore_city || 'Explorar por ciudad'}</h3>
-        <a href="/listings" onClick={(e) => { e.preventDefault(); onViewAllMexico(); }} className="text-[13px] font-medium text-slate-600 hover:text-slate-900 cursor-pointer">{t.view_all_mexico || 'Ver todo México →'}</a>
+        <a href="/listings" onClick={(e) => { e.preventDefault(); onViewAllMexico(); }} className="home-see-all text-[13px] font-medium text-slate-600 hover:text-slate-900 cursor-pointer">{t.view_all_mexico || 'Ver todo México →'}</a>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
         {POPULAR_CITIES.map(city => (

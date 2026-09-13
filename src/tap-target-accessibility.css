@@ -1,0 +1,30 @@
+/**
+ * WCAG 2.5.8 Target Size (Minimum) — Level AA — for text-sized navigation
+ * controls (footer navigation and the home "see all" links/buttons).
+ *
+ * These controls are not links placed inline in a sentence, so the inline
+ * exception does not apply: each one is its own target and needs a 24 x 24 CSS px
+ * minimum. Each is grown to a 24px-tall box and the extra height is cancelled
+ * with an equal negative block margin, so line boxes, row pitch and the
+ * surrounding layout do not move — only the tappable area grows. The boxes are
+ * transparent and glyph size/position are untouched.
+ *
+ * `1.5em` is the previous line box of these rows (Tailwind text-[13px] and
+ * text-[12px] both resolve to a 1.5 line-height here), so the compensation is
+ * exact and self-adjusting if the type scale changes.
+ */
+.app-footer-nav a,
+.app-footer-nav button,
+/* `button` as well as `a` in the legal bar: #1139 (consent preferences, merged
+   after this branch was written) added a cookie-preferences <button> next to the
+   links. Same treatment, hit box only — its testid, handler and position are
+   untouched. Without this the control stays 137x18 and passes only via the
+   WCAG 2.5.8 spacing exception, which is exactly what this file exists to remove. */
+.app-footer-legal a,
+.app-footer-legal button,
+.home-see-all {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin-block: calc((24px - 1.5em) / -2);
+}

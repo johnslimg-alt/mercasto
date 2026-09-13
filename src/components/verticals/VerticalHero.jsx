@@ -134,26 +134,31 @@ export default function VerticalHero({
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder={searchPlaceholder || `${copy.search}…`}
-              className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder-slate-400"
+              /* WCAG 2.5.8 AA: the field itself — not only the wrapping label —
+                 must accept a 24px-tall pointer target. self-stretch makes it
+                 fill the 48px label, min-h-6 keeps the floor if padding moves.
+                 The input is transparent and borderless, so nothing visible
+                 changes; only the tappable box grows. */
+              className="min-w-0 flex-1 self-stretch min-h-6 bg-transparent text-[14px] outline-none placeholder-slate-400"
             />
           </label>
           <label className="flex min-h-12 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <MapPin size={18} className="text-slate-400 shrink-0" />
-            <select aria-label={copy.state} value={state} onChange={handleStateChange} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
+            <select aria-label={copy.state} value={state} onChange={handleStateChange} className="min-w-0 flex-1 self-stretch min-h-6 bg-transparent text-[14px] font-semibold outline-none">
               <option value="">{copy.allMexico}</option>
               {states.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="flex min-h-12 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <LocateFixed size={18} className="text-slate-400 shrink-0" />
-            <select ref={citySelectRef} aria-label={copy.city} value={city} onChange={e => setCity(e.target.value)} disabled={!state} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none disabled:text-slate-400">
+            <select ref={citySelectRef} aria-label={copy.city} value={city} onChange={e => setCity(e.target.value)} disabled={!state} className="min-w-0 flex-1 self-stretch min-h-6 bg-transparent text-[14px] font-semibold outline-none disabled:text-slate-400">
               <option value="">{state ? copy.allCity : copy.city}</option>
               {cities.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="flex min-h-12 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <SlidersHorizontal size={18} className="text-slate-400 shrink-0" />
-            <select aria-label={copy.radius} value={radius} onChange={e => setRadius(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
+            <select aria-label={copy.radius} value={radius} onChange={e => setRadius(e.target.value)} className="min-w-0 flex-1 self-stretch min-h-6 bg-transparent text-[14px] font-semibold outline-none">
               {['5', '10', '25', '50', '100'].map(item => <option key={item} value={item}>{item} km</option>)}
             </select>
           </label>
