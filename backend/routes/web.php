@@ -5,6 +5,7 @@ use App\Http\Controllers\ShareAdController;
 use App\Http\Controllers\ShareOgImageController;
 use App\Http\Controllers\SeoShellController;
 use App\Http\Controllers\Api\SitemapController;
+use App\Services\OgPreviewComposer;
 
 Route::get('/sitemap.xml', [SitemapController::class, 'sitemapIndex']);
 Route::get('/sitemap-main.xml', [SitemapController::class, 'index']);
@@ -15,9 +16,11 @@ Route::get('/sitemap-ads.xml', [SitemapController::class, 'ads']);
 Route::get('/sitemap-ads-{chunk}.xml', [SitemapController::class, 'adsChunk'])->whereNumber('chunk');
 
 Route::get('/share/ads/{id}', ShareAdController::class)->whereNumber('id');
-// Composited 1200x630 social preview (og:image). Separate route so the share-card
-// controller stays untouched; wired in via OgPreviewComposer::urlFor().
-Route::get('/share/ads/{id}/og.jpg', ShareOgImageController::class)
+// Composited 1200x630 social preview (og:image). Both crawler-facing emitters -
+// ShareAdController (/share/ads/{id}) and SeoShellController (/ads/{id}) - advertise
+// this URL via OgPreviewComposer::urlFor(); the path is defined in that service so
+// the route and the URL it hands out cannot drift apart.
+Route::get(OgPreviewComposer::SHARE_IMAGE_PATH, ShareOgImageController::class)
     ->whereNumber('id')
     ->name('share.og-image');
 Route::get('/listings', [SeoShellController::class, 'listings']);

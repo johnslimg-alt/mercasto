@@ -160,7 +160,11 @@ class SeoShellControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('<title>Bicicleta urbana | Mercasto</title>', false);
         $response->assertSee("https://mercasto.test/ads/{$ad->id}", false);
-        $response->assertSee('https://mercasto.test/storage/ads/bicicleta.webp', false);
+        // The listing photo is advertised through the composited preview, never as
+        // the raw stored upload (see ServedShareImageWiringTest for the served-HTML
+        // contract on both crawler-facing surfaces).
+        $response->assertSee("https://mercasto.test/share/ads/{$ad->id}/og.jpg?v=", false);
+        $response->assertDontSee('content="https://mercasto.test/storage/ads/bicicleta.webp"', false);
         $response->assertSee('"@type":"Product"', false);
         $response->assertSee('"price":"3500.00"', false);
         $response->assertDontSee('City bicycle');
@@ -543,6 +547,51 @@ class SeoShellControllerTest extends TestCase
         ]);
 
         $this->get('https://mercasto.test/listings')->assertServerError();
+    }
+
+    /**
+     * og:image:width/height are declarations ABOUT the og:image next to them, so a
+     * shell that already carries a size must not keep it after this controller swaps
+     * in an image of a different size. Omission is honest; a stale number makes
+     * platforms reserve the wrong box. The two tags are therefore rewritten as a pair
+     * and dropped when the size is not known to be true.
+     */
+    public function test_listing_shell_drops_stale_preview_dimensions_when_the_size_is_unknown(): void
+    {
+        Http::fake([
+            'http://frontend.test/index.html' => Http::response(
+                str_replace(
+                    '<meta property="og:image" content="https://mercasto.test/home.png" />',
+                    '<meta property="og:image" content="https://mercasto.test/icon-512x512.png" />' . "\n"
+                        . '<meta property="og:image:width" content="512" />' . "\n"
+                        . '<meta property="og:image:height" content="512" />',
+                    $this->frontendShell(),
+                ),
+                200,
+            ),
+        ]);
+
+        $ad = Ad::create([
+            'user_id' => User::factory()->create()->id,
+            'title' => 'Bicicleta urbana',
+            'description' => 'Bicicleta urbana lista para rodar por toda la ciudad, frenos revisados.',
+            'price' => 3500,
+            'location' => 'Guadalajara',
+            'category' => 'deportes',
+            'condition' => 'usado',
+            // Hosted elsewhere: not composable, and its real size is unknowable here.
+            'image_url' => 'https://cdn.example.com/photos/1234.jpg',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+
+        $response = $this->get("https://mercasto.test/ads/{$ad->id}");
+
+        $response->assertOk();
+        $response->assertSee('content="https://cdn.example.com/photos/1234.jpg"', false);
+        $response->assertDontSee('og:image:width', false);
+        $response->assertDontSee('og:image:height', false);
     }
 
     private function frontendShell(): string

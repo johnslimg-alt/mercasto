@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ad;
+use App\Services\OgPreviewComposer;
 use App\Support\ListingIndexability;
 use App\Support\SeoIndexability;
 use Illuminate\Http\Request;
@@ -302,7 +303,14 @@ class SeoShellController extends Controller
             '',
         );
         $canonical = SeoIndexability::listingUrl($ad->id);
-        $image = $this->resolveImage($ad);
+        // Same source of truth as the share card: the composited 1200x630 preview.
+        // This page is what a crawler following the canonical listing URL receives,
+        // and its og:image used to be the raw stored upload - a 1200x1800 portrait
+        // that platforms crop to a middle band. A third-party-hosted photo is not
+        // composable, so urlFor() returns null there and this keeps the old URL.
+        $composer = app(OgPreviewComposer::class);
+        $image = $composer->urlFor($ad) ?? $this->resolveImage($ad);
+        $imageDimensions = $composer->isShareImageUrl($image) ? $composer->frameSize() : null;
         $isCatalogFiller = (bool) $ad->is_catalog_filler;
         // Availability is the contract shared with SitemapController so the shell and the ads
         // sitemap can never drift apart again (a hand-copied filter emptied /sitemap-ads.xml in
@@ -329,6 +337,7 @@ class SeoShellController extends Controller
                 'canonical' => $canonical,
                 'type' => 'website',
                 'image' => $image,
+                'image_dimensions' => $imageDimensions,
                 'robots' => SeoIndexability::ROBOTS_NOINDEX,
             ], [
                 '@context' => 'https://schema.org',
@@ -353,6 +362,7 @@ class SeoShellController extends Controller
             'canonical' => $canonical,
             'type' => 'product',
             'image' => $image,
+            'image_dimensions' => $imageDimensions,
             // Same directive the hydrated DOM writes for an indexable listing.
             'robots' => SeoIndexability::ROBOTS_INDEXABLE,
         ], [
@@ -401,7 +411,7 @@ class SeoShellController extends Controller
         $html = $this->replaceMeta($html, 'property', 'og:title', $meta['title']);
         $html = $this->replaceMeta($html, 'property', 'og:description', $meta['description']);
         $html = $this->replaceMeta($html, 'property', 'og:url', $meta['canonical']);
-        $html = $this->replaceMeta($html, 'property', 'og:image', $meta['image']);
+        $html = $this->replaceImageMeta($html, $meta['image'], $meta['image_dimensions'] ?? null);
         $html = $this->replaceMeta($html, 'name', 'twitter:title', $meta['title']);
         $html = $this->replaceMeta($html, 'name', 'twitter:description', $meta['description']);
         $html = $this->replaceMeta($html, 'name', 'twitter:image', $meta['image']);
@@ -436,6 +446,47 @@ class SeoShellController extends Controller
         $replacement = '<meta ' . $attribute . '="' . e($key) . '" content="' . e($content) . '" />';
 
         return $this->replaceFirst($html, $pattern, $replacement);
+    }
+
+    /**
+     * og:image plus its declared size, written together.
+     *
+     * They have to move as a pair. og:image:width/height describe the image in the
+     * tag next to them, and the frontend shell ships its own og:image (a 512x512
+     * icon) - so a shell that ever declared a size would otherwise keep advertising
+     * it after this controller swapped in a differently sized listing image. The
+     * pattern therefore consumes any existing dimension tags and rewrites them from
+     * $dimensions, which is null unless the URL is one we produced and whose size is
+     * therefore known. Null removes them: omitting a size is honest, a stale or
+     * guessed one is not.
+     *
+     * The whole span is matched and rebuilt rather than captured, so this works
+     * through {@see replaceFirst()}, whose replacement is inserted verbatim.
+     *
+     * @param  array{0:int,1:int}|null  $dimensions
+     */
+    private function replaceImageMeta(string $html, string $image, ?array $dimensions): string
+    {
+        $pattern = '#<meta\s+property="og:image"\s+content="[^"]*"\s*/?>'
+            . '(?:\s*<meta\s+property="og:image:(?:width|height)"\s+content="[^"]*"\s*/?>)*#i';
+
+        $replacement = '<meta property="og:image" content="' . e($image) . '" />';
+
+        if ($dimensions !== null) {
+            $replacement .= "\n    " . $this->imageDimensionTags($dimensions);
+        }
+
+        return $this->replaceFirst($html, $pattern, $replacement);
+    }
+
+    /**
+     * @param  array{0:int,1:int}  $dimensions
+     */
+    private function imageDimensionTags(array $dimensions): string
+    {
+        return '<meta property="og:image:width" content="' . (int) $dimensions[0] . '" />'
+            . "\n    "
+            . '<meta property="og:image:height" content="' . (int) $dimensions[1] . '" />';
     }
 
     /**
