@@ -27,7 +27,25 @@ if grep -Eq "en-US|es-MX|pt-BR|ru-RU|toLocale(DateString|String)\\(" "$DASH" "$S
   echo "Dashboard surfaces must use the shared locale formatter" >&2
   exit 1
 fi
-if grep -Eq "\{t\.[A-Za-z0-9_]+\}" "$DASH" | grep -q "'"; then
+# NOTE: this must be a SINGLE grep, not a pipeline. Two defects were found here by
+# scripts/gate-integrity-check.mjs:
+#   1. `grep -Eq ... | grep -q "'"` -- the left `-q` writes nothing to stdout, so
+#      the stream was always empty and the guard could never fire (RC-4 /
+#      retrospective-2 case 5).
+#   2. Repairing that to `grep -E ... | grep -q "'"` was still not enough under
+#      `set -o pipefail`, which this script sets. The downstream `grep -q` exits on
+#      its first match, the upstream grep takes SIGPIPE and returns 141, and
+#      pipefail makes the pipeline non-zero -- so the guard was skipped exactly
+#      when the file was large enough to keep the pipe busy. Measured on a 20,001
+#      line control with a quote on line 1 and 20,000 matching lines after:
+#      pipeline rc=141 under pipefail, rc=0 without. The guard missed a real match.
+#
+# One grep, no pipeline, therefore no SIGPIPE. The quote must be IMMEDIATELY
+# adjacent to the expression, because that is what stringification is: '{t.x}' or
+# "{t.x}". An earlier attempt required only "a quote somewhere on the same line",
+# which rejected legitimate JSX such as <span className='label'>{t.trust_score}</span>
+# -- a false positive that would have blocked CI on ordinary formatting.
+if grep -Eq "(['\"]\{t\.[A-Za-z0-9_]+\})|(\{t\.[A-Za-z0-9_]+\}['\"])" "$DASH"; then
   echo "Dashboard must not contain stringified translation expressions" >&2
   exit 1
 fi

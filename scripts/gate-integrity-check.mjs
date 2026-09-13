@@ -55,7 +55,7 @@
  *     `const`/`VAR=` assignments only.
  */
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -72,7 +72,22 @@ const notes = [];
 
 const GUARD = 'scripts/check-recovery-guards.mjs';
 const WAIVER_FILE = 'scripts/gate-integrity-waivers.json';
-const KNOWN_CHECKS = new Set(['dead-code-assertion', 'gate-not-triggered']);
+const BASELINE_FILE = 'scripts/gate-coverage-baseline.json';
+const KNOWN_CHECKS = new Set([
+  // RC-1 -- no reachability check (closed in #1150).
+  'dead-code-assertion',
+  'gate-not-triggered',
+  // RC-3 -- the wrong observation surface: the gate reads something other than
+  // the artifact that ships.
+  'asserted-orphan',
+  // RC-4 -- no proof the check can fail.
+  'never-fails',
+  'no-negative-control',
+]);
+/** Checks whose existing population is grandfathered through the baseline file. */
+const BASELINE_CHECKS = new Set(['no-negative-control']);
+/** Checks whose identity needs a target, not just a gate. */
+const TARGETED_CHECKS = new Set(['dead-code-assertion', 'gate-not-triggered', 'asserted-orphan', 'never-fails']);
 
 function readRepoFile(path) {
   return readFileSync(join(ROOT, path), 'utf8');
@@ -196,8 +211,8 @@ function extractAssertions(gatePath, source) {
     if (!/\bgrep\b/.test(line)) continue;
     // Only positive greps: skip the `if grep ...; then echo ... exit 1` guards.
     if (/^\s*if\s+grep\b/.test(line)) continue;
-    const grep = /grep\s+-[A-Za-z]*q[A-Za-z]*F?\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+(\S+)/.exec(line)
-      ?? /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+(\S+)/.exec(line);
+    const grep = /grep\s+-[A-Za-z]*q[A-Za-z]*F?\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/.exec(line)
+      ?? /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/.exec(line);
     if (!grep) continue;
     let target = grep[3].replace(/^["']|["']$/g, '');
     if (target.startsWith('$')) target = vars.get(target.slice(1).replace(/[{}]/g, '')) ?? '';
@@ -219,14 +234,62 @@ function extractAssertions(gatePath, source) {
  * NOT contain something. Negative-only targets used to be dropped entirely, so
  * removing their `paths:` entry went unnoticed.
  */
-function extractAssertedTargets(source) {
+/**
+ * Every repository file a gate asserts about that this analysis can reason over.
+ *
+ * Collects from BOTH directions, because "which file is this gate making a claim
+ * about?" does not depend on the claim's polarity:
+ *   - JS: assertContains / assertOrder / assertNotContains
+ *   - SH: every positive `grep`, AND every negative guard -- `if grep -qF lit path;
+ *     then fail; fi` and `! grep -qF lit path` are claims about `path` just as much
+ *     as a positive grep is. Collecting only the positive form meant a target
+ *     referenced solely by a negative guard was invisible to `asserted-orphan`.
+ *
+ * Dead-code analysis still uses `extractAssertions()`, which stays positive-only:
+ * an absence assertion cannot be satisfied by dead code.
+ */
+function extractAssertedTargets(gatePath, source) {
   const targets = new Set();
-  const constants = jsConstants(source);
-  const call = new RegExp(String.raw`assert(?:Contains|Order|NotContains)\(\s*${ASSERT_ARG}`, 'g');
-  let match;
-  while ((match = call.exec(source)) !== null) {
-    const target = resolveArgGroups(match, 1, constants);
-    if (target !== null) targets.add(target);
+
+  if (!gatePath.endsWith('.sh')) {
+    const constants = jsConstants(source);
+    const call = new RegExp(String.raw`assert(?:Contains|Order|NotContains)\(\s*${ASSERT_ARG}`, 'g');
+    let match;
+    while ((match = call.exec(source)) !== null) {
+      const target = resolveArgGroups(match, 1, constants);
+      if (target !== null) targets.add(target);
+    }
+    return targets;
+  }
+
+  const variables = shellVariables(source);
+  const resolveTarget = (raw) => {
+    let target = raw.replace(/^["']|["']$/g, '');
+    if (target.startsWith('$')) target = variables.get(target.slice(1).replace(/[{}]/g, '')) ?? '';
+    return target;
+  };
+
+  // The target stops at shell metacharacters: `if grep -qF x path; then` must yield
+  // `path`, not `path;`. Capturing `\S+` swallowed the semicolon, so existsSync
+  // failed and the target was silently dropped -- which is how the funnel gate's
+  // negative guard on the dead AuthContext stayed invisible to this check.
+  // EVERY grep in the logical command, not just the first: a gate that chains
+  // assertions (`grep -qF x src/live.jsx && grep -qF y src/orphan.jsx`, or several
+  // negative greps joined by `||`) makes a claim about each target, and stopping at
+  // the first left the others invisible to `asserted-orphan`.
+  const grepPattern = /grep\s+-[A-Za-z]*q[A-Za-z]*F?\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/g;
+  const altGrepPattern = /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/g;
+  for (const { text } of logicalShellLines(source)) {
+    const found = new Set();
+    for (const pattern of [grepPattern, altGrepPattern]) {
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const target = resolveTarget(match[3]);
+        if (target) found.add(target);
+      }
+    }
+    for (const target of found) targets.add(target);
   }
   return targets;
 }
@@ -263,6 +326,537 @@ function isRepoTarget(target) {
   if (target.startsWith('/') || target.startsWith('$') || target.includes('..')) return false;
   if (!/\.(php|jsx?|tsx?|mjs|cjs|vue|html|css|json|ya?ml|md|sh|py|conf|txt|xml|env)$/.test(target)) return false;
   return target.includes('/') || /^(index\.html|package\.json|package-lock\.json)$/.test(target);
+}
+
+/* ------------------------------------------------------------------ *
+ * RC-3 -- does the gate read the artifact that is actually delivered?
+ * ------------------------------------------------------------------ */
+
+const FRONTEND_EXTENSIONS = ['', '.js', '.jsx', '.ts', '.tsx', '.mjs', '/index.js', '/index.jsx', '/index.ts', '/index.tsx'];
+/** Module extensions `asserted-orphan` will judge. Must match what the graph resolves. */
+const FRONTEND_MODULE_TARGET = /^src\/.*\.(jsx?|tsx?|mjs|cjs)$/;
+/**
+ * Replaces string, template and regex bodies with spaces, preserving length and the
+ * quote characters themselves.
+ *
+ * The import scan reads source text, so a path mentioned INSIDE a string is not an
+ * import: `const help = "import './orphan.jsx'"` used to mark that orphan reachable
+ * and hide it from `asserted-orphan` -- the same false negative the check exists to
+ * prevent. Masking bodies keeps every other offset intact, so a real specifier can
+ * still be read from the original text at the same index.
+ */
+function maskStringBodies(source) {
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const char = source[i];
+    if (char === "'" || char === '"' || char === '`') {
+      const quote = char;
+      out += char;
+      i += 1;
+      while (i < source.length) {
+        if (source[i] === '\\') {
+          out += '  ';
+          i += 2;
+          continue;
+        }
+        const isEnd = source[i] === quote;
+        out += isEnd ? quote : ' ';
+        i += 1;
+        if (isEnd) break;
+      }
+      continue;
+    }
+    out += char;
+    i += 1;
+  }
+  return out;
+}
+
+/**
+ * Import specifiers from EXECUTABLE syntax only.
+ *
+ * Masking string bodies first means a keyword inside a string is invisible, while a
+ * real specifier -- which lives inside quotes -- is still matched, because the
+ * opening quote survives masking. The specifier text is then read from the original
+ * source at the same offset.
+ */
+function extractImportSpecifiers(source) {
+  const masked = maskStringBodies(source);
+  const specifiers = [];
+  const opener = /\b(?:from|import|require|export)\b[^'"`\n]{0,200}?(['"`])/g;
+  let match;
+  while ((match = opener.exec(masked)) !== null) {
+    const quote = match[1];
+    const start = match.index + match[0].length;
+    const end = source.indexOf(quote, start);
+    if (end < 0) continue;
+    specifiers.push(source.slice(start, end));
+    opener.lastIndex = end;
+  }
+  return specifiers;
+}
+
+/**
+ * Removes JavaScript comments while leaving string, template and regex-ish text intact.
+ *
+ * The import scan reads source text, so a commented-out import is not an import.
+ * `// import './orphan.jsx'` inside a reachable module used to mark that orphan as
+ * reachable and hide it from `asserted-orphan` -- the exact false negative the check
+ * exists to prevent. String bodies are copied verbatim so a `//` inside a URL
+ * literal is not mistaken for a comment.
+ */
+function stripJsComments(source) {
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (char === "'" || char === '"' || char === '`') {
+      const quote = char;
+      out += char;
+      i += 1;
+      while (i < source.length) {
+        if (source[i] === '\\') {
+          out += source[i] + (source[i + 1] ?? '');
+          i += 2;
+          continue;
+        }
+        out += source[i];
+        const done = source[i] === quote;
+        i += 1;
+        if (done) break;
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      const end = source.indexOf('*/', i + 2);
+      i = end === -1 ? source.length : end + 2;
+      out += ' ';
+      continue;
+    }
+
+    if (char === '/' && next === '/') {
+      const end = source.indexOf('\n', i);
+      i = end === -1 ? source.length : end;
+      continue;
+    }
+
+    out += char;
+    i += 1;
+  }
+  return out;
+}
+
+/**
+ * Alias prefixes from the project's bundler config, if any.
+ *
+ * This repository configures none (verified: `vite.config.js` has no `resolve.alias`
+ * and there is no `jsconfig.json`/`tsconfig.json` paths block), so no module is
+ * reachable only through an alias today. If one is ever added, a module imported
+ * that way would be absent from the graph and a gate asserting it would be falsely
+ * reported as an orphan -- so alias usage is detected and turns orphan verdicts off
+ * for the run rather than producing a false accusation.
+ */
+function configuredAliasPrefixes() {
+  for (const file of ['vite.config.js', 'vite.config.mjs', 'vite.config.ts']) {
+    if (!existsSync(join(ROOT, file))) continue;
+    let source;
+    try {
+      source = readRepoFile(file);
+    } catch {
+      continue;
+    }
+    const block = /alias\s*:\s*\{([\s\S]{0,600}?)\}/.exec(source);
+    if (!block) continue;
+    const keys = [...block[1].matchAll(/['"]([^'"]+)['"]\s*:/g)].map((m) => m[1]);
+    if (keys.length > 0) return keys;
+  }
+  return [];
+}
+
+let frontendGraphCache = null;
+
+/**
+ * Frontend modules reachable from the browser entry point.
+ *
+ * index.html loads `/src/main.jsx`; everything the SPA can execute is reachable
+ * from there through static and dynamic imports. A `src/**` module NOT in this
+ * set never runs in the browser -- so a gate asserting its contents is observing
+ * an intermediate artifact, not the delivered one. That is exactly the recorded
+ * `/reembolsos/` defect: a gate asserted an orphaned React screen while the
+ * shipped page was static HTML in `public/`.
+ *
+ * Resolution is deliberately conservative, because a false orphan accusation is
+ * worse than a missed one:
+ *   - comments are stripped first, so a commented-out import does not count;
+ *   - a specifier that cannot be resolved is treated as external and skipped;
+ *   - a COMPUTED specifier (`./locales/${lang}.json`) marks every module in its
+ *     static prefix directory as reachable, since the code can load any of them;
+ *   - if there is no entry point at all the whole analysis is skipped with a note.
+ */
+function frontendReachableModules() {
+  if (frontendGraphCache) return frontendGraphCache;
+
+  const entry = 'src/main.jsx';
+  const reachable = new Set();
+  if (!existsSync(join(ROOT, entry))) {
+    notes.push(`${entry} not found; RC-3 orphan analysis skipped`);
+    frontendGraphCache = reachable;
+    return reachable;
+  }
+
+  // Aliases are configuration, not code: a specifier such as `@/components/Screen`
+  // is local but unresolvable without the project's config. If aliases are
+  // configured and one is used, orphan verdicts are skipped for the whole run
+  // rather than risking a false accusation -- see configuredAliasPrefixes().
+  const aliasPrefixes = configuredAliasPrefixes();
+  let sawUnresolvedAlias = false;
+
+  const resolveSpecifier = (fromFile, specifier) => {
+    if (!specifier.startsWith('.')) return null; // package or alias import
+    const base = join(dirname(fromFile), specifier);
+    for (const extension of FRONTEND_EXTENSIONS) {
+      const candidate = `${base}${extension}`;
+      const full = join(ROOT, candidate);
+      // A FILE, not a directory: `import './feature'` must resolve to
+      // `src/feature/index.jsx`, and `src/feature` itself is a directory that
+      // exists. Accepting it made the index module look unreachable -- a false
+      // orphan for a module the browser actually loads.
+      if (!existsSync(full)) continue;
+      try {
+        if (!statSync(full).isFile()) continue;
+      } catch {
+        continue;
+      }
+      return candidate;
+    }
+    return null;
+  };
+
+  /** Every module under a directory, for computed specifiers. */
+  const modulesUnder = (dir) => {
+    const found = [];
+    const walk = (current) => {
+      let entries;
+      try {
+        entries = readdirSync(join(ROOT, current), { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entryInfo of entries) {
+        const path = `${current}/${entryInfo.name}`;
+        if (entryInfo.isDirectory()) walk(path);
+        else if (/\.(jsx?|tsx?|mjs|cjs)$/.test(entryInfo.name)) found.push(path);
+      }
+    };
+    walk(dir);
+    return found;
+  };
+
+  const queue = [entry];
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (reachable.has(file)) continue;
+    reachable.add(file);
+    let source;
+    try {
+      source = stripJsComments(readRepoFile(file));
+    } catch {
+      continue;
+    }
+    for (const specifier of extractImportSpecifiers(source)) {
+      if (aliasPrefixes.some((prefix) => specifier === prefix || specifier.startsWith(`${prefix}/`))) {
+        sawUnresolvedAlias = true;
+        continue;
+      }
+
+      if (specifier.includes('${')) {
+        // Computed specifier: the code can load any file the static prefix can
+        // name, so treat the whole prefix directory as reachable. Marking a live
+        // module as an orphan would accuse a gate of observing nothing when it is
+        // observing the shipped code.
+        const prefix = specifier.slice(0, specifier.indexOf('${'));
+        const prefixDir = prefix.slice(0, prefix.lastIndexOf('/'));
+        if (prefixDir === '') continue;
+        const resolvedDir = prefix.startsWith('.')
+          ? join(dirname(file), prefixDir)
+          : prefixDir;
+        for (const candidate of modulesUnder(resolvedDir)) {
+          if (!reachable.has(candidate)) queue.push(candidate);
+        }
+        continue;
+      }
+
+      const resolved = resolveSpecifier(file, specifier);
+      if (resolved !== null && !reachable.has(resolved)) queue.push(resolved);
+    }
+  }
+
+  if (sawUnresolvedAlias) {
+    // Fail safe: an alias-resolved module cannot be distinguished from an orphan
+    // without the project's alias config, and a false orphan accusation is worse
+    // than a missed one. Report the skip instead of guessing.
+    notes.push(
+      'a configured import alias was used; RC-3 orphan analysis skipped (cannot distinguish an alias-resolved module from an orphan)'
+    );
+    frontendGraphCache = new Set();
+    return frontendGraphCache;
+  }
+
+  frontendGraphCache = reachable;
+  return reachable;
+}
+
+/** Every `src/**` module the gate asserts about by literal path. */
+function checkAssertedOrphans() {
+  const hits = [];
+  const reachable = frontendReachableModules();
+  if (reachable.size === 0) return hits;
+
+  for (const gate of gateFiles()) {
+    const source = readRepoFile(gate);
+    const targets = new Set();
+    for (const { target } of extractAssertions(gate, source)) targets.add(target);
+    for (const target of extractAssertedTargets(gate, source)) targets.add(target);
+
+    for (const target of targets) {
+      if (!FRONTEND_MODULE_TARGET.test(target)) continue;
+      if (!existsSync(join(ROOT, target))) continue;
+      if (reachable.has(target)) continue;
+      hits.push({
+        check: 'asserted-orphan',
+        gate,
+        target,
+        detail: `${gate} asserts ${target}, which no frontend entry point can reach: it does not execute in the browser, so the assertion observes an intermediate artifact rather than the delivered page`,
+      });
+    }
+  }
+  return hits;
+}
+
+/* ------------------------------------------------------------------ *
+ * RC-4 -- can the check actually fail?
+ * ------------------------------------------------------------------ */
+
+/** Strips shell comments from a whole script, so fixed-out code is not reported. */
+function stripShellComments(source) {
+  return source.split('\n').map(stripShellComment).join('\n');
+}
+
+/**
+ * Shell LOGICAL commands, with line continuations joined.
+ *
+ * Scanning physical lines misses a pipeline written across a continuation:
+ *
+ *     if grep -qF x file \
+ *        | grep -qF y; then
+ *
+ * is the same never-succeeding pipeline as the one-line form, but neither
+ * physical line contains both greps. Each entry carries the 1-based PHYSICAL line
+ * number where the logical command starts, so reports still point at real lines.
+ */
+function logicalShellLines(source) {
+  const result = [];
+  let buffer = '';
+  let startLine = 1;
+
+  source.split('\n').forEach((raw, index) => {
+    const physical = index + 1;
+    if (buffer === '') startLine = physical;
+    const continued = /\\\s*$/.test(raw);
+    buffer += continued ? raw.replace(/\\\s*$/, ' ') : raw;
+    if (continued) return;
+    result.push({ text: stripShellComment(buffer), line: startLine });
+    buffer = '';
+  });
+
+  if (buffer !== '') result.push({ text: stripShellComment(buffer), line: startLine });
+  return result;
+}
+
+/**
+ * `grep -q ... | grep -q ...` can never succeed.
+ *
+ * `grep -q` writes nothing to stdout, so the right-hand side always reads an
+ * empty stream. Used as `if ...; then fail; fi` the guard never fires and the
+ * check silently passes forever. Found live in the tree (recorded as D-054) and
+ * reproduced: with a file containing both a `{t.x}` expression and a quote, the
+ * piped form does not fire while the same pipeline without the left `-q` does.
+ */
+/**
+ * True only when a quiet grep feeds a DOWNSTREAM quiet grep that reads stdin.
+ *
+ * `grep -q x a | grep -q y b` is NOT a dead pipeline: the consumer names its own
+ * file operand, so it reads `b` rather than the empty stream, and with pipefail the
+ * pipeline succeeds when both files match. Reporting that shape was a false
+ * positive.
+ */
+function quietGrepPipelineCannotFail(text) {
+  const segments = text.split('|');
+  if (segments.length < 2) return false;
+  const left = segments[0];
+  const right = segments[segments.length - 1];
+  if (!/(?:^|[;&(]\s*|\s)(?:if\s+|elif\s+|while\s+)?grep\s+-[A-Za-z]*q[A-Za-z]*/.test(left)) return false;
+  if (!/grep\s+-[A-Za-z]*q[A-Za-z]*/.test(right)) return false;
+  // Trailing shell syntax (`; then`, `; fi`, `&& echo`) is not a grep operand, so
+  // cut the consumer at the first statement separator before counting.
+  const consumer = right.split(/;|&&|\|\|/)[0];
+  // Positional arguments after `grep`: one is the pattern, a second is a FILE.
+  const afterGrep = consumer.trim().replace(/^.*?\bgrep\b/, '').trim();
+  const positional = afterGrep.split(/\s+/).filter((part) => part !== '' && !part.startsWith('-'));
+  return positional.length < 2;
+}
+
+function checkNeverFails() {
+  const hits = [];
+  for (const gate of gateFiles()) {
+    // Shell pipelines are a shell shape. Applying this scan to `.mjs` gates means
+    // parsing JavaScript as shell, which produced a false positive on this very
+    // file's docstring the moment continuations were joined. A Node gate that
+    // shells out to a piped grep is a documented limit, not something to guess at.
+    if (!gate.endsWith('.sh')) continue;
+    // Logical commands, so a pipeline continued with `\` cannot escape the check.
+    for (const { text, line } of logicalShellLines(readRepoFile(gate))) {
+      if (!quietGrepPipelineCannotFail(text)) continue;
+      hits.push({
+        check: 'never-fails',
+        gate,
+        target: `${gate}:${line}`,
+        detail: `${gate}:${line} pipes \`grep -q\` into \`grep -q\`; the left side writes no stdout, so this condition can never be true and the check cannot fail`,
+      });
+    }
+  }
+  return hits;
+}
+
+/**
+ * Gates with no evidence that anything proves they can fail.
+ *
+ * Proxies, in decreasing strength:
+ *   1. a companion `scripts/<name>.test.*` file;
+ *   2. a `tests/**\/*.test.mjs` that names the gate;
+ *   3. an in-gate proof -- the gate runs `node --test`, or it is itself an
+ *      assertion program (`scripts/vertical-seo-contract.mjs` style), or it embeds
+ *      one in a heredoc.
+ *
+ * The heredoc delimiter is matched by PREFIX, not exactly: real gates use suffixed
+ * delimiters such as `PY_EXPIRY`, and requiring exactly `PY`/`JS`/`NODE` reported
+ * gates that do prove their own assertions as having no control.
+ *
+ * A gate matching none of these may still have a control this heuristic cannot
+ * see, which is why the existing population is grandfathered through the baseline
+ * file rather than reported as broken.
+ */
+function gateHasControlEvidence(gate) {
+  const base = gate.split('/').pop();
+  const stem = base.replace(/\.(sh|mjs|cjs)$/, '');
+  for (const extension of ['.test.sh', '.test.mjs']) {
+    if (existsSync(join(ROOT, `scripts/${stem}${extension}`))) return `scripts/${stem}${extension}`;
+  }
+
+  // Recursive, matching the documented `tests/**/*.test.mjs` proxy: a control in
+  // `tests/gates/x.test.mjs` is a control, and a non-recursive listing reported its
+  // gate as having none.
+  const testsDir = join(ROOT, 'tests');
+  if (existsSync(testsDir)) {
+    const walkTests = (dir) => {
+      let entries;
+      try {
+        entries = readdirSync(join(ROOT, dir), { withFileTypes: true });
+      } catch {
+        return null;
+      }
+      for (const entry of entries) {
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          const found = walkTests(path);
+          if (found) return found;
+          continue;
+        }
+        if (!entry.name.endsWith('.test.mjs')) continue;
+        try {
+          if (readRepoFile(path).includes(base)) return path;
+        } catch {
+          continue;
+        }
+      }
+      return null;
+    };
+    const control = walkTests('tests');
+    if (control) return control;
+  }
+
+  // Inactive text proves nothing: `# run node --test ...` in a comment, or a
+  // commented-out `// assert(...)`, must not satisfy the control requirement --
+  // otherwise a gate could leave the finding population without ever being able to
+  // fail. Comments are stripped before any evidence is read, exactly as the import
+  // graph and the dashboard gate now do.
+  const raw = readRepoFile(gate);
+  const source = gate.endsWith('.sh') ? stripShellComments(raw) : stripJsComments(raw);
+  if (/\bnode --test\b/.test(source)) return 'in-gate node --test';
+
+  const assertsProgrammatically = /\bassert\s*[.(]|\bdeepStrictEqual\b|\bdeepEqual\b|\bstrictEqual\b|\bsys\.exit\(/.test(source);
+
+  // A Node assertion gate: the file IS the program that proves its assertions.
+  if (/\.(mjs|cjs)$/.test(gate) && assertsProgrammatically) return 'standalone assertion program';
+
+  // An embedded assertion program, with or without a suffixed delimiter.
+  const heredoc = /<<-?\s*['"]?([A-Za-z_][A-Za-z0-9_]*)['"]?/.exec(source);
+  if (heredoc && /^(PY|JS|NODE|SH)/i.test(heredoc[1]) && assertsProgrammatically) {
+    return `in-gate assertion program (${heredoc[1]})`;
+  }
+  return null;
+}
+
+function checkNegativeControls() {
+  const hits = [];
+  for (const gate of gateFiles()) {
+    if (gateHasControlEvidence(gate) !== null) continue;
+    hits.push({
+      check: 'no-negative-control',
+      gate,
+      detail: `${gate} has no control proving it can fail: no companion scripts/<name>.test.*, no tests/**/*.test.mjs naming it, and no in-gate assertion program`,
+    });
+  }
+  return hits;
+}
+
+/* ------------------------------------------------------------------ *
+ * RC-2 -- invariants derived from current code rather than intent (ADVISORY)
+ * ------------------------------------------------------------------ */
+
+const CODE_SHAPED_LITERAL = /(->|::|=>|\$this|\bfunction\s|\breturn\s|\bwhere\(|\bwhereIn\(|\borderBy|\bfilled\(|\bif\s*\(|\?\?|===|!==|&&|\|\|)/;
+const IMPLEMENTATION_TARGET = /^(?:src\/|backend\/app\/|backend\/resources\/)/;
+
+/**
+ * Counts assertions whose literal is a fragment of the implementation they guard.
+ *
+ * This is the RC-2 *shape*, and it is deliberately ADVISORY -- reported, never
+ * gated. "Is this invariant derived from intent, or from whatever the code
+ * happens to do today?" is not mechanically decidable: the same literal is
+ * legitimate when the implementation fragment IS the contract (a route
+ * registration, a middleware attachment) and illegitimate when it merely records
+ * current behaviour. Gating this proxy would force hundreds of waivers encoding a
+ * judgement the tool cannot make, which is fake precision. The policy rule in
+ * docs/architecture/gate-assertion-policy.md is the control; this count is the
+ * measurement that tells us whether the rule is being followed.
+ */
+function auditCodeDerivedInvariants() {
+  const perGate = new Map();
+  let total = 0;
+  for (const gate of gateFiles()) {
+    const source = readRepoFile(gate);
+    for (const { target, literal } of extractAssertions(gate, source)) {
+      if (!IMPLEMENTATION_TARGET.test(target)) continue;
+      if (!CODE_SHAPED_LITERAL.test(literal)) continue;
+      total += 1;
+      perGate.set(gate, (perGate.get(gate) ?? 0) + 1);
+    }
+  }
+  return { total, perGate };
 }
 
 /* ------------------------------------------------------------------ *
@@ -516,10 +1110,12 @@ function enclosingMethod(source, offset) {
  */
 function validateWaivers(waivers) {
   const problems = [];
+  const invalid = new Set();
   if (!Array.isArray(waivers)) {
-    return ['waivers file must contain a "waivers" array'];
+    return { problems: ['waivers file must contain a "waivers" array'], invalid };
   }
   waivers.forEach((waiver, index) => {
+    const before = problems.length;
     const where = `waivers[${index}]`;
     if (waiver === null || typeof waiver !== 'object' || Array.isArray(waiver)) {
       problems.push(`${where} must be an object`);
@@ -528,10 +1124,18 @@ function validateWaivers(waivers) {
     if (!KNOWN_CHECKS.has(waiver.check)) {
       problems.push(`${where}.check must be one of ${[...KNOWN_CHECKS].join(', ')} (got ${JSON.stringify(waiver.check)})`);
     }
-    for (const field of ['owner', 'reason', 'gate', 'target']) {
+    for (const field of ['owner', 'reason', 'gate']) {
       const value = waiver[field];
       if (typeof value !== 'string' || value.trim() === '') {
         problems.push(`${where}.${field} is required and must be a non-empty string`);
+      }
+    }
+    // Checks whose identity includes a target require one, so the waiver binds to
+    // one concrete finding instead of whichever matched first.
+    if (TARGETED_CHECKS.has(waiver.check)) {
+      const value = waiver.target;
+      if (typeof value !== 'string' || value.trim() === '') {
+        problems.push(`${where}.target is required for a ${waiver.check} waiver`);
       }
     }
     // A gate can hold several dead-code assertions against the same controller, so
@@ -547,8 +1151,56 @@ function validateWaivers(waivers) {
         );
       }
     }
+    if (problems.length > before) invalid.add(index);
   });
-  return problems;
+  return { problems, invalid };
+}
+
+/**
+ * The grandfathered population for checks that describe a whole class of gates.
+ *
+ * RC-4 asks that every gate either have a control or be listed with an owner. The
+ * honest state of this repository is that most gates have none, so listing them
+ * individually would be 100+ near-identical entries. Instead the population gets
+ * ONE owner, ONE reason and a recorded date, and every entry is still checked:
+ * an entry that no longer matches a finding is a `stale-baseline` violation, so a
+ * gate that gains a control must have its entry deleted. New findings that are
+ * not listed fail outright, which is the property that matters -- the population
+ * may not grow.
+ */
+function loadBaseline() {
+  const path = join(ROOT, BASELINE_FILE);
+  if (!existsSync(path)) return { baseline: null, problems: [], file: BASELINE_FILE };
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8'));
+    const problems = [];
+    for (const field of ['owner', 'reason', 'recordedAt']) {
+      if (typeof parsed?.[field] !== 'string' || parsed[field].trim() === '') {
+        problems.push(`${BASELINE_FILE}.${field} is required and must be a non-empty string`);
+      }
+    }
+    if (!Array.isArray(parsed?.entries)) {
+      problems.push(`${BASELINE_FILE}.entries must be an array`);
+    }
+    (Array.isArray(parsed?.entries) ? parsed.entries : []).forEach((entry, index) => {
+      if (entry === null || typeof entry !== 'object') {
+        problems.push(`${BASELINE_FILE}.entries[${index}] must be an object`);
+        return;
+      }
+      if (!KNOWN_CHECKS.has(entry.check)) {
+        problems.push(`${BASELINE_FILE}.entries[${index}].check is unknown: ${JSON.stringify(entry.check)}`);
+      }
+      if (typeof entry.gate !== 'string' || entry.gate.trim() === '') {
+        problems.push(`${BASELINE_FILE}.entries[${index}].gate is required`);
+      }
+      if (TARGETED_CHECKS.has(entry.check) && (typeof entry.target !== 'string' || entry.target.trim() === '')) {
+        problems.push(`${BASELINE_FILE}.entries[${index}].target is required for ${entry.check}`);
+      }
+    });
+    return { baseline: parsed, problems, file: BASELINE_FILE };
+  } catch (error) {
+    return { baseline: null, problems: [`${BASELINE_FILE} is not valid JSON: ${error.message}`], file: BASELINE_FILE };
+  }
 }
 
 function loadWaivers() {
@@ -561,7 +1213,8 @@ function loadWaivers() {
     return { waivers: [], problems: [`${WAIVER_FILE} is not valid JSON: ${error.message}`], file: WAIVER_FILE };
   }
   const waivers = Array.isArray(parsed?.waivers) ? parsed.waivers : [];
-  return { waivers, problems: validateWaivers(parsed?.waivers), file: WAIVER_FILE };
+  const { problems, invalid } = validateWaivers(parsed?.waivers);
+  return { waivers, problems, invalid, file: WAIVER_FILE };
 }
 
 function checkDeadCodeAssertions() {
@@ -791,7 +1444,7 @@ function checkGateTriggerCoverage() {
   // positive or negative: root files and workflow files count too, otherwise
   // dropping their trigger goes unnoticed.
   const targets = new Set();
-  for (const target of extractAssertedTargets(guardSource)) {
+  for (const target of extractAssertedTargets(GUARD, guardSource)) {
     if (isRepoTarget(target)) targets.add(target);
   }
   for (const match of guardSource.matchAll(/(?:read|readFileSync)\(\s*'([^']+)'/g)) {
@@ -872,15 +1525,59 @@ function applyWaivers(hits, waivers) {
  * Main
  * ------------------------------------------------------------------ */
 
-const { waivers, problems: waiverProblems, file: waiverFile } = loadWaivers();
+const { waivers, problems: waiverProblems, invalid: invalidWaivers, file: waiverFile } = loadWaivers();
 for (const problem of waiverProblems) {
   violations.push({ check: 'invalid-waiver', detail: `${problem} in ${waiverFile}` });
 }
 
-const allHits = [...checkDeadCodeAssertions(), ...checkGateTriggerCoverage()];
-const { surviving, stale } = applyWaivers(allHits, waivers);
+const { baseline, problems: baselineProblems, file: baselineFile } = loadBaseline();
+for (const problem of baselineProblems) {
+  violations.push({ check: 'invalid-baseline', detail: `${problem} in ${baselineFile}` });
+}
 
-for (const waiver of stale) {
+const allHits = [
+  ...checkDeadCodeAssertions(),
+  ...checkGateTriggerCoverage(),
+  ...checkAssertedOrphans(),
+  ...checkNeverFails(),
+  ...checkNegativeControls(),
+];
+
+// The baseline grandfathers an existing population. It may not grow: any finding
+// not listed still fails, and an entry that no longer matches a finding is stale.
+// Malformed entries (null, a string, an object with no `gate`) are reported as
+// invalid-baseline by loadBaseline(), so they are dropped here rather than
+// dereferenced: a `"entries": [null]` used to throw a TypeError and make --json
+// emit a stack trace instead of its documented machine-readable report.
+const baselineEntries = (Array.isArray(baseline?.entries) ? baseline.entries : [])
+  .filter((entry) => entry !== null && typeof entry === 'object' && !Array.isArray(entry) && typeof entry.gate === 'string');
+const baselineKeys = new Set(baselineEntries.map((e) => `${e.check}\u0000${e.gate}\u0000${e.target ?? ''}`));
+const usedBaseline = new Set();
+const afterBaseline = [];
+for (const hit of allHits) {
+  if (!BASELINE_CHECKS.has(hit.check)) { afterBaseline.push(hit); continue; }
+  const key = `${hit.check}\u0000${hit.gate}\u0000${hit.target ?? ''}`;
+  if (!baselineKeys.has(key)) { afterBaseline.push(hit); continue; }
+  usedBaseline.add(key);
+  hit.baselined = true;
+}
+
+for (const entry of baselineEntries) {
+  const key = `${entry.check}\u0000${entry.gate}\u0000${entry.target ?? ''}`;
+  if (usedBaseline.has(key)) continue;
+  violations.push({
+    check: 'stale-baseline',
+    detail: `${baselineFile} still lists ${entry.check} for ${entry.gate}${entry.target ? ` -> ${entry.target}` : ''}, which is no longer a finding; delete the entry (owner ${baseline.owner})`,
+  });
+}
+
+const { surviving, stale } = applyWaivers(afterBaseline, waivers);
+
+// A waiver that failed validation is already an `invalid-waiver` failure and could
+// never have been applied, so also calling it stale is redundant noise -- and it
+// obscured the real message when a `gate-not-triggered` waiver omitted its target.
+const reportingStale = stale.filter((waiver) => !invalidWaivers.has(waivers.indexOf(waiver)));
+for (const waiver of reportingStale) {
   violations.push({
     check: 'stale-waiver',
     detail: `waiver for ${waiver.gate} -> ${waiver.target} matches no current violation; remove it from ${waiverFile} (owner ${waiver.owner})`,
@@ -888,14 +1585,55 @@ for (const waiver of stale) {
 }
 violations.push(...surviving);
 
+// RC-2 is measured, never gated. See auditCodeDerivedInvariants() for why.
+const rc2 = auditCodeDerivedInvariants();
+const rc2Top = [...rc2.perGate.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+const AUDIT = process.argv.includes('--audit');
+const counts = (check) => allHits.filter((h) => h.check === check).length;
+
 if (JSON_OUTPUT) {
-  console.log(JSON.stringify({ violations, waived: allHits.filter((h) => h.waived), notes }, null, 2));
+  console.log(JSON.stringify({
+    violations,
+    waived: allHits.filter((h) => h.waived),
+    baselined: allHits.filter((h) => h.baselined),
+    advisory: { codeDerivedInvariants: rc2.total, topGates: Object.fromEntries(rc2Top) },
+    counts: {
+      gates: gateFiles().length,
+      'dead-code-assertion': counts('dead-code-assertion'),
+      'gate-not-triggered': counts('gate-not-triggered'),
+      'asserted-orphan': counts('asserted-orphan'),
+      'never-fails': counts('never-fails'),
+      'no-negative-control': counts('no-negative-control'),
+    },
+    notes,
+  }, null, 2));
 } else {
   console.log('== Gate integrity check ==');
   console.log(`Gates inspected: ${gateFiles().length}`);
   console.log(
     `Source-text assertions resolved: ${gateFiles().reduce((n, g) => n + extractAssertions(g, readRepoFile(g)).length, 0)}`
   );
+
+  if (AUDIT) {
+    console.log('\nFindings by class (RC = root cause from retrospective-2):');
+    console.log(`  RC-1  dead-code-assertion     : ${counts('dead-code-assertion')}`);
+    console.log(`  RC-1  gate-not-triggered      : ${counts('gate-not-triggered')}`);
+    console.log(`  RC-3  asserted-orphan         : ${counts('asserted-orphan')}`);
+    console.log(`  RC-4  never-fails             : ${counts('never-fails')}`);
+    console.log(`  RC-4  no-negative-control     : ${counts('no-negative-control')}`);
+    console.log(`  RC-2  code-derived-invariant  : ${rc2.total} (ADVISORY, not gated)`);
+    for (const [gate, n] of rc2Top) console.log(`          ${n.toString().padStart(3)}  ${gate}`);
+  }
+
+  const baselined = allHits.filter((h) => h.baselined);
+  if (baselined.length) {
+    console.log(`\nBaselined (grandfathered population, owner: ${baseline?.owner}): ${baselined.length}`);
+    const byCheck = new Map();
+    for (const hit of baselined) byCheck.set(hit.check, (byCheck.get(hit.check) ?? 0) + 1);
+    for (const [check, n] of byCheck) console.log(`  ${check}: ${n}`);
+    console.log(`  recorded: ${baseline?.recordedAt} -- this population may not grow`);
+  }
   if (allHits.filter((h) => h.waived).length) {
     console.log('\nWaived (owned and bound to one violation):');
     for (const hit of allHits.filter((h) => h.waived)) {
@@ -914,4 +1652,5 @@ if (JSON_OUTPUT) {
   }
 }
 
+if (AUDIT) process.exit(0);
 process.exit(violations.length === 0 ? 0 : 1);

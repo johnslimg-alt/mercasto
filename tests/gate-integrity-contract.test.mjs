@@ -88,7 +88,29 @@ function scratchRepo({ routedMethods = ['show'], workflowPaths = null, waivers =
     writeFileSync(join(root, 'scripts/gate-integrity-waivers.json'), JSON.stringify({ waivers }, null, 2));
   }
 
+  // RC-4: baseline the fixture's own gate, which deliberately carries no control.
+  writeFileSync(join(root, 'scripts/gate-coverage-baseline.json'), JSON.stringify({
+    owner: 'fixture',
+    recordedAt: '2026-01-01',
+    reason: 'fixture gate probes other checks and deliberately carries no control',
+    entries: [{ check: 'no-negative-control', gate: 'scripts/sample-gate.mjs' }],
+  }, null, 2));
+
   return root;
+}
+
+/** Runs the checker with extra CLI flags (e.g. --audit). */
+function runCheckerWithArgs(root, args) {
+  try {
+    const stdout = execFileSync(process.execPath, [CHECKER, ...args], {
+      env: { ...process.env, GATE_INTEGRITY_ROOT: root },
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return { status: 0, output: stdout };
+  } catch (error) {
+    return { status: error.status, output: `${error.stdout ?? ''}${error.stderr ?? ''}` };
+  }
 }
 
 function runChecker(root) {
@@ -203,6 +225,10 @@ test('negative control: a waiver that no longer matches a violation fails the ch
       check: 'dead-code-assertion',
       gate: 'scripts/sample-gate.mjs',
       target: 'backend/app/Http/Controllers/Api/FooController.php',
+      // Fully specified, so it is a VALID waiver that matches nothing -- which is
+      // what "stale" means. An under-specified waiver is rejected as
+      // invalid-waiver instead, and that case is covered separately.
+      literalContains: "orderBy('foo.dead'",
       owner: 'nobody',
       reason: 'stale by construction',
     }],
@@ -240,6 +266,23 @@ function fixtureRepo(files) {
     'package.json': JSON.stringify({ name: 'fixture', version: '1.0.0', scripts: {} }),
     ...files,
   };
+  // RC-4 now asks every gate to prove it can fail. Fixtures probe a different
+  // check each time and their gates deliberately carry no controls, so give the
+  // fixture a baseline covering its OWN gates. Tests that exercise the control
+  // check itself supply their own baseline instead.
+  if (!all['scripts/gate-coverage-baseline.json']) {
+    const entries = Object.keys(all)
+      .filter((p) => /^scripts\/[^/]+\.(sh|mjs|cjs)$/.test(p) && !/\.test\./.test(p))
+      .map((gate) => ({ check: 'no-negative-control', gate }));
+    if (entries.length > 0) {
+      all['scripts/gate-coverage-baseline.json'] = JSON.stringify({
+        owner: 'fixture',
+        recordedAt: '2026-01-01',
+        reason: 'fixture gates probe other checks and deliberately carry no control',
+        entries,
+      }, null, 2);
+    }
+  }
   for (const [path, content] of Object.entries(all)) {
     mkdirSync(join(root, dirname(path)), { recursive: true });
     writeFileSync(join(root, path), content);
@@ -924,4 +967,610 @@ test('negative control: a direct static controller call keeps the method reachab
       assert.equal(status, 0, `a statically called method is reachable:\n${output}`);
     }
   );
+});
+
+/* ------------------------------------------------------------------ *
+ * RC-3 -- the wrong observation surface
+ * ------------------------------------------------------------------ */
+
+test('negative control: a gate asserting an orphaned frontend module fails', () => {
+  const base = {
+    'src/main.jsx': "import Used from './used.jsx';\n",
+    'src/used.jsx': 'export default function Used() { return null; }\n',
+    'src/orphan.jsx': 'export default function Orphan() { return null; }\n',
+  };
+
+  // Control: the asserted module IS reachable from the entry point -> fine.
+  withRepo(
+    { ...base, 'scripts/reach-gate.sh': "#!/usr/bin/env bash\ngrep -qF 'export default' src/used.jsx\n" },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a reachable asserted module must pass:\n${output}`);
+    }
+  );
+
+  // The orphan never executes in the browser, so the gate observes an
+  // intermediate artifact rather than the delivered page.
+  withRepo(
+    { ...base, 'scripts/orphan-gate.sh': "#!/usr/bin/env bash\ngrep -qF 'export default' src/orphan.jsx\n" },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'asserting an orphaned module must fail');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+});
+
+test('RC-3 orphan analysis is skipped rather than guessed when there is no entry point', () => {
+  const root = fixtureRepo({
+    'src/orphan.jsx': 'export default function Orphan() { return null; }\n',
+    'scripts/orphan-gate.sh': "#!/usr/bin/env bash\ngrep -qF 'export default' src/orphan.jsx\n",
+  });
+  try {
+    const { status, output } = runChecker(root);
+    assert.equal(status, 0, `no entry point means no orphan verdict, not an accusation:\n${output}`);
+    assert.match(output, /RC-3 orphan analysis skipped/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+/* ------------------------------------------------------------------ *
+ * RC-4 -- can the check actually fail?
+ * ------------------------------------------------------------------ */
+
+test('negative control: grep -q piped into grep -q is reported as never-failing', () => {
+  const base = {
+    'src/used.jsx': "const a = 'x';\nconst b = 'y';\n",
+  };
+
+  // Control: without -q on the left the pipeline can produce output.
+  withRepo(
+    {
+      ...base,
+      'scripts/pipeline-ok-gate.sh': "#!/usr/bin/env bash\nif grep -F a src/used.jsx | grep -qF b; then\n  echo matched\nfi\n",
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a working pipeline must not be reported:\n${output}`);
+    }
+  );
+
+  // `grep -q` writes no stdout, so the right-hand side always sees an empty
+  // stream: the condition can never be true and the guard cannot fire.
+  withRepo(
+    {
+      ...base,
+      'scripts/pipeline-bad-gate.sh': "#!/usr/bin/env bash\nif grep -qF a src/used.jsx | grep -qF b; then\n  echo bad >&2\n  exit 1\nfi\n",
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a never-failing condition must be reported');
+      assert.match(output, /never-fails/);
+      assert.match(output, /pipeline-bad-gate\.sh:2/);
+    }
+  );
+});
+
+test('never-fails ignores the pattern when it is commented out', () => {
+  withRepo(
+    {
+      'src/used.jsx': "const a = 'x';\n",
+      'scripts/commented-gate.sh': "#!/usr/bin/env bash\n# if grep -qF a src/used.jsx | grep -qF b; then\n",
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a commented-out pattern is not a live defect:\n${output}`);
+    }
+  );
+});
+
+test('negative control: a gate with no control proves it can fail is reported', () => {
+  const files = {
+    'src/used.jsx': "const a = 'x';\n",
+    'scripts/unproven-gate.sh': "#!/usr/bin/env bash\ngrep -qF a src/used.jsx\n",
+  };
+
+  // No baseline -> the gate is reported.
+  const root = fixtureRepo(files);
+  try {
+    rmSync(join(root, 'scripts/gate-coverage-baseline.json'), { force: true });
+    const { status, output } = runChecker(root);
+    assert.notEqual(status, 0, 'a gate with no control must be reported');
+    assert.match(output, /no-negative-control/);
+    assert.match(output, /unproven-gate\.sh/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+
+  // A companion control file satisfies the requirement. The baseline is empty on
+  // purpose: if it still listed the gate, the entry would be stale (and reporting
+  // that is the next test) rather than the control being accepted.
+  withRepo(
+    {
+      ...files,
+      'scripts/unproven-gate.test.sh': '#!/usr/bin/env bash\nexit 0\n',
+      'scripts/gate-coverage-baseline.json': JSON.stringify({
+        owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [],
+      }, null, 2),
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a companion control must satisfy the check:\n${output}`);
+    }
+  );
+});
+
+test('negative control: a baseline entry that gained a control is stale', () => {
+  // The baseline lists the gate, but the gate now HAS a companion control, so the
+  // entry must be deleted -- the grandfathered population can only fall.
+  const files = {
+    'src/used.jsx': "const a = 'x';\n",
+    'scripts/gained-gate.sh': "#!/usr/bin/env bash\ngrep -qF a src/used.jsx\n",
+    'scripts/gained-gate.test.sh': '#!/usr/bin/env bash\nexit 0\n',
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture',
+      recordedAt: '2026-01-01',
+      reason: 'fixture',
+      entries: [{ check: 'no-negative-control', gate: 'scripts/gained-gate.sh' }],
+    }, null, 2),
+  };
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'a baseline entry with no matching finding must fail');
+    assert.match(output, /stale-baseline/);
+  });
+});
+
+test('negative control: a gate with no control that is NOT baselined fails even when others are', () => {
+  // The population may not grow: existing entries are grandfathered, new ones are not.
+  const files = {
+    'src/used.jsx': "const a = 'x';\n",
+    'scripts/old-gate.sh': "#!/usr/bin/env bash\ngrep -qF a src/used.jsx\n",
+    'scripts/new-gate.sh': "#!/usr/bin/env bash\ngrep -qF a src/used.jsx\n",
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture',
+      recordedAt: '2026-01-01',
+      reason: 'fixture',
+      entries: [{ check: 'no-negative-control', gate: 'scripts/old-gate.sh' }],
+    }, null, 2),
+  };
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'a new gate without a control must fail');
+    assert.match(output, /no-negative-control/);
+    assert.match(output, /new-gate\.sh/);
+    assert.doesNotMatch(output, /\[no-negative-control\] scripts\/old-gate\.sh/);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * RC-2 -- advisory by design
+ * ------------------------------------------------------------------ */
+
+test('RC-2 code-derived-invariant is measured but never gates', () => {
+  // A literal that is a fragment of the implementation it guards: the RC-2 shape.
+  // It is reported in --audit output and must NOT fail the check, because "is this
+  // invariant derived from intent?" is not mechanically decidable.
+  const files = {
+    'backend/app/Services/Thing.php': '<?php\nclass Thing\n{\n    public function go()\n    {\n        return $query->where(\'x\', 1);\n    }\n}\n',
+    'scripts/impl-gate.sh': "#!/usr/bin/env bash\ngrep -qF \"->where('x', 1)\" backend/app/Services/Thing.php\n",
+  };
+  withRepo(files, ({ status, output }) => {
+    assert.equal(status, 0, `the RC-2 shape must not gate:\n${output}`);
+  });
+
+  const root = fixtureRepo(files);
+  try {
+    const audit = runCheckerWithArgs(root, ['--audit']);
+    assert.match(audit.output, /RC-2\s+code-derived-invariant\s+: 1/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+/* ------------------------------------------------------------------ *
+ * Review-round hardening: inactive text and shell-logic edge cases
+ * ------------------------------------------------------------------ */
+
+test('negative control: a NEGATIVE shell guard contributes its target to orphan analysis', () => {
+  // `if grep -qF lit path; then fail; fi` is a claim about `path`, and the target
+  // used to be dropped (and, before that, captured with its trailing semicolon).
+  withRepo(
+    {
+      'src/main.jsx': "import './used.jsx';\n",
+      'src/used.jsx': 'export default 1;\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      'scripts/negative-gate.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        'if grep -qF "bad-marker" src/orphan.jsx; then',
+        '  echo "must not contain bad-marker" >&2',
+        '  exit 1',
+        'fi',
+        '',
+      ].join('\n'),
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a negative-only asserted target must be orphan-checked');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+});
+
+test('negative control: a commented-out import does not make a module reachable', () => {
+  const base = { 'src/orphan.jsx': 'export default 2;\n' };
+  // Quoted literals, as real gates write them: the shell parser reads
+  // `grep -qF "lit" path`, and an unquoted literal is a documented limit.
+  const gate = { 'scripts/comment-orphan-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/orphan.jsx\n' };
+
+  // Control: a real import makes it reachable.
+  withRepo(
+    { ...base, ...gate, 'src/main.jsx': "import './orphan.jsx';\n" },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a real import must make the module reachable:\n${output}`);
+    }
+  );
+
+  // `// import './orphan.jsx'` is not an import. Raw-text scanning used to count it.
+  withRepo(
+    { ...base, ...gate, 'src/main.jsx': "// import './orphan.jsx';\nimport './used.jsx';\n", 'src/used.jsx': 'export default 1;\n' },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a commented-out import must not count as reachability');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+
+  // Same for a block comment.
+  withRepo(
+    { ...base, ...gate, 'src/main.jsx': "/* import './orphan.jsx' */\nimport './used.jsx';\n", 'src/used.jsx': 'export default 1;\n' },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a block-commented import must not count as reachability');
+      assert.match(output, /asserted-orphan/);
+    }
+  );
+});
+
+test('computed imports keep their whole prefix directory reachable', () => {
+  // `import(`./locales/${lang}.js`)` can load any module in that directory, so a
+  // gate asserting one of them is observing shipped code, not an orphan.
+  withRepo(
+    {
+      'src/main.jsx': "const load = (lang) => import(`./locales/${lang}.js`);\n",
+      'src/locales/es.js': 'export default {};\n',
+      'src/locales/ru.js': 'export default {};\n',
+      'scripts/locale-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/locales/ru.js\n',
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a computed-import directory must be treated as reachable:\n${output}`);
+    }
+  );
+});
+
+test('negative control: an orphaned .mjs module is audited too', () => {
+  // The graph resolves `.mjs`, so the audit must judge `.mjs` targets as well.
+  withRepo(
+    {
+      'src/main.jsx': "import './used.jsx';\n",
+      'src/used.jsx': 'export default 1;\n',
+      'src/helper.mjs': 'export const x = 1;\n',
+      'scripts/mjs-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export const" src/helper.mjs\n',
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'an orphaned .mjs module must be reported');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/helper\.mjs/);
+    }
+  );
+});
+
+test('negative control: a pipeline continued with a backslash cannot escape never-fails', () => {
+  const base = { 'src/used.jsx': "const a = 'x';\n" };
+
+  // Control: a legitimate two-line pipeline is not reported.
+  withRepo(
+    {
+      ...base,
+      'scripts/continued-ok-gate.sh': '#!/usr/bin/env bash\nif grep -F a src/used.jsx \\\n  | grep -qF b; then\n  echo ok\nfi\n',
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a working continued pipeline must not be reported:\n${output}`);
+    }
+  );
+
+  // The same pipeline as a dead one: `grep -q` on the left of a continuation.
+  withRepo(
+    {
+      ...base,
+      'scripts/continued-bad-gate.sh': '#!/usr/bin/env bash\nif grep -qF a src/used.jsx \\\n  | grep -qF b; then\n  echo bad >&2\n  exit 1\nfi\n',
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a continued never-failing pipeline must be reported');
+      assert.match(output, /never-fails/);
+    }
+  );
+});
+
+test('negative control: a malformed baseline entry is reported without crashing', () => {
+  const files = {
+    'src/used.jsx': "const a = 'x';\n",
+    'scripts/ok-gate.sh': '#!/usr/bin/env bash\ngrep -qF a src/used.jsx\n',
+    // Valid JSON, malformed entry: used to throw a TypeError and break --json.
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [null, 'nope', { check: 'no-negative-control' }],
+    }, null, 2),
+  };
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'malformed baseline entries must be reported');
+    assert.match(output, /invalid-baseline/);
+    assert.match(output, /no-negative-control/);
+  });
+
+  const root = fixtureRepo(files);
+  try {
+    const json = runCheckerWithArgs(root, ['--json']);
+    assert.doesNotThrow(() => JSON.parse(json.output), '--json must emit a machine-readable report, not a stack trace');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('in-gate assertion programs count as control evidence', () => {
+  // A suffixed heredoc delimiter (real gates use `PY_EXPIRY`) and a standalone
+  // .mjs assertion gate both prove their own assertions.
+  const noBaseline = {
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [],
+    }, null, 2),
+  };
+
+  withRepo(
+    {
+      ...noBaseline,
+      'src/used.jsx': "const a = 'x';\n",
+      'scripts/heredoc-gate.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        "python3 - <<'PY_EXPIRY'",
+        'import sys',
+        'assert 1 == 1',
+        'sys.exit(0)',
+        'PY_EXPIRY',
+        '',
+      ].join('\n'),
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a suffixed heredoc assertion program is a control:\n${output}`);
+    }
+  );
+
+  withRepo(
+    {
+      ...noBaseline,
+      'src/used.jsx': "const a = 'x';\n",
+      'scripts/standalone-contract.mjs': [
+        "import assert from 'node:assert/strict';",
+        'assert.deepStrictEqual(1, 1);',
+        '',
+      ].join('\n'),
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a standalone .mjs assertion gate is a control:\n${output}`);
+    }
+  );
+});
+
+/* ------------------------------------------------------------------ *
+ * Review round 3: executable-syntax-only detection and false positives
+ * ------------------------------------------------------------------ */
+
+test('negative control: an import written inside a STRING is not an import', () => {
+  const gate = { 'scripts/str-orphan-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/orphan.jsx\n' };
+
+  // A path inside a string literal is data, not an edge. Raw-text scanning counted
+  // it and hid the orphan -- the exact false negative this check exists to prevent.
+  withRepo(
+    {
+      'src/main.jsx': 'import "./used.jsx";\nconst help = "import \'./orphan.jsx\'";\n',
+      'src/used.jsx': 'export default 1;\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      ...gate,
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a string mentioning an import must not create reachability');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+
+  // Positive control: a real import still counts.
+  withRepo(
+    {
+      'src/main.jsx': 'import "./orphan.jsx";\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      ...gate,
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a real import must keep the module reachable:\n${output}`);
+    }
+  );
+});
+
+test('negative control: a commented-out control is not control evidence', () => {
+  const emptyBaseline = {
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [],
+    }, null, 2),
+  };
+
+  // `# run node --test ...` proves nothing: the gate cannot fail.
+  withRepo(
+    {
+      'src/used.jsx': 'export default 1;\n',
+      'scripts/commented-control.sh': '#!/usr/bin/env bash\n# run node --test tests/nothing.test.mjs\necho ok\n',
+      ...emptyBaseline,
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a commented-out control must not satisfy the requirement');
+      assert.match(output, /no-negative-control/);
+    }
+  );
+
+  // The same for a commented-out JS assertion.
+  withRepo(
+    {
+      'src/used.jsx': 'export default 1;\n',
+      'scripts/commented-contract.mjs': "// import assert from 'node:assert';\n// assert.deepStrictEqual(1, 1);\nconsole.log('ok');\n",
+      ...emptyBaseline,
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a commented-out assertion must not satisfy the requirement');
+      assert.match(output, /no-negative-control/);
+    }
+  );
+
+  // Positive control: an ACTIVE in-gate program is evidence.
+  withRepo(
+    {
+      'src/used.jsx': 'export default 1;\n',
+      'scripts/live-control.sh': '#!/usr/bin/env bash\nset -euo pipefail\nnode --test tests/gate-integrity-contract.test.mjs >/dev/null\n',
+      ...emptyBaseline,
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a real in-gate control must be accepted:\n${output}`);
+    }
+  );
+});
+
+test('negative control: every grep target in a chained shell command is collected', () => {
+  withRepo(
+    {
+      'src/main.jsx': 'import "./live.jsx";\n',
+      'src/live.jsx': 'export default 1;\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      'scripts/chained-gate.sh': [
+        '#!/usr/bin/env bash',
+        'grep -qF "export default" src/live.jsx && grep -qF "export default" src/orphan.jsx',
+        '',
+      ].join('\n'),
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'the second target in a chained command must be audited');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+});
+
+test('a pipeline whose consumer names a file is not a never-failing pipeline', () => {
+  const base = { 'src/used.jsx': 'export default 1;\n', 'first.txt': 'a\n', 'second.txt': 'b\n' };
+
+  // The consumer reads second.txt, so the pipeline can succeed.
+  withRepo(
+    { ...base, 'scripts/file-consumer.sh': '#!/usr/bin/env bash\nif grep -qF a first.txt | grep -qF b second.txt; then exit 1; fi\n' },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a consumer with its own file must not be reported:\n${output}`);
+    }
+  );
+
+  // Positive control: a stdin consumer is still reported.
+  withRepo(
+    { ...base, 'scripts/stdin-consumer.sh': '#!/usr/bin/env bash\nif grep -qF a src/used.jsx | grep -qF b; then exit 1; fi\n' },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a stdin consumer must still be reported');
+      assert.match(output, /never-fails/);
+    }
+  );
+});
+
+test('a control in a nested tests directory is found', () => {
+  const files = {
+    'src/used.jsx': 'export default 1;\n',
+    'scripts/nested-control.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/used.jsx\n',
+    // No auto baseline: an explicit empty one, so a missing control would be reported.
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [],
+    }, null, 2),
+  };
+
+  withRepo(
+    { ...files, 'tests/gates/nested-control.test.mjs': '// control for scripts/nested-control.sh\n' },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a nested tests/ control must satisfy the requirement:\n${output}`);
+    }
+  );
+
+  // Positive control: with no control anywhere, the gate is still reported.
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'a gate with no control anywhere must be reported');
+    assert.match(output, /no-negative-control/);
+  });
+});
+
+test('an extensionless import resolving to a directory index is reachable', () => {
+  withRepo(
+    {
+      'src/main.jsx': 'import "./feature";\n',
+      'src/feature/index.jsx': 'export default 1;\n',
+      'scripts/index-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/feature/index.jsx\n',
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a directory index module must be reachable:\n${output}`);
+    }
+  );
+});
+
+test('alias usage disables orphan verdicts instead of inventing one', () => {
+  const files = {
+    'src/main.jsx': "import Screen from '@/screens/Screen.jsx';\n",
+    'src/screens/Screen.jsx': 'export default 1;\n',
+    'scripts/alias-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/screens/Screen.jsx\n',
+  };
+
+  // With an alias configured, the aliased module cannot be resolved from the
+  // repository alone: skip verdicts with a note rather than accuse.
+  withRepo(
+    { ...files, 'vite.config.js': "export default { resolve: { alias: { '@': '/src' } } };\n" },
+    ({ status, output }) => {
+      assert.equal(status, 0, `alias usage must not produce a false orphan:\n${output}`);
+      assert.match(output, /RC-3 orphan analysis skipped/);
+    }
+  );
+
+  // Positive control: without the alias the orphan analysis runs and reports.
+  withRepo(
+    {
+      'src/main.jsx': 'import "./used.jsx";\n',
+      'src/used.jsx': 'export default 1;\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      'scripts/no-alias-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/orphan.jsx\n',
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'without aliases the orphan must still be reported');
+      assert.match(output, /asserted-orphan/);
+    }
+  );
+});
+
+test('negative control: a gate-not-triggered waiver must name its target', () => {
+  const files = {
+    'backend/routes/api.php': '<?php\n',
+    [GUARD_PATH]: guardAsserting('<?php', 'backend/routes/api.php'),
+    '.github/workflows/guard.yml': [
+      'name: Fixture', 'on:', '  pull_request:', '    paths:', "      - 'scripts/**'",
+      'jobs:', '  check:', '    steps:', `      - run: node ${GUARD_PATH}`, '',
+    ].join('\n'),
+    'scripts/gate-integrity-waivers.json': JSON.stringify({
+      waivers: [{
+        check: 'gate-not-triggered',
+        gate: GUARD_PATH,
+        owner: 'owner',
+        reason: 'no target supplied',
+      }],
+    }, null, 2),
+  };
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'a gate-not-triggered waiver without a target must be rejected');
+    assert.match(output, /invalid-waiver/);
+    assert.match(output, /target is required for a gate-not-triggered waiver/);
+    // The redundant stale-waiver line is suppressed: the waiver never applied.
+    assert.doesNotMatch(output, /stale-waiver/);
+    // And the underlying violation must still surface.
+    assert.match(output, /gate-not-triggered/);
+  });
 });
