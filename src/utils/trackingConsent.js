@@ -18,6 +18,42 @@ const CONSENT_RELEVANT_STORAGE_KEYS = new Set([
   'auth_token',
 ]);
 
+// Consent must stay withdrawable: every "cookie settings" entry point must be able
+// to reopen the consent dialog, even after a decision was stored and even when the
+// dialog itself has not mounted yet (it is loaded lazily). The dialog registers its
+// opener here on mount; entry points ask through requestOpenCookiePreferences().
+// A request that arrives before the opener registered is remembered as a pending
+// intent and flushed exactly once when the opener appears - a transient event alone
+// would be silently dropped in that window.
+let registeredPreferencesOpener = null;
+let pendingPreferencesRequest = false;
+
+export function registerCookiePreferencesOpener(opener) {
+  if (typeof opener !== 'function') return () => {};
+  registeredPreferencesOpener = opener;
+  if (pendingPreferencesRequest) {
+    // Flush exactly once: a consumed intent must never reopen the dialog on a later
+    // remount.
+    pendingPreferencesRequest = false;
+    opener();
+  }
+  return () => {
+    // Identity guard: a stale cleanup must not unregister a newer opener.
+    if (registeredPreferencesOpener === opener) registeredPreferencesOpener = null;
+  };
+}
+
+export function requestOpenCookiePreferences() {
+  if (typeof registeredPreferencesOpener === 'function') {
+    registeredPreferencesOpener();
+    return;
+  }
+  pendingPreferencesRequest = true;
+  if (!isBrowser()) return;
+  // Keep the event for any listener that is not wired through the registry.
+  window.dispatchEvent(new CustomEvent(OPEN_COOKIE_PREFERENCES_EVENT));
+}
+
 // Banner decision only: 'all' | 'essential' | null when the visitor never chose.
 export function readCookieConsent() {
   if (!isBrowser()) return null;

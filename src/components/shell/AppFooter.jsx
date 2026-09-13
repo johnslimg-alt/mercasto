@@ -1,11 +1,12 @@
 import React from 'react';
 import MercastoLogo from './MercastoLogo';
-import { OPEN_COOKIE_PREFERENCES_EVENT } from '../../utils/trackingConsent';
+import { requestOpenCookiePreferences } from '../../utils/trackingConsent';
 
 // Consent must remain withdrawable after the first answer, so the footer keeps a
-// permanent entry point that re-opens the cookie dialog.
+// permanent entry point that re-opens the cookie dialog. The request is stateful, so
+// it is replayed when the dialog has not subscribed yet instead of being dropped.
 function openCookiePreferences() {
-  window.dispatchEvent(new CustomEvent(OPEN_COOKIE_PREFERENCES_EVENT));
+  requestOpenCookiePreferences();
 }
 
 export default function AppFooter({

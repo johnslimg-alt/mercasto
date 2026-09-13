@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Cookie, ExternalLink } from 'lucide-react';
+import { requestOpenCookiePreferences } from '../../../utils/trackingConsent';
 
 const LAST_UPDATED = '17 de mayo de 2026';
 
@@ -202,7 +203,7 @@ export default function CookiesScreen() {
                             <button
                               type="button"
                               data-testid="cookie-settings-legal"
-                              onClick={() => window.dispatchEvent(new CustomEvent('mercasto:open-cookie-preferences'))}
+                              onClick={() => requestOpenCookiePreferences()}
                               className="mt-2 px-3 py-1.5 text-xs font-semibold text-white bg-[#0b6f61] hover:bg-[#085147] rounded-lg transition-colors"
                             >
                               Administrar mis preferencias de cookies

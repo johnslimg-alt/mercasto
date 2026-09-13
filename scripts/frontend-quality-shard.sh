@@ -84,6 +84,7 @@ case "${shard}" in
       tests/e2e/catalog-localization.spec.js tests/e2e/ad-detail-critical-path.spec.js \
       tests/e2e/share-og-utm.spec.js \
       tests/e2e/analytics-vendor-activation.spec.js tests/e2e/consent-gated-vendors.spec.js \
+      tests/e2e/consent-preferences-entry-race.spec.js \
       tests/e2e/header-geometry.spec.js \
       tests/e2e/header-geometry-scrollbar.spec.js tests/e2e/sticky-header-offsets.spec.js tests/e2e/ai-brand-positioning.spec.js \
       --project=chromium-desktop --workers=1 --retries=0 --reporter=list
