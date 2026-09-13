@@ -125,6 +125,60 @@ final class ActivationLifetimeProvenance
     }
 
     /**
+     * The lifetime recorded alongside a grant, or null when it was not recorded.
+     *
+     * A grant's two facts travel together (`activationGrant()` and `correctionGrant()` always write
+     * the instant and the lifetime in the same array), so a decision carrying one but not the other
+     * is a damaged record rather than a usable one: callers treat null as unverifiable.
+     */
+    public static function grantedLifetimeDays(AdModerationDecision $decision): ?int
+    {
+        $metadata = $decision->metadata;
+        if (! is_array($metadata)) {
+            return null;
+        }
+
+        $days = data_get($metadata, 'reconciliation.granted_lifetime_days')
+            ?? data_get($metadata, 'lifetime_correction.lifetime_days');
+
+        if (! is_numeric($days) || (int) $days < 1) {
+            return null;
+        }
+
+        return (int) $days;
+    }
+
+    /**
+     * The instant a grant was measured from: the recorded expiry minus the recorded lifetime.
+     *
+     * This is the authoritative activation instant, and it is DERIVED rather than taken from the
+     * audit decision's `created_at`. The activation computes `expires_at` from one `now()`, writes
+     * the row, and only then creates the decision from a second `now()`; when the update waits on a
+     * lock or merely crosses a whole-second boundary, `created_at` is later than the instant that
+     * was actually granted. Anchoring on it makes a row look marginally older than it is, so a
+     * correction with an UNCHANGED lifetime stops reporting 0 changes and writes a small extension
+     * instead — and, because eligibility compares the stored expiry against this same recorded
+     * instant, the anchor and the guard would be reading two different seconds.
+     *
+     * Deriving it keeps both on one second by construction: `recorded expiry - recorded lifetime`
+     * is exactly the instant the recorded window began, for activations and corrections alike (a
+     * correction's target was itself anchor + lifetime). It is also stable across revisions: a row
+     * written by an earlier build derives the anchor that build actually used, because the
+     * derivation reads what was written rather than what was believed.
+     */
+    public static function grantedAnchor(AdModerationDecision $decision): ?Carbon
+    {
+        $expiresAt = self::grantedExpiresAt($decision);
+        $days = self::grantedLifetimeDays($decision);
+
+        if ($expiresAt === null || $days === null) {
+            return null;
+        }
+
+        return $expiresAt->copy()->subDays($days);
+    }
+
+    /**
      * Whether the stored column still holds exactly the recorded instant.
      *
      * Compared at whole-second precision and with NO adjacent-second window.
