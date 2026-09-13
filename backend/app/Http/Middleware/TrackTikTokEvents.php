@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\TikTokEventsApiService;
+use App\Support\AnalyticsTrackingConsent;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -30,21 +32,28 @@ class TrackTikTokEvents
 
             if ($payment) {
                 $context = $this->requestContext($request);
+                // Egress gate: the browser must affirm vendor measurement on this
+                // request and the account must still allow it. No consent, no send.
+                $vendorEgressAllowed = AnalyticsTrackingConsent::allowsVendorEgress($request, $request->user());
 
                 if ($this->isClipCheckout($request)) {
-                    $this->rememberCheckoutContext($payment, $context);
+                    // Remember the explicit checkout decision so the Clip webhook,
+                    // which carries no browser signal, can honour it later.
+                    $this->rememberCheckoutContext($payment, $context, $vendorEgressAllowed);
                 }
 
                 $includePurchase = $this->isBalanceCheckout($request)
                     && $payment->status === 'paid';
 
-                defer(fn () => $this->sendCheckoutFunnel(
-                    $request,
-                    $payment,
-                    $request->user(),
-                    $context,
-                    $includePurchase,
-                ))->always();
+                if ($vendorEgressAllowed) {
+                    defer(fn () => $this->sendCheckoutFunnel(
+                        $request,
+                        $payment,
+                        $request->user(),
+                        $context,
+                        $includePurchase,
+                    ))->always();
+                }
             }
         }
 
@@ -138,12 +147,19 @@ class TrackTikTokEvents
         ], fn ($value) => $value !== null && $value !== '');
     }
 
-    private function rememberCheckoutContext(object $payment, array $context): void
+    private function rememberCheckoutContext(object $payment, array $context, bool $vendorEgressAllowed): void
     {
         try {
             Cache::put(
                 $this->contextKey((int) $payment->id),
                 $context,
+                now()->addDay(),
+            );
+            // Stored separately from the click context so the webhook gate reads an
+            // unambiguous boolean that nothing else can populate.
+            Cache::put(
+                $this->consentKey((int) $payment->id),
+                $vendorEgressAllowed,
                 now()->addDay(),
             );
         } catch (\Throwable $e) {
@@ -329,6 +345,23 @@ class TrackTikTokEvents
                 return;
             }
 
+            // The Clip webhook is server-to-server and carries no browser consent
+            // signal, so the decision captured explicitly at checkout is required
+            // here and is re-verified against the account. Fail closed: a missing
+            // or non-affirmative cached decision blocks the send before the
+            // deduplication key is reserved, so a later consented retry can still
+            // deliver the purchase.
+            if (! AnalyticsTrackingConsent::allowsDeferredVendorEgress(
+                $this->cachedCheckoutConsent((int) $payment->id),
+                User::find($payment->user_id),
+            )) {
+                Log::info('TikTok Purchase egress blocked: no verifiable analytics consent', [
+                    'payment_id' => $payment->id,
+                ]);
+
+                return;
+            }
+
             $sentKey = $this->sentKey((int) $payment->id);
             try {
                 if (! Cache::add($sentKey, 'sending', now()->addDays(35))) {
@@ -483,6 +516,25 @@ class TrackTikTokEvents
     private function contextKey(int $paymentId): string
     {
         return 'tiktok_purchase_context:' . $paymentId;
+    }
+
+    private function consentKey(int $paymentId): string
+    {
+        return 'tiktok_checkout_consent:' . $paymentId;
+    }
+
+    private function cachedCheckoutConsent(int $paymentId): mixed
+    {
+        try {
+            return Cache::get($this->consentKey($paymentId), false);
+        } catch (\Throwable $e) {
+            Log::warning('Unable to read TikTok checkout consent', [
+                'payment_id' => $paymentId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function sentKey(int $paymentId): string

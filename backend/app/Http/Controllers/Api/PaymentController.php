@@ -593,6 +593,10 @@ class PaymentController extends Controller
                 'fbp' => $request->cookie('_fbp'),
                 'fbc' => $request->cookie('_fbc'),
                 'openai_measurement_consent' => $request->boolean('openai_measurement_consent'),
+                'analytics_tracking_consent' => AnalyticsTrackingConsent::signalGranted(
+                    $request,
+                    AnalyticsTrackingConsent::VENDOR_SIGNAL,
+                ),
                 'oppref' => $this->rawCookieValue($request, '__oppref'),
                 'obref' => $this->rawCookieValue($request, '__obref'),
                 'source_url' => $request->headers->get('referer'),
@@ -641,6 +645,20 @@ class PaymentController extends Controller
 
         if (! is_array($userData)) {
             $userData = [];
+        }
+
+        // Server-to-server callback: Meta egress requires the explicit decision
+        // captured at checkout AND a persisted account preference that still
+        // allows measurement. Fail closed when either is absent.
+        if (! AnalyticsTrackingConsent::allowsDeferredVendorEgress(
+            $userData['analytics_tracking_consent'] ?? false,
+            User::find($payment->user_id),
+        )) {
+            Log::info('Meta CAPI Purchase egress blocked: no verifiable analytics consent', [
+                'payment_id' => $payment->id,
+            ]);
+
+            return;
         }
 
         $result = $meta->send(
@@ -710,8 +728,9 @@ class PaymentController extends Controller
         $checkoutConsent = (bool) ($context['openai_measurement_consent']
             ?? $request->boolean('openai_measurement_consent'));
         $openAiUser = User::find($payment->user_id);
-        $currentConsent = AnalyticsTrackingConsent::current($openAiUser);
-        if (! $checkoutConsent || ! $currentConsent) {
+        // OpenAI order conversion is egress too: the cached checkout decision and
+        // the account preference must both still allow it.
+        if (! $checkoutConsent || ! AnalyticsTrackingConsent::current($openAiUser)) {
             return;
         }
 

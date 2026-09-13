@@ -422,15 +422,21 @@ class ProfileController extends Controller
         AnalyticsTrackingConsent::persist($user, $allowed);
 
         if (! $allowed) {
-            $checkoutIds = DB::table('payments')
+            // Withdrawal must also invalidate the checkout decisions cached for the
+            // webhook egress gates, so a checkout started before the withdrawal
+            // cannot deliver a purchase later. The account re-check inside every
+            // gate is the authoritative block; this is cache hygiene on top of it.
+            $pendingCheckouts = DB::table('payments')
                 ->where('user_id', $user->id)
                 ->where('status', 'pending')
                 ->whereNotNull('clip_checkout_id')
-                ->pluck('clip_checkout_id');
-            foreach ($checkoutIds as $checkoutId) {
-                if (is_string($checkoutId) && $checkoutId !== '') {
-                    Cache::forget('meta_purchase_context:' . $checkoutId);
+                ->get(['id', 'clip_checkout_id']);
+            foreach ($pendingCheckouts as $checkout) {
+                if (is_string($checkout->clip_checkout_id) && $checkout->clip_checkout_id !== '') {
+                    Cache::forget('meta_purchase_context:' . $checkout->clip_checkout_id);
                 }
+                Cache::forget('tiktok_checkout_consent:' . $checkout->id);
+                Cache::forget('ga4_checkout_consent:' . $checkout->id);
             }
         }
 

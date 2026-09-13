@@ -183,8 +183,7 @@ class ChatController extends Controller {
             $formatted['lead_created'] = $leadCreated;
 
             if ($leadCreated
-                && $request->boolean('openai_measurement_consent')
-                && AnalyticsTrackingConsent::current($request->user())) {
+                && AnalyticsTrackingConsent::allowsOpenAiEgress($request, $request->user())) {
                 $openAiLeadEventId = 'lead_created_message_' . $message->id;
                 $formatted['openai_lead_event_id'] = $openAiLeadEventId;
                 defer(fn () => $openai->send(

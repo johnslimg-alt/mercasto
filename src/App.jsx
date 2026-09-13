@@ -7,7 +7,7 @@ import { formatDate, formatMXN, formatNumber } from './utils/localeFormat';
 import { formatPaymentActionCopy, getPaymentActionCopy } from './utils/paymentActionCopy';
 import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlState';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
-import { isOpenAIAdsMeasurementAllowed } from './utils/trackingConsent';
+import { hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './utils/trackingConsent';
 import { clearPublishDraft } from './utils/publishDraft';
 import { isAdCreditPromotionEligible } from './utils/adBulkEligibility';
 import { isCatalogReference } from './utils/catalogInventory';
@@ -3716,6 +3716,7 @@ function App() {
               description,
               ad_id: adId,
               product_code: productCode,
+              analytics_tracking_consent: hasVendorConsent(),
               openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
             }),
           });
@@ -3748,6 +3749,7 @@ function App() {
           description,
           ad_id: adId,
           product_code: productCode,
+          analytics_tracking_consent: hasVendorConsent(),
           openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
         })
       });
