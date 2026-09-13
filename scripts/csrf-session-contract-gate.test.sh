@@ -98,9 +98,34 @@ seed
 mutate "src/App.jsx" "localStorage.setItem('auth_token'" "localStorage.setItem('nope_token'"
 check "token is never stored on sign-in" 1
 
+# Scoping: clearing the token ELSEWHERE in the file while handleLogout stops doing
+# it must fail. This is the realistic partial regression the file-wide grep missed.
+seed
+python3 - "$TMP/tree/src/App.jsx" <<'PY'
+import re, sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+m = re.search(r'const handleLogout\b[^{]*\{', src)
+assert m, 'handleLogout not found'
+depth = 0
+for i in range(m.end() - 1, len(src)):
+    if src[i] == '{':
+        depth += 1
+    elif src[i] == '}':
+        depth -= 1
+        if depth == 0:
+            body = src[m.end():i]
+            assert "localStorage.removeItem('auth_token')" in body, 'expected the clear inside handleLogout'
+            src = src[:m.end()] + body.replace("localStorage.removeItem('auth_token')", "localStorage.removeItem('nope_token')", 1) + src[i:]
+            break
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "handleLogout stops clearing the token (unrelated clears remain)" 1
+
+# And removing EVERY occurrence still fails.
 seed
 mutate "src/App.jsx" "localStorage.removeItem('auth_token')" "localStorage.removeItem('nope_token')"
-check "token is never cleared on sign-out" 1
+check "token is never cleared anywhere" 1
 
 # --- entry wiring: the asserted module must be the one the browser loads ----
 seed
@@ -140,5 +165,51 @@ check "protected routes drop auth:sanctum" 1
 seed
 mutate "backend/app/Http/Controllers/Api/AuthController.php" "Cache::put('oauth_exchange:'" "Cache::put('oauth_plain:'"
 check "OAuth one-time exchange code removed" 1
+
+# --- remaining backend assertions -------------------------------------------
+seed
+mutate "backend/config/cors.php" "'allowed_origins' => [\$frontendOrigin]" "'allowed_origins' => ['*']"
+check "CORS allowed_origins widened to a wildcard" 1
+
+seed
+mutate "backend/config/session.php" "'same_site' => env('SESSION_SAME_SITE', 'lax')" "'same_site' => 'none'"
+check "session cookie same_site weakened" 1
+
+seed
+mutate "backend/app/Http/Controllers/Api/AuthController.php" "'oauth_code' => \$exchangeCode" "'access_token' => \$user->createToken('x')->plainTextToken"
+check "OAuth callback returns a raw token instead of a one-time code" 1
+
+seed
+python3 - "$TMP/tree/backend/app/Http/Controllers/Api/AuthController.php" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+src += "\n// negative control: a redirect carrying a raw bearer token\n"
+src += "function _bad_redirect($access_token) { return redirect('/x?access_token=' . $access_token); }\n"
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "raw bearer token placed in a redirect URL" 1
+
+# --- wiring must be ACTIVE, not merely present ------------------------------
+seed
+python3 - "$TMP/tree/index.html" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+src = src.replace('<script type="module" src="/src/main.jsx"></script>',
+                  '<!-- <script type="module" src="/src/main.jsx"></script> -->\n<script type="module" src="/src/other.jsx"></script>', 1)
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "index.html comments out the live entry and loads a replacement" 1
+
+seed
+python3 - "$TMP/tree/src/main.jsx" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+src = src.replace("import AppWrapper from './App.jsx'", "// import AppWrapper from './App.jsx'\nimport AppWrapper from './Other.jsx'", 1)
+open(path, 'w', encoding='utf-8').write(src)
+PY
+check "main.jsx comments out the App.jsx import" 1
 
 echo "csrf-session-contract-gate negative control OK"
