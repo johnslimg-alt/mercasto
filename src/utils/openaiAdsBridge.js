@@ -82,8 +82,17 @@ function measure(name, data, eventOptions = {}) {
   return true;
 }
 
+function isGrantedConsentState(item = {}) {
+  return String(item?.consent_state || '').toLowerCase() === 'granted';
+}
+
 function handleItem(item = {}) {
   if (!item || typeof item !== 'object' || item[SENT] || !isOpenAIAdsMeasurementAllowed()) return;
+  // Uniform consent invariant with the Meta and TikTok bridges: only an explicit
+  // granted stamp is deliverable. This walk runs over retained history when the
+  // bridge installs after a grant, so missing/unknown/unstampable items would
+  // otherwise be measured retroactively.
+  if (!isGrantedConsentState(item)) return;
   const event = clean(item.event).toLowerCase();
   let sent = false;
 
