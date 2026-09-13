@@ -421,6 +421,56 @@ test('a refusal erases attribution from an earlier session and writes no new ide
   }
 });
 
+test('a withdrawal keeps the campaign in memory so a re-grant keeps its attribution', async () => {
+  const env = installFakeBrowser({ consent: 'all' });
+
+  try {
+    const { installCampaignAttribution, getCampaignAttribution } = await loadCampaignAttribution();
+    installCampaignAttribution();
+    assert.equal(env.localStore.has(ATTRIBUTION_KEYS[0]), true, 'a consenting visitor persists attribution');
+
+    env.setConsent('essential');
+    assert.deepEqual(storedAttributionKeys(env), [], 'a withdrawal must clear the stored copies');
+    assert.equal(getCampaignAttribution().attribution_campaign, 'consent_unit', 'the campaign stays in memory');
+
+    env.setConsent('all');
+    assert.equal(env.localStore.has(ATTRIBUTION_KEYS[0]), true, 're-granting restores the campaign');
+    assert.equal(env.sessionStore.has(ATTRIBUTION_KEYS[2]), true);
+    assert.equal(getCampaignAttribution().attribution_campaign, 'consent_unit');
+  } finally {
+    env.restore();
+  }
+});
+
+test('a grant is measured with exactly one page view', async () => {
+  const env = installFakeBrowser({ consent: null });
+
+  try {
+    const delivered = [];
+    env.window.fbq = (...args) => {
+      if (args[0] !== 'consent') delivered.push(args);
+    };
+    const analytics = await loadAnalyticsModules();
+
+    // The visitor accepts before the first-party bootstrap produced its own view.
+    analytics.trackEvent('page_view');
+    env.setConsent('all');
+    analytics.trackEvent('page_view');
+    assert.equal(analytics.activateAnalyticsVendors(), true);
+
+    const pageViews = delivered.filter(([kind, name]) => kind === 'track' && name === 'PageView');
+    assert.equal(pageViews.length, 1, 'the grant must not be counted twice');
+
+    const ga4PageViews = env.window.dataLayer
+      .map((item) => (Array.isArray(item) ? item : Array.from(item || [])))
+      .filter((entry) => entry[0] === 'event' && entry[1] === 'page_view');
+    assert.equal(ga4PageViews.length, 1, 'GA4 must receive exactly one granted page_view');
+    assert.equal(ga4PageViews[0][2].consent_state, 'granted');
+  } finally {
+    env.restore();
+  }
+});
+
 test('events raised before consent are never delivered after the grant', async () => {
   const env = installFakeBrowser({ consent: null });
 
