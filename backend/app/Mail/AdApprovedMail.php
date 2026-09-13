@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Ad;
+use App\Support\MailLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -14,7 +15,11 @@ class AdApprovedMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Ad $ad) {}
+    public function __construct(public Ad $ad)
+    {
+        // Spanish-only template: pin the mail locale so the shared layout footer renders in Spanish.
+        $this->locale(MailLocale::FALLBACK);
+    }
 
     public function envelope(): Envelope
     {
