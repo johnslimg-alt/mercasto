@@ -132,6 +132,7 @@ bash scripts/location-search-gate.sh
 bash scripts/registration-consent-contract-gate.sh
 bash scripts/registration-consent-contract-gate.test.sh
 bash scripts/funnel-analytics-contract-gate.sh
+bash scripts/funnel-analytics-contract-gate.test.sh
 node --test scripts/buyer-nudge-contract-gate.test.mjs
 bash scripts/mobile-app-association-gate.sh
 bash scripts/design-token-contract-gate.sh

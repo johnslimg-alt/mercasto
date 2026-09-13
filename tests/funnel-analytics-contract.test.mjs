@@ -59,7 +59,11 @@ test('web analytics enforces platform/version and avoids duplicate signup hooks'
   const openAiBridge = read('src/utils/openaiAdsBridge.js');
   const tiktok = read('src/utils/tiktokPixel.js');
   const app = read('src/App.jsx');
-  const authContext = read('src/contexts/AuthContext.jsx');
+  // The live auth surface. The AppProviders/AuthContext subtree is unreachable
+  // (no importers repo-wide, no useAuth consumers) and is slated for removal; the
+  // live app authenticates through this hook plus localStorage.auth_token, so the
+  // anti-duplication contract has to be asserted here to keep executing.
+  const liveAuthState = read('src/app/useAuthSessionState.js');
 
   assert.match(analytics, /platform: 'web'/);
   assert.match(analytics, /analytics_contract_version: FUNNEL_ANALYTICS_VERSION/);
@@ -67,7 +71,14 @@ test('web analytics enforces platform/version and avoids duplicate signup hooks'
   assert.doesNotMatch(bridge, /sendMappedEvent\(EVENT_MAP\.sign_up/);
   assert.doesNotMatch(app, /events\.messageStarted\(channel\)/);
   assert.doesNotMatch(app, /event: `\$\{channel\}_click`/);
-  assert.doesNotMatch(authContext, /events\.registered/);
+  // The live auth module must exist and stay a state hook, so the negative
+  // assertion below cannot pass just because the file was renamed or emptied.
+  assert.match(liveAuthState, /export function useAuthSessionState/);
+  assert.doesNotMatch(liveAuthState, /events\.registered/);
+  // Email/password sign_up is emitted exactly once, by the registration fetch
+  // interceptor in metaCapiBridge.js. App.jsx may only emit the OAuth, phone and
+  // Telegram channels, never a second email conversion.
+  assert.doesNotMatch(app, /events\.registered\(\{[^}]*method: 'email'/);
   assert.match(bridge, /if \(!response\.ok\)/);
   assert.match(bridge, /if \(isPostAd && !payload\.listing_id\) return;/);
   assert.match(openAiBridge, /if \(!content\) return;/);
