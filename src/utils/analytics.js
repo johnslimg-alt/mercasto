@@ -95,6 +95,7 @@ let vendorsReady = false;
 let vendorActivationAllowed = false;
 let pendingVendorEvents = [];
 let preConsentPageViewDropped = false;
+let preConsentActivitySeen = false;
 let behaviorReady = false;
 let lastUrl = '';
 let pageStartedAt = Date.now();
@@ -505,6 +506,14 @@ export function activateAnalyticsVendors() {
   window.__mercastoAnalyticsVendorsActivated = true;
   window.__mercastoAnalyticsVendorsRevoked = false;
 
+  if (preConsentActivitySeen) {
+    preConsentActivitySeen = false;
+    // Measurement starts at the grant: dwell time, scroll depth and click
+    // context accumulated while consent was unknown are dropped, so no later
+    // heartbeat or page_dwell report covers the pre-consent interval.
+    resetConsentScopedEngagement();
+  }
+
   if (preConsentPageViewDropped) {
     preConsentPageViewDropped = false;
     // Measurement starts now, so the visitor who granted mid-session is counted
@@ -543,6 +552,8 @@ export function trackEvent(eventName, params = {}) {
   if (!isEnabled()) return;
 
   const consentState = getVendorConsentState();
+  // Remembered so the grant can drop everything accumulated before it.
+  if (consentState !== 'granted') preConsentActivitySeen = true;
   const name = normalizeEventName(eventName);
   const payload = sanitizeParams({
     ...getPageContext(),
@@ -606,6 +617,16 @@ function resetPageEngagement() {
   pageStartedAt = Date.now();
   maxScrollPercent = getScrollPercent();
   scrollThresholdsHit = new Set();
+}
+
+// Grant-time reset: unlike a route change, nothing measured before the grant may
+// be reported afterwards, so scroll depth restarts at zero instead of inheriting
+// the position already reached while consent was unknown.
+function resetConsentScopedEngagement() {
+  pageStartedAt = Date.now();
+  maxScrollPercent = 0;
+  scrollThresholdsHit = new Set();
+  recentClicks = [];
 }
 
 function flushPageDwell(reason = 'route_change') {

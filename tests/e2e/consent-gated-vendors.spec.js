@@ -289,6 +289,121 @@ test.describe('consent gated tracking vendors', () => {
     expect(serverRelay.some((url) => pathOf(url) === '/api/meta/events/wishlist')).toBeTruthy();
   });
 
+  test('items pushed before the bridges install are never delivered to a vendor', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    const hits = await interceptVendorTraffic(page);
+    const serverRelay = [];
+    await page.route('**/api/meta/events/**', async (route) => {
+      serverRelay.push(route.request().url());
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    });
+    // Deterministic version of the reported race: the Meta bridge chunk loads
+    // slowly, so the visitor grants BEFORE it installs. Any historical item that
+    // is labelled with the install-time state would then be considered consented.
+    await page.route('**/assets/*', async (route) => {
+      const fileName = pathOf(route.request().url()).split('/').pop() || '';
+      if (/^metaCapiBridge-[^/]*\.js$/.test(fileName)) {
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+      return route.continue();
+    });
+    await page.addInitScript(seedBrowserState, null);
+    // Pushed before any application script runs: every bridge sees these as history.
+    await page.addInitScript(() => {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'favorite_added',
+        listing_id: '6666',
+        category: 'motor',
+        event_id: 'historical_favorite_6666',
+      });
+      window.dataLayer.push({
+        event: 'page_view',
+        page_path: '/historical-consent-check',
+        page_title: 'historical',
+      });
+    });
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const banner = page.getByRole('dialog', { name: 'Aviso de cookies' });
+    await expect(banner).toBeVisible();
+    await banner.getByRole('button', { name: ACCEPT_LABEL }).click();
+    await expect(banner).toBeHidden();
+    await expect
+      .poll(() => hits.some((hit) => hostOf(hit) === 'www.googletagmanager.com'), { timeout: 20_000 })
+      .toBeTruthy();
+    await page.waitForTimeout(1500);
+
+    // Meta must not receive the historical wishlist event (event id is shared by
+    // the browser copy and the server relay, so it identifies the item exactly).
+    const metaCalls = await page.evaluate(() => (
+      Array.from(window.fbq?.queue || [], (entry) => Array.from(entry))
+    ));
+    const metaConfigured = await page.evaluate(() => typeof window.fbq === 'function');
+    if (metaConfigured) {
+      expect(metaCalls.some((entry) => entry[3]?.eventID === 'historical_favorite_6666')).toBeFalsy();
+    }
+
+    // TikTok must not receive the historical wishlist event.
+    const tikTokQueue = await page.evaluate(() => (
+      Array.from(window.ttq || [], (entry) => (Array.isArray(entry) ? entry : Array.from(entry || [])))
+    ));
+    expect(tikTokQueue.some((entry) => entry[0] === 'track' && entry[1] === 'AddToWishlist')).toBeFalsy();
+
+    // OpenAI: the historical page view must not be measured, while the grant-time
+    // page view still is (build gated: the pixel id comes from a build-time env).
+    const openAiPageIds = await page.evaluate(() => (
+      Array.isArray(window.oaiq?.q)
+        ? window.oaiq.q
+          .filter((entry) => entry?.[0] === 'measure' && entry?.[1] === 'page_viewed')
+          .map((entry) => entry?.[2]?.contents?.[0]?.id || '')
+        : null
+    ));
+    if (openAiPageIds) {
+      expect(openAiPageIds).not.toContain('/historical-consent-check');
+      expect(openAiPageIds.length).toBeGreaterThan(0);
+    } else if (!metaConfigured) {
+      testInfo.annotations.push({
+        type: 'vendor-build-gated',
+        description: 'neither Meta Pixel nor OpenAI Ads pixel is configured in this build; browser-vendor assertions limited to TikTok',
+      });
+    }
+
+    // D-111: the first-party relay is not gated by cookie consent and still
+    // receives the mapped historical event.
+    expect(serverRelay.some((url) => pathOf(url) === '/api/meta/events/wishlist')).toBeTruthy();
+  });
+
+  test('a mid-session grant does not report pre-consent dwell time or scroll depth', async ({ page }) => {
+    test.setTimeout(60_000);
+    await interceptVendorTraffic(page);
+    await page.addInitScript(seedBrowserState, null);
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const banner = page.getByRole('dialog', { name: 'Aviso de cookies' });
+    await expect(banner).toBeVisible();
+
+    // Accumulate pre-consent engagement: bottom of the page, then five seconds.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(5000);
+
+    await banner.getByRole('button', { name: ACCEPT_LABEL }).click();
+    await expect(banner).toBeHidden();
+
+    // Measurement restarts at the grant, so this dwell must cover post-grant time only.
+    await page.waitForTimeout(4000);
+    await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+
+    const dwell = await page.evaluate(() => (
+      [...(window.dataLayer || [])].reverse().find((item) => item?.event === 'page_dwell') || null
+    ));
+    expect(dwell).not.toBeNull();
+    expect(dwell.dwell_seconds).toBeLessThanOrEqual(7);
+    expect(dwell.max_scroll_percent).toBeLessThan(50);
+  });
+
   test('returning consenting visitors still load vendors through the consent-aware fallback', async ({ page }) => {
     test.setTimeout(60_000);
     const hits = await interceptVendorTraffic(page);
