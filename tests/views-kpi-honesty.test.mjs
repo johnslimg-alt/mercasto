@@ -137,8 +137,8 @@ test('the admin dashboard shows the measured figure and names its source', () =>
   );
   assert.match(
     source,
-    /data-testid="admin-measured-views-source"[\s\S]{0,120}ad_views/,
-    'the admin views KPI must name ad_views as its source so it cannot be confused with the counter',
+    /data-testid="admin-measured-views-source"[\s\S]{0,200}adminAnalytics\?\.total_views_source/,
+    'the admin views KPI must name its source from the payload so it cannot be confused with the counter',
   );
   assert.doesNotMatch(
     source,

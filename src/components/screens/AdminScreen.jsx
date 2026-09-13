@@ -317,9 +317,10 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                       {adminAnalytics ? formatNumber(adminAnalytics.total_views ?? 0, lang) : '—'}
                     </span>
                     {/* Source is named explicitly so the figure can never be confused with
-                        the unverified ads.views demo counter (docs/analytics/views-provenance.md). */}
+                        the unverified ads.views demo counter (docs/analytics/views-provenance.md).
+                        Rendered from the payload so the label cannot drift from the API. */}
                     <span data-testid="admin-measured-views-source" className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
-                      ad_views
+                      {adminAnalytics?.total_views_source || ''}
                     </span>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-500 shadow-sm border border-emerald-100/55 dark:border-emerald-900/30">
