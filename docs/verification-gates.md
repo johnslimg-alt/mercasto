@@ -210,6 +210,74 @@ Expected:
 
 - Quick verification returns to green.
 
+## 12. PostgreSQL migration gate
+
+Run this before pushing any change under `backend/database/migrations/`.
+
+`backend/phpunit.xml` forces `DB_CONNECTION=sqlite` and `DB_DATABASE=:memory:`, so the
+PHPUnit suite never executes the PostgreSQL DDL that production executes. SQLite does not
+enforce foreign keys unless they are switched on, has no lock levels, no
+`ACCESS EXCLUSIVE`, no real `ALTER COLUMN ... TYPE` and no enum types, so a migration can
+pass the suite and still be wrong on the engine that runs it.
+
+```bash
+cd /var/www/mercasto
+bash scripts/verify-migrations-postgres.sh
+```
+
+Expected:
+
+- `RESULT: PASS` and exit 0 before the migration is pushed.
+- A non-zero exit on any of: `up()` failing on PostgreSQL, a captured DDL statement whose
+  effect is not in the resulting catalog, a re-apply that is not a no-op, a `down()` that
+  deletes rows, or an `up()` → `down()` round trip that does not restore the baseline
+  schema.
+- The path printed as `artifacts :` holds the captured SQL, the schema fingerprints and
+  the per-column fill report for the reviewer.
+
+What it does, on a throwaway `pgvector/pgvector:pg18` container:
+
+1. applies every other migration as a baseline, then seeds deterministic rows into the
+   tables the migration names (parents first, so foreign keys hold);
+2. applies `up()` and captures the SQL the server actually ran;
+3. re-checks every captured DDL statement against the resulting catalog, including the
+   `ON DELETE` action of any foreign key it re-created — the same constraint name coming
+   back with different delete semantics is a defect no name-level check can see;
+4. deletes the migration's row from `migrations` and applies `up()` again, requiring the
+   schema and the seeded rows to be unchanged;
+5. sets every nullable column it can to NULL, then runs `down()` and reports exactly what
+   was destroyed — columns dropped and rows deleted. Rows deleted from a table other than
+   `migrations` fail the run unless `--allow-down-data-loss` accepts it;
+6. requires the `up()` → `down()` round trip to restore the baseline schema;
+7. lists every lock-taking statement next to the production row count of its table, then
+   measures the real requirement by holding `ACCESS SHARE` on every table (only
+   `ACCESS EXCLUSIVE` conflicts with it) and, separately, `ROW EXCLUSIVE` on each table
+   the migration's foreign keys reference.
+
+Variations:
+
+```bash
+bash scripts/verify-migrations-postgres.sh --static-only          # seconds, no container
+bash scripts/verify-migrations-postgres.sh --all                  # whole set from scratch
+bash scripts/verify-migrations-postgres.sh --seed-sql=rows.sql    # realistic rows before up()
+bash scripts/verify-migrations-postgres.sh --no-production-counts # no production reads
+bash scripts/verify-migrations-postgres.sh --allow-down-data-loss # accept a lossy down()
+bash scripts/verify-migrations-postgres.sh --require-targets      # empty selection is an error
+bash scripts/verify-migrations-postgres.sh backend/database/migrations/<file>.php
+```
+
+Safety: the tool creates its own container, builds its own DSN from that container's own
+published port, and never reads `DB_*` from `backend/.env`. Before touching anything it
+asserts the connection terminates inside that container and aborts otherwise. The
+container is removed on exit, including on failure. Production is only ever read, and only
+for row counts, and only while `--production-counts` is left on.
+
+CI: `.github/workflows/migration-postgres-gate.yml` runs the same tool on a GitHub-hosted
+runner for pull requests that touch `backend/database/migrations/**`. It does not use the
+self-hosted runner, so it adds nothing to the serialised merge-queue work in D-121. It runs
+`scripts/verify-migrations-postgres.test.sh` first, so a PASS is only trusted once the gate
+has proved on that commit that it can fail.
+
 ## Notes
 
 - Code rollback and database restore are separate operations.
