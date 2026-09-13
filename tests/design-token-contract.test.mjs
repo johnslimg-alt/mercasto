@@ -19,7 +19,7 @@ const expected = {
   '--mc-dark-background': '#0F172A',
   '--mc-dark-surface': '#111827',
   '--mc-dark-raised-surface': '#1F2937',
-  '--mc-dark-line': '#334155',
+  '--mc-dark-line': '#64748B',
   '--mc-dark-ink': '#F8FAFC',
   '--mc-dark-muted': '#CBD5E1',
   '--mc-radius-sm': '8px',

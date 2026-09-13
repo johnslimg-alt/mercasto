@@ -26,10 +26,10 @@ export default function MobileTabBar({
 }) {
   return (
     <div className="mobile-tabbar md:hidden fixed bottom-0 w-full border-t pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[84px] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-      <button aria-label={t.home || 'Inicio'} onClick={() => { setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className={`flex flex-col items-center p-1 ${currentTab === 'home' && !viewedAd ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button aria-label={t.home || 'Inicio'} onClick={() => { setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className={`flex flex-col items-center p-1 ${currentTab === 'home' && !viewedAd ? 'text-[#4D7C0F] dark:text-[#84CC16]' : 'text-gray-400 hover:text-[#4D7C0F] dark:hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
-      <button aria-label={t.search} onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
+      <button aria-label={t.search} onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#4D7C0F] dark:hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
       <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-6 hover:scale-105 transition-transform" aria-label={t.post_ad || 'Publicar anuncio'}>
@@ -37,11 +37,11 @@ export default function MobileTabBar({
           <Plus className="w-7 h-7 stroke-[3]" />
         </div>
       </button>
-      <button data-testid="mobile-notifications-tab" aria-label={t.notifications} onClick={() => { user ? navigate('/notificaciones') : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${location.pathname === '/notificaciones' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button data-testid="mobile-notifications-tab" aria-label={t.notifications} onClick={() => { user ? navigate('/notificaciones') : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${location.pathname === '/notificaciones' ? 'text-[#4D7C0F] dark:text-[#84CC16]' : 'text-gray-400 hover:text-[#4D7C0F] dark:hover:text-[#84CC16]'}`}>
         <Bell className="w-6 h-6 mb-1" />
         {unreadCount > 0 && <span data-testid="mobile-notifications-unread" className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
       </button>
-      <button onClick={() => setShowTabBarMenu(v => !v)} className={`flex flex-col items-center p-1 ${showTabBarMenu ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showTabBarMenu} aria-label={t.global_menu || 'Menú global'}>
+      <button onClick={() => setShowTabBarMenu(v => !v)} className={`flex flex-col items-center p-1 ${showTabBarMenu ? 'text-[#4D7C0F] dark:text-[#84CC16]' : 'text-gray-400 hover:text-[#4D7C0F] dark:hover:text-[#84CC16]'}`} aria-expanded={showTabBarMenu} aria-label={t.global_menu || 'Menú global'}>
         <Menu className="w-6 h-6 mb-1" />
       </button>
       {showTabBarMenu && (

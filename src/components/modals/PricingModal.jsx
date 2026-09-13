@@ -12,7 +12,7 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
     // Кнопка плана: если это текущий активный план — показываем "активен", иначе "Adquirir plan"
     const renderPlanBtn = (code, onBuy, buyClass, buyLabel = t.pm_buy_plan) => (
       currentPlanCode === code
-        ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#65A30D] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan}</button>
+        ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#4D7C0F] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan}</button>
         : <button onClick={onBuy} className={buyClass}>{buyLabel}</button>
     );
 
@@ -25,8 +25,8 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
               <button ref={initialFocusRef} type="button" aria-label={t.close_btn} onClick={closeModal} className="p-3.5 -m-2.5 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"><XCircle size={26}/></button>
             </div>
             <div className="flex px-5 gap-6 border-t border-slate-100 dark:border-slate-800">
-              <button onClick={() => setPriceTab('particular')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'particular' ? 'border-[#84CC16] text-[#65A30D] dark:text-[#84CC16]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>{t.pm_tab_plans}</button>
-              <button onClick={() => setPriceTab('pro')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'pro' ? 'border-[#84CC16] text-[#65A30D] dark:text-[#84CC16]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>{t.pm_tab_promos}</button>
+              <button onClick={() => setPriceTab('particular')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'particular' ? 'border-[#84CC16] text-[#4D7C0F] dark:text-[#84CC16]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>{t.pm_tab_plans}</button>
+              <button onClick={() => setPriceTab('pro')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'pro' ? 'border-[#84CC16] text-[#4D7C0F] dark:text-[#84CC16]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>{t.pm_tab_promos}</button>
             </div>
           </div>
           <div className="p-4 md:p-6 overflow-y-auto">
@@ -42,12 +42,12 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_contact_whatsapp}</li>
                     </ul>
                     {currentPlanCode === 'package_free'
-                      ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#65A30D] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan}</button>
+                      ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#4D7C0F] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan}</button>
                       : <button disabled className="py-2.5 w-full border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 rounded-xl text-xs font-bold cursor-default">{t.pm_plan_free}</button>}
                   </div>
                   {/* Impulso */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-[#65A30D] dark:text-[#84CC16] uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_impulso}</h4>
+                    <h4 className="font-bold text-[#4D7C0F] dark:text-[#84CC16] uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_impulso}</h4>
                     <p className="text-2xl font-black text-slate-950 dark:text-white mb-3">$99 <span className="text-[12px] font-normal text-slate-400 dark:text-slate-500">{t.pm_per_month}</span></p>
                     <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600 dark:text-slate-300">
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_10}</li>
@@ -57,7 +57,7 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                   </div>
                   {/* Negocio */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-[#65A30D] dark:text-[#84CC16] uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_negocio}</h4>
+                    <h4 className="font-bold text-[#4D7C0F] dark:text-[#84CC16] uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_negocio}</h4>
                     <p className="text-2xl font-black text-slate-950 dark:text-white mb-3">$249 <span className="text-[12px] font-normal text-slate-400 dark:text-slate-500">{t.pm_per_month}</span></p>
                     <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600 dark:text-slate-300">
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_30}</li>
@@ -145,7 +145,7 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
 
                   {/* Resaltar / Destacar 7 días */}
                   <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-[#84CC16]/50 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-[#65A30D] dark:text-[#84CC16] uppercase tracking-wider text-[12px] mb-4">{t.pm_highlight_section}</h4>
+                    <h4 className="font-bold text-[#4D7C0F] dark:text-[#84CC16] uppercase tracking-wider text-[12px] mb-4">{t.pm_highlight_section}</h4>
                     <div className="space-y-4 flex-1">
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>

@@ -649,14 +649,14 @@ export default function SellerLandingScreen({ lang = 'es' }) {
         {/* Glow Effects */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-[#84CC16]/10 dark:bg-[#84CC16]/5 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
 
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#84CC16]/10 text-[#84CC16] text-xs font-semibold uppercase tracking-wider mb-6 animate-pulse border border-[#84CC16]/20">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#84CC16]/10 text-[#365314] dark:text-[#84CC16] text-xs font-semibold uppercase tracking-wider mb-6 border border-[#84CC16]/20">
           <Sparkles size={14} />
           <span>{t.ai_brand_tagline}</span>
         </div>
 
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 leading-[1.1] max-w-4xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-200 dark:to-slate-300 bg-clip-text text-transparent">
           {t.hero_title_before}
-          <span className="text-[#84CC16] drop-shadow-sm">{t.hero_title_highlight}</span>
+          <span className="text-[#4D7C0F] dark:text-[#84CC16] drop-shadow-sm">{t.hero_title_highlight}</span>
           {t.hero_title_after}
         </h1>
 

@@ -985,11 +985,11 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <ul className="mt-4 space-y-2 text-[13px] text-slate-700 dark:text-slate-300">
 
-                    <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> 3 {t.free_ad || 'anuncios'}</li>
+                    <li className="flex gap-2"><span className="text-[#4D7C0F] dark:text-[#84CC16]">✓</span> 3 {t.free_ad || 'anuncios'}</li>
 
-                    <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.basic_stats || 'Estadísticas básicas'}</li>
+                    <li className="flex gap-2"><span className="text-[#4D7C0F] dark:text-[#84CC16]">✓</span> {t.basic_stats || 'Estadísticas básicas'}</li>
 
-                    <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.contacto_qr || 'Contacto vía Whatsapp/Telegram'}</li>
+                    <li className="flex gap-2"><span className="text-[#4D7C0F] dark:text-[#84CC16]">✓</span> {t.contacto_qr || 'Contacto vía Whatsapp/Telegram'}</li>
 
                   </ul>
 
@@ -1033,11 +1033,11 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <ul className="mt-4 space-y-2 text-[13px] text-slate-700 dark:text-slate-300">
 
-                    <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.bulk_import || 'Importación masiva'}</li>
+                    <li className="flex gap-2"><span className="text-[#4D7C0F] dark:text-[#84CC16]">✓</span> {t.bulk_import || 'Importación masiva'}</li>
 
-                    <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.account_manager || 'Soporte dedicado'}</li>
+                    <li className="flex gap-2"><span className="text-[#4D7C0F] dark:text-[#84CC16]">✓</span> {t.account_manager || 'Soporte dedicado'}</li>
 
-                    <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.storefront || 'Página de Tienda'}</li>
+                    <li className="flex gap-2"><span className="text-[#4D7C0F] dark:text-[#84CC16]">✓</span> {t.storefront || 'Página de Tienda'}</li>
 
                   </ul>
 
