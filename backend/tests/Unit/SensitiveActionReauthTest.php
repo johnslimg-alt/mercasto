@@ -14,6 +14,15 @@ class SensitiveActionReauthTest extends TestCase
     #[DataProvider('tokenAges')]
     public function test_passwordless_recent_token_window(int $minutesOld, bool $expected): void
     {
+        // Pin the clock to the start of the current second. PersonalAccessToken stores created_at
+        // through Eloquent's date cast at whole-second precision, while the window bound in
+        // SensitiveActionReauth::hasRecentAccessToken() is derived from a second, later now() call.
+        // Leaving the clock live lets a second boundary fall between the two reads, which drops the
+        // token just outside the inclusive boundary and fails the "exactly RECENT_TOKEN_MINUTES old"
+        // case (5, true) at random. Freezing puts the fixture and the comparison on the same instant
+        // and the same resolution, without relaxing the assertion.
+        $this->freezeSecond();
+
         $token = new PersonalAccessToken();
         $token->created_at = now()->subMinutes($minutesOld);
         $user = (new User())->forceFill(['password' => null])->withAccessToken($token);
