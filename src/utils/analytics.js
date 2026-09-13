@@ -95,7 +95,11 @@ let vendorsReady = false;
 let vendorActivationAllowed = false;
 let pendingVendorEvents = [];
 let preConsentPageViewDropped = false;
-let preConsentActivitySeen = false;
+// Set whenever the page is measured without a grant: an event raised before
+// consent, or any withdrawal (banner, other tab, server sync). The next
+// activation then starts a fresh measurement interval regardless of how the
+// transition arrived — including a re-grant with no intervening page activity.
+let measurementIntervalDirty = false;
 let behaviorReady = false;
 let lastUrl = '';
 let pageStartedAt = Date.now();
@@ -506,8 +510,8 @@ export function activateAnalyticsVendors() {
   window.__mercastoAnalyticsVendorsActivated = true;
   window.__mercastoAnalyticsVendorsRevoked = false;
 
-  if (preConsentActivitySeen) {
-    preConsentActivitySeen = false;
+  if (measurementIntervalDirty) {
+    measurementIntervalDirty = false;
     // Measurement starts at the grant: dwell time, scroll depth and click
     // context accumulated while consent was unknown are dropped, so no later
     // heartbeat or page_dwell report covers the pre-consent interval.
@@ -533,6 +537,10 @@ export function revokeAnalyticsVendors() {
   vendorsReady = false;
   pendingVendorEvents = [];
   memorySessionId = '';
+  // A withdrawal always invalidates the current measurement interval, even when
+  // it arrives from another tab or a server sync with no page activity: the next
+  // grant must not report dwell/scroll accumulated before or during it.
+  measurementIntervalDirty = true;
 
   syncVendorConsent(false);
   purgeVendorCookies();
@@ -553,7 +561,7 @@ export function trackEvent(eventName, params = {}) {
 
   const consentState = getVendorConsentState();
   // Remembered so the grant can drop everything accumulated before it.
-  if (consentState !== 'granted') preConsentActivitySeen = true;
+  if (consentState !== 'granted') measurementIntervalDirty = true;
   const name = normalizeEventName(eventName);
   const payload = sanitizeParams({
     ...getPageContext(),
