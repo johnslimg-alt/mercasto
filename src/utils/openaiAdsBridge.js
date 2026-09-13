@@ -1,4 +1,4 @@
-import { isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
+import { getConsentEpoch, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const ENV = import.meta.env || {};
 const OPENAI_ADS_PIXEL_ID = ENV.VITE_OPENAI_ADS_PIXEL_ID || '';
@@ -82,8 +82,19 @@ function measure(name, data, eventOptions = {}) {
   return true;
 }
 
+function isGrantedConsentState(item = {}) {
+  if (String(item?.consent_state || '').toLowerCase() !== 'granted') return false;
+  // Same consent-epoch rule as the Meta and TikTok bridges.
+  return Number(item?.consent_epoch) === getConsentEpoch();
+}
+
 function handleItem(item = {}) {
   if (!item || typeof item !== 'object' || item[SENT] || !isOpenAIAdsMeasurementAllowed()) return;
+  // Uniform consent invariant with the Meta and TikTok bridges: only an explicit
+  // granted stamp is deliverable. This walk runs over retained history when the
+  // bridge installs after a grant, so missing/unknown/unstampable items would
+  // otherwise be measured retroactively.
+  if (!isGrantedConsentState(item)) return;
   const event = clean(item.event).toLowerCase();
   let sent = false;
 
