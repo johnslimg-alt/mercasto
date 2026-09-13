@@ -22,6 +22,7 @@
 #   H  down() leaves a function behind                      -> FAIL on the round-trip fingerprint
 #   I  table created then renamed                       -> PASS (rename retires the old expectation)
 #   M  column added and filled with '' on every row        -> PASS, and the fill report says <empty>
+#   S  down() drops a column and replaces every row too    -> FAIL (identity captured pre-rollback)
 #
 # Cases J, K, L, N, O, P and R are cheap and need no container: option parsing, target
 # selection for a renamed migration, the workflow's push-run comparison base, a deleted
@@ -769,6 +770,94 @@ if [ "$rc" = "0" ] && grep -qF "migverify_blank.blank_col" "$OUT_DIR/M.log" \
 else
   fail "M-empty-string-fill-reported: exit $rc (see $OUT_DIR/M.log)"
   grep -A6 "columns this migration filled" "$OUT_DIR/M.log" | head -8 | sed 's/^/        /'
+fi
+
+# S. down() drops a column and, in the same rollback, replaces every row at the same
+#    count. Comparing only the columns common to both sides cannot see it, because both
+#    readings would come from the already-rolled-back table; identity has to be captured
+#    before the rollback, which is what the primary-key hash is for.
+clear_fixtures
+fixture "000001_migverify_s_setup_$$.php" <<'PHP'
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    // Not a target: it gives the target a table with rows to replace.
+    public function up(): void
+    {
+        if (Schema::hasTable('migverify_pk')) {
+            return;
+        }
+
+        Schema::create('migverify_pk', function (Blueprint $table): void {
+            $table->id();
+            $table->string('note')->nullable();
+        });
+
+        DB::table('migverify_pk')->insert([['note' => 'a'], ['note' => 'b']]);
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('migverify_pk');
+    }
+};
+PHP
+fixture "000002_migverify_s_target_$$.php" <<'PHP'
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (! Schema::hasTable('migverify_pk') || Schema::hasColumn('migverify_pk', 'extra')) {
+            return;
+        }
+
+        Schema::table('migverify_pk', function (Blueprint $table): void {
+            $table->string('extra')->nullable();
+        });
+    }
+
+    public function down(): void
+    {
+        if (! Schema::hasTable('migverify_pk')) {
+            return;
+        }
+
+        $n = (int) DB::selectOne('select count(*) as c from migverify_pk')->c;
+        DB::statement('DELETE FROM migverify_pk');
+        DB::statement("INSERT INTO migverify_pk (note) SELECT 'swapped-' || g FROM generate_series(1, $n) g");
+
+        if (Schema::hasColumn('migverify_pk', 'extra')) {
+            Schema::table('migverify_pk', function (Blueprint $table): void {
+                $table->dropColumn('extra');
+            });
+        }
+    }
+};
+PHP
+total=$((total + 1))
+rc=0
+bash "$TOOL" --seed-rows=3 --no-lock-probe --no-production-counts \
+  --out-dir="$OUT_DIR/S" \
+  "$MIGRATIONS_DIR/2099_01_01_000002_migverify_s_target_$$.php" > "$OUT_DIR/S.log" 2>&1 || rc=$?
+rm -f $FIXTURE_GLOB
+if [ "$rc" != "0" ] && grep -qF "all replaced by different content" "$OUT_DIR/S.log"; then
+  pass "S-identity-across-column-drop: exit $rc and the replacement was caught despite the dropped column"
+else
+  fail "S-identity-across-column-drop: exit $rc without the identity diagnostic (see $OUT_DIR/S.log)"
+  grep -E "destroyed by down|rows |table |failures" "$OUT_DIR/S.log" | head -8 | sed 's/^/        /'
 fi
 
 echo ""
