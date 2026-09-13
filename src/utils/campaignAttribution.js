@@ -1,10 +1,19 @@
 import { classifyReferrerHost, isAiReferralSource, normalizeTrafficSource } from './trafficSourceClassification.js';
+import { getVendorConsentState, hasVendorConsent, subscribeTrackingConsent } from './trackingConsent.js';
 
 const FIRST_TOUCH_KEY = 'mercasto.attribution.first.v1';
 const LAST_TOUCH_KEY = 'mercasto.attribution.last.v1';
 const SESSION_TOUCH_KEY = 'mercasto.attribution.session.v1';
 const PATCH_MARKER = '__mercastoCampaignAttribution';
 const ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Campaign context captured before an analytics consent grant. It stays in
+// memory only: nothing is written to localStorage/sessionStorage until the
+// visitor grants, so a visitor who declines leaves no stored attribution trace.
+// The cost of a reload before consent is the in-memory first touch (the landing
+// campaign of that page load), which is re-captured from the new URL/referrer.
+let pendingFirstTouch = null;
+let pendingLastTouch = null;
 
 const PARAMS = {
   source: 'utm_source',
@@ -136,13 +145,47 @@ function persistAttribution(attribution) {
   safeWrite(sessionStorage, SESSION_TOUCH_KEY, attribution);
 }
 
+// Consent-gated write path. Before a grant the capture waits in memory; once
+// consent is granted the pending capture is flushed and later captures persist
+// directly (unchanged behaviour for consenting visitors).
+function rememberPendingAttribution(attribution) {
+  if (!pendingFirstTouch) pendingFirstTouch = attribution;
+  pendingLastTouch = attribution;
+}
+
+function flushPendingAttribution() {
+  if (!hasVendorConsent()) return;
+
+  const first = pendingFirstTouch;
+  const last = pendingLastTouch;
+  pendingFirstTouch = null;
+  pendingLastTouch = null;
+
+  if (first) persistAttribution(first);
+  if (last && last !== first) persistAttribution(last);
+}
+
+// A refusal erases campaign storage written by an earlier session; the
+// in-memory capture is kept so a change of mind in the same page session can
+// still be flushed on grant, but nothing reaches the browser's storage.
+function clearStoredAttribution() {
+  try {
+    localStorage.removeItem(FIRST_TOUCH_KEY);
+    localStorage.removeItem(LAST_TOUCH_KEY);
+    sessionStorage.removeItem(SESSION_TOUCH_KEY);
+  } catch {
+    // Storage may be unavailable in restricted browsers.
+  }
+}
+
 export function getCampaignAttribution() {
   if (!isBrowser()) return {};
 
   const sessionTouch = safeRead(sessionStorage, SESSION_TOUCH_KEY);
   const lastTouch = safeRead(localStorage, LAST_TOUCH_KEY);
   const firstTouch = safeRead(localStorage, FIRST_TOUCH_KEY);
-  const active = sessionTouch || lastTouch || firstTouch || {};
+  const active = pendingLastTouch || sessionTouch || lastTouch || firstTouch || {};
+  const first = firstTouch || pendingFirstTouch;
 
   return {
     attribution_source: clean(active.source),
@@ -156,8 +199,8 @@ export function getCampaignAttribution() {
     attribution_referrer_host: clean(active.referrerHost),
     attribution_ai_referral: active.channel === 'ai_referral' || isAiReferralSource(active.source),
     attribution_landing_path: clean(active.landingPath, 500),
-    first_touch_source: clean(firstTouch?.source),
-    first_touch_campaign: clean(firstTouch?.campaign),
+    first_touch_source: clean(first?.source),
+    first_touch_campaign: clean(first?.campaign),
   };
 }
 
@@ -201,7 +244,14 @@ function patchDataLayer() {
 
 function capture(rawUrl, allowReferrer = false) {
   const attribution = attributionFromUrl(rawUrl, allowReferrer);
-  if (attribution) persistAttribution(attribution);
+  if (!attribution) return;
+
+  if (!hasVendorConsent()) {
+    rememberPendingAttribution(attribution);
+    return;
+  }
+
+  persistAttribution(attribution);
 }
 
 function patchHistory() {
@@ -230,4 +280,15 @@ export function installCampaignAttribution() {
   patchHistory();
   window.addEventListener('popstate', () => capture(window.location.href, false));
   window.__mercastoCampaignAttribution = getCampaignAttribution;
+
+  // Consent gate: attribute storage is written only after a grant. A visitor who
+  // already refused starts clean, and a later grant flushes the in-memory capture.
+  if (getVendorConsentState() === 'denied') clearStoredAttribution();
+  subscribeTrackingConsent((state) => {
+    if (state === 'granted') {
+      flushPendingAttribution();
+      return;
+    }
+    if (state === 'denied') clearStoredAttribution();
+  });
 }
