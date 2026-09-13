@@ -17,7 +17,9 @@ const CATALOG_BODY = 'Este producto se muestra como referencia';
 
 const referenceAd = {
   id: FILLER_ID,
-  title: 'Refrigerador de catálogo 300L',
+  // A real catalogue title (production ad 6376): long enough to need two lines on a
+  // narrow grid card, which is the case where the badge used to outrank the title.
+  title: 'Fundas para Asientos de Piel Sintética - Modelo G',
   price: 8999,
   category: 'electronica',
   state: 'Jalisco',
@@ -196,6 +198,30 @@ test.describe('reference inventory is labelled', () => {
 
     await expect(page.getByTestId('catalog-reference-badge')).toHaveCount(0);
     await expect(page.getByTestId('catalog-reference-notice')).toHaveCount(0);
+  });
+
+  test('the listing title keeps more visual weight than the reference badge', async ({ page }) => {
+    // Regression guard for the inverted card hierarchy: the 11px badge label is long, so on
+    // narrow grid cards it wraps to two lines. The card title is clamped, and while it was
+    // clamped to ONE line the badge was taller than the listing's own title. The title must
+    // render at least as tall as the badge at the widths where the badge wraps.
+    for (const width of [360, 390, 430, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/listings', { waitUntil: 'domcontentloaded' });
+
+      const card = cardByTitle(page, referenceAd.title).first();
+      await expect(card, `reference card at ${width}px`).toBeVisible({ timeout: 20_000 });
+
+      const title = await card.locator('h2,h3,h4').first().boundingBox();
+      const badge = await card.getByTestId('catalog-reference-badge').boundingBox();
+      expect(title, `title box at ${width}px`).not.toBeNull();
+      expect(badge, `badge box at ${width}px`).not.toBeNull();
+      expect(badge.height, `badge still wraps at ${width}px (badge under test)`).toBeGreaterThan(0);
+      expect(
+        title.height,
+        `card title (${title.height}px) must not be shorter than the reference badge (${badge.height}px) at ${width}px`,
+      ).toBeGreaterThanOrEqual(badge.height);
+    }
   });
 });
 
