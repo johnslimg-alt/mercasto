@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Http\Controllers\Api\SitemapController;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
+use App\Support\ActivationLifetimeProvenance;
 use App\Traits\ReportsAdLifetimePreflight;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -40,6 +41,13 @@ use Illuminate\Support\Facades\DB;
  * --apply is a no-op that cannot restore the archived state or the granted
  * lifetime. The preflight block below states that, with the resolved lifetime and
  * the expiry the rows will receive, before any write and in dry-run too.
+ *
+ * Recoverability: a wrong lifetime is no longer terminal. The decision row this
+ * command already writes now also records the exact instant it granted (see
+ * App\Support\ActivationLifetimeProvenance), which is what lets
+ * `ads:correct-activation-lifetime` tell a lifetime THIS command granted from one a
+ * seller paid for or chose, and correct only the former. Recording it is additive
+ * bookkeeping: it changes no attribute written here.
  */
 class ReconcileModerationVisibility extends Command
 {
@@ -71,8 +79,8 @@ class ReconcileModerationVisibility extends Command
         // the rows will receive and the fact that the action cannot be repeated before
         // committing to it. Additive output only - the command's contract is unchanged.
         $this->printActivationPreflight([
-            'ONE-SHOT' => "activation requires status='archived' and writes status='active', so a later --apply selects none of the activated rows: re-running is not an undo. No command restores the archived state or the granted lifetime; when that lifetime ends, the scheduled daily ads:expire task moves the rows from 'active' to 'expired'.",
-            'REMEDY' => 'if the lifetime above is not the intended one, stop and set AD_LIFETIME_DAYS first (the runbook step is: decide the lifetime, then activate).',
+            'ONE-SHOT' => "activation requires status='archived' and writes status='active', so a later --apply selects none of the activated rows: re-running is not an undo and no command restores the archived state. The granted LIFETIME is recoverable: if the lifetime above is not the one you want, ads:correct-activation-lifetime re-anchors it on this activation, and it never touches a lifetime a seller paid for or chose. When a lifetime ends, the scheduled daily ads:expire task moves the rows from 'active' to 'expired'.",
+            'REMEDY' => 'if the lifetime above is not the intended one, stop and set AD_LIFETIME_DAYS first (the runbook step is: decide the lifetime, then activate). Otherwise activate now and correct the lifetime afterwards with ads:correct-activation-lifetime.',
         ]);
 
         if (! $apply) {
@@ -161,12 +169,16 @@ class ReconcileModerationVisibility extends Command
                                 'decision' => 'approved',
                                 'reason' => 'Reconciliación de visibilidad: el anuncio estaba aprobado pero oculto.',
                                 'metadata' => [
+                                    // The granted lifetime is recorded here so a later
+                                    // correction can prove that the row's expires_at is still
+                                    // the one this activation stamped. Additive bookkeeping:
+                                    // it changes no attribute this command writes.
                                     'reconciliation' => [
                                         'command' => 'ads:reconcile-moderation-visibility',
                                         'activation_mode' => 'automatic_reconciliation',
                                         'previous_status' => 'archived',
                                         'previous_ai_moderation_status' => Ad::MODERATION_APPROVED,
-                                    ],
+                                    ] + ActivationLifetimeProvenance::activationGrant($publishAttributes['expires_at']),
                                 ],
                             ]);
                         }

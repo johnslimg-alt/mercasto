@@ -6,6 +6,7 @@ use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Models\User;
+use App\Support\ListingIndexability;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -68,9 +69,9 @@ class ModerationVisibilityReconciliationTest extends TestCase
     {
         $ad = $ad->fresh();
 
-        if (class_exists(\App\Support\ListingIndexability::class)) {
+        if (class_exists(ListingIndexability::class)) {
             $this->assertTrue(
-                \App\Support\ListingIndexability::isIndexable($ad),
+                ListingIndexability::isIndexable($ad),
                 'Activated ad must satisfy the shared ListingIndexability predicate.'
             );
 
@@ -570,7 +571,12 @@ class ModerationVisibilityReconciliationTest extends TestCase
             $text
         );
         $this->assertStringContainsString('re-running is not an undo', $text);
-        $this->assertStringContainsString('No command restores the archived state or the granted lifetime', $text);
+        // The state stays irreversible; the granted lifetime is recoverable, and the operator
+        // is told which command does it and what that command refuses to touch.
+        $this->assertStringContainsString('no command restores the archived state', $text);
+        $this->assertStringContainsString('The granted LIFETIME is recoverable', $text);
+        $this->assertStringContainsString('ads:correct-activation-lifetime re-anchors it on this activation', $text);
+        $this->assertStringContainsString('never touches a lifetime a seller paid for or chose', $text);
 
         // A dry run is read-only, on every row of every table this command writes.
         $this->assertSame($before, $this->writeSurfaceSnapshot(), 'A dry run must not write.');
