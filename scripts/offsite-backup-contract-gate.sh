@@ -47,6 +47,12 @@ if grep -qE '^test -x "\$STATUS_BIN"$' "$SMOKE"; then
   echo "FAIL: offsite smoke checks the root-only status binary without run_root" >&2
   exit 1
 fi
+# The secret scan below reads three trees. ops/ and scripts/ are implied by the
+# file assertions above; docs/ is not, and a missing tree makes the scan exit
+# non-zero and pass while leaving that surface unobserved.
+for root in ops scripts docs; do
+  test -d "$root" || { echo "FAIL: missing scan root $root" >&2; exit 1; }
+done
 if grep -RIEq --exclude=offsite-backup-contract-gate.sh 'AWS_SECRET_ACCESS_KEY=[A-Za-z0-9_/+=-]{16,}|R2_[A-Z_]*SECRET=[A-Za-z0-9_/+=-]{16,}' ops scripts docs; then
   echo "FAIL: possible offsite-backup secret committed" >&2
   exit 1

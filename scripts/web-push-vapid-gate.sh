@@ -10,6 +10,10 @@ CONFIG="backend/config/services.php"
 
 echo "== Web Push VAPID contract gate =="
 
+# Both recursive guards below can only see a leaked key if the tree they scan
+# exists; grep -R against a missing path exits non-zero and the guard passes.
+test -d src || { echo "FAIL: missing scan root src" >&2; exit 1; }
+
 if grep -R -qF 'BAhZDxk3BjI_OCkHCOEyihsxsuCfcDtMilUZjMfecw-Lt4JvHNfYkmZIU_llDiaF3L0uOtXsgU60IZksmtpTrIs' src; then
   echo "Legacy hardcoded VAPID public key returned" >&2
   exit 1

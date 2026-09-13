@@ -56,6 +56,11 @@ grep -qF 'Las páginas locales solo deben indexarse cuando cumplen los umbrales 
 node --test tests/geo-source-localization.test.mjs
 
 BANNED='portal líder|marketplace líder|más rápido crecimiento|fastest-growing|moderación 24/7|24/7 moderation|garantizar transacciones seguras|guarantee safe transactions|más de 200 ciudades|200 cities|fotos ilimitadas|unlimited photos|todos los vendedores|all sellers|PRO desde \$99|PRO from \$99|\$499 MXN/mes|Enterprise \(\$1,999|visible para miles|reseñas del vendedor'
+# A missing tree would make the recursive scan below exit non-zero and pass
+# while leaving its banned-claim surface unobserved.
+for root in src backend/app backend/resources; do
+  test -d "$root" || { echo "FAIL: missing scan root $root" >&2; exit 1; }
+done
 if grep -RInE --exclude-dir=node_modules --exclude-dir=vendor --exclude='*.map' "$BANNED" src backend/app backend/resources; then
   echo "unsupported public trust or pricing claim found" >&2
   exit 1

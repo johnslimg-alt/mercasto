@@ -56,8 +56,15 @@ for filename in sys.argv[1:]:
         raise SystemExit(f'exception message logging is forbidden in payment flow: {filename}')
 CHECKPY
 
+# An unmatched glob stays literal, so grep would fail on a path that does not
+# exist and the card-credential scan would pass while observing nothing.
+payment_migrations=(backend/database/migrations/*payments*)
+if [ ! -e "${payment_migrations[0]}" ]; then
+  echo "FAIL: no payments migration matched backend/database/migrations/*payments*" >&2
+  exit 1
+fi
 if grep -RInE "\$table->[^;]*(pan|card_number|cardholder|cvv|cvc|expiry_month|expiry_year)" \
-  backend/database/migrations/*payments*; then
+  "${payment_migrations[@]}"; then
   echo "payment table must not store cardholder or card credential fields" >&2
   exit 1
 fi

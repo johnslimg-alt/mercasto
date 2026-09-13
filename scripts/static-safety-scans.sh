@@ -72,6 +72,7 @@ bash scripts/reverb-healthcheck-gate.sh
 bash scripts/docker-build-cache-cleanup.test.sh
 bash scripts/os-maintenance-precheck-tempfile.test.sh
 bash scripts/persistent-firewall-docker-gate.test.sh
+bash scripts/observed-file-assertion.test.sh
 node --test scripts/manual-server-gate-self-hosted.test.mjs
 bash scripts/root-owned-checkout-workflow-gate.sh
 node --test scripts/automerge-workflow-guard.test.mjs
