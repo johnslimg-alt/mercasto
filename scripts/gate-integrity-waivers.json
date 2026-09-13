@@ -27,6 +27,13 @@
       "target": "src/components/screens/legal/ReembolsosScreen.jsx",
       "owner": "gate-maintenance",
       "reason": "REAL FINDING, awaiting fix (retrospective-2 RC-3 case 6, D-054). ReembolsosScreen.jsx is imported by nothing while the shipped page is public/reembolsos/index.html -- the exact wrong-observation-surface defect, where the gate watched a component the browser never runs. Declared rather than fixed because the correct target is the delivered static page and rewriting the assertion is outside this task's scope. Re-verified 2026-09-13."
+    },
+    {
+      "check": "asserted-orphan",
+      "gate": "scripts/funnel-analytics-contract-gate.sh",
+      "target": "src/contexts/AuthContext.jsx",
+      "owner": "gate-maintenance",
+      "reason": "REAL FINDING, awaiting fix (retrospective-2 RC-3). Surfaced by this PR's own fix for negative shell targets -- the guard is `if grep -qF \"events.registered(...)\" src/contexts/AuthContext.jsx; then fail; fi`, a negative claim about a file that never executes, which the checker previously could not see. The invariant (no duplicate signup hook in the email registration path) belongs to the live analytics surface and the funnel lane (#1136); retargeting it is their call, not this PR's. Note this same dead file is also read by tests/funnel-analytics-contract.test.mjs:62, which would fail with ENOENT if the file were deleted."
     }
   ]
 }

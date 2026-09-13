@@ -1157,3 +1157,196 @@ test('RC-2 code-derived-invariant is measured but never gates', () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+/* ------------------------------------------------------------------ *
+ * Review-round hardening: inactive text and shell-logic edge cases
+ * ------------------------------------------------------------------ */
+
+test('negative control: a NEGATIVE shell guard contributes its target to orphan analysis', () => {
+  // `if grep -qF lit path; then fail; fi` is a claim about `path`, and the target
+  // used to be dropped (and, before that, captured with its trailing semicolon).
+  withRepo(
+    {
+      'src/main.jsx': "import './used.jsx';\n",
+      'src/used.jsx': 'export default 1;\n',
+      'src/orphan.jsx': 'export default 2;\n',
+      'scripts/negative-gate.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        'if grep -qF "bad-marker" src/orphan.jsx; then',
+        '  echo "must not contain bad-marker" >&2',
+        '  exit 1',
+        'fi',
+        '',
+      ].join('\n'),
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a negative-only asserted target must be orphan-checked');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+});
+
+test('negative control: a commented-out import does not make a module reachable', () => {
+  const base = { 'src/orphan.jsx': 'export default 2;\n' };
+  // Quoted literals, as real gates write them: the shell parser reads
+  // `grep -qF "lit" path`, and an unquoted literal is a documented limit.
+  const gate = { 'scripts/comment-orphan-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/orphan.jsx\n' };
+
+  // Control: a real import makes it reachable.
+  withRepo(
+    { ...base, ...gate, 'src/main.jsx': "import './orphan.jsx';\n" },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a real import must make the module reachable:\n${output}`);
+    }
+  );
+
+  // `// import './orphan.jsx'` is not an import. Raw-text scanning used to count it.
+  withRepo(
+    { ...base, ...gate, 'src/main.jsx': "// import './orphan.jsx';\nimport './used.jsx';\n", 'src/used.jsx': 'export default 1;\n' },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a commented-out import must not count as reachability');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/orphan\.jsx/);
+    }
+  );
+
+  // Same for a block comment.
+  withRepo(
+    { ...base, ...gate, 'src/main.jsx': "/* import './orphan.jsx' */\nimport './used.jsx';\n", 'src/used.jsx': 'export default 1;\n' },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a block-commented import must not count as reachability');
+      assert.match(output, /asserted-orphan/);
+    }
+  );
+});
+
+test('computed imports keep their whole prefix directory reachable', () => {
+  // `import(`./locales/${lang}.js`)` can load any module in that directory, so a
+  // gate asserting one of them is observing shipped code, not an orphan.
+  withRepo(
+    {
+      'src/main.jsx': "const load = (lang) => import(`./locales/${lang}.js`);\n",
+      'src/locales/es.js': 'export default {};\n',
+      'src/locales/ru.js': 'export default {};\n',
+      'scripts/locale-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export default" src/locales/ru.js\n',
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a computed-import directory must be treated as reachable:\n${output}`);
+    }
+  );
+});
+
+test('negative control: an orphaned .mjs module is audited too', () => {
+  // The graph resolves `.mjs`, so the audit must judge `.mjs` targets as well.
+  withRepo(
+    {
+      'src/main.jsx': "import './used.jsx';\n",
+      'src/used.jsx': 'export default 1;\n',
+      'src/helper.mjs': 'export const x = 1;\n',
+      'scripts/mjs-gate.sh': '#!/usr/bin/env bash\ngrep -qF "export const" src/helper.mjs\n',
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'an orphaned .mjs module must be reported');
+      assert.match(output, /asserted-orphan/);
+      assert.match(output, /src\/helper\.mjs/);
+    }
+  );
+});
+
+test('negative control: a pipeline continued with a backslash cannot escape never-fails', () => {
+  const base = { 'src/used.jsx': "const a = 'x';\n" };
+
+  // Control: a legitimate two-line pipeline is not reported.
+  withRepo(
+    {
+      ...base,
+      'scripts/continued-ok-gate.sh': '#!/usr/bin/env bash\nif grep -F a src/used.jsx \\\n  | grep -qF b; then\n  echo ok\nfi\n',
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a working continued pipeline must not be reported:\n${output}`);
+    }
+  );
+
+  // The same pipeline as a dead one: `grep -q` on the left of a continuation.
+  withRepo(
+    {
+      ...base,
+      'scripts/continued-bad-gate.sh': '#!/usr/bin/env bash\nif grep -qF a src/used.jsx \\\n  | grep -qF b; then\n  echo bad >&2\n  exit 1\nfi\n',
+    },
+    ({ status, output }) => {
+      assert.notEqual(status, 0, 'a continued never-failing pipeline must be reported');
+      assert.match(output, /never-fails/);
+    }
+  );
+});
+
+test('negative control: a malformed baseline entry is reported without crashing', () => {
+  const files = {
+    'src/used.jsx': "const a = 'x';\n",
+    'scripts/ok-gate.sh': '#!/usr/bin/env bash\ngrep -qF a src/used.jsx\n',
+    // Valid JSON, malformed entry: used to throw a TypeError and break --json.
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [null, 'nope', { check: 'no-negative-control' }],
+    }, null, 2),
+  };
+  withRepo(files, ({ status, output }) => {
+    assert.notEqual(status, 0, 'malformed baseline entries must be reported');
+    assert.match(output, /invalid-baseline/);
+    assert.match(output, /no-negative-control/);
+  });
+
+  const root = fixtureRepo(files);
+  try {
+    const json = runCheckerWithArgs(root, ['--json']);
+    assert.doesNotThrow(() => JSON.parse(json.output), '--json must emit a machine-readable report, not a stack trace');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('in-gate assertion programs count as control evidence', () => {
+  // A suffixed heredoc delimiter (real gates use `PY_EXPIRY`) and a standalone
+  // .mjs assertion gate both prove their own assertions.
+  const noBaseline = {
+    'scripts/gate-coverage-baseline.json': JSON.stringify({
+      owner: 'fixture', recordedAt: '2026-01-01', reason: 'fixture', entries: [],
+    }, null, 2),
+  };
+
+  withRepo(
+    {
+      ...noBaseline,
+      'src/used.jsx': "const a = 'x';\n",
+      'scripts/heredoc-gate.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        "python3 - <<'PY_EXPIRY'",
+        'import sys',
+        'assert 1 == 1',
+        'sys.exit(0)',
+        'PY_EXPIRY',
+        '',
+      ].join('\n'),
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a suffixed heredoc assertion program is a control:\n${output}`);
+    }
+  );
+
+  withRepo(
+    {
+      ...noBaseline,
+      'src/used.jsx': "const a = 'x';\n",
+      'scripts/standalone-contract.mjs': [
+        "import assert from 'node:assert/strict';",
+        'assert.deepStrictEqual(1, 1);',
+        '',
+      ].join('\n'),
+    },
+    ({ status, output }) => {
+      assert.equal(status, 0, `a standalone .mjs assertion gate is a control:\n${output}`);
+    }
+  );
+});

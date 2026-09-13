@@ -211,8 +211,8 @@ function extractAssertions(gatePath, source) {
     if (!/\bgrep\b/.test(line)) continue;
     // Only positive greps: skip the `if grep ...; then echo ... exit 1` guards.
     if (/^\s*if\s+grep\b/.test(line)) continue;
-    const grep = /grep\s+-[A-Za-z]*q[A-Za-z]*F?\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+(\S+)/.exec(line)
-      ?? /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+(\S+)/.exec(line);
+    const grep = /grep\s+-[A-Za-z]*q[A-Za-z]*F?\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/.exec(line)
+      ?? /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/.exec(line);
     if (!grep) continue;
     let target = grep[3].replace(/^["']|["']$/g, '');
     if (target.startsWith('$')) target = vars.get(target.slice(1).replace(/[{}]/g, '')) ?? '';
@@ -234,14 +234,52 @@ function extractAssertions(gatePath, source) {
  * NOT contain something. Negative-only targets used to be dropped entirely, so
  * removing their `paths:` entry went unnoticed.
  */
-function extractAssertedTargets(source) {
+/**
+ * Every repository file a gate asserts about that this analysis can reason over.
+ *
+ * Collects from BOTH directions, because "which file is this gate making a claim
+ * about?" does not depend on the claim's polarity:
+ *   - JS: assertContains / assertOrder / assertNotContains
+ *   - SH: every positive `grep`, AND every negative guard -- `if grep -qF lit path;
+ *     then fail; fi` and `! grep -qF lit path` are claims about `path` just as much
+ *     as a positive grep is. Collecting only the positive form meant a target
+ *     referenced solely by a negative guard was invisible to `asserted-orphan`.
+ *
+ * Dead-code analysis still uses `extractAssertions()`, which stays positive-only:
+ * an absence assertion cannot be satisfied by dead code.
+ */
+function extractAssertedTargets(gatePath, source) {
   const targets = new Set();
-  const constants = jsConstants(source);
-  const call = new RegExp(String.raw`assert(?:Contains|Order|NotContains)\(\s*${ASSERT_ARG}`, 'g');
-  let match;
-  while ((match = call.exec(source)) !== null) {
-    const target = resolveArgGroups(match, 1, constants);
-    if (target !== null) targets.add(target);
+
+  if (!gatePath.endsWith('.sh')) {
+    const constants = jsConstants(source);
+    const call = new RegExp(String.raw`assert(?:Contains|Order|NotContains)\(\s*${ASSERT_ARG}`, 'g');
+    let match;
+    while ((match = call.exec(source)) !== null) {
+      const target = resolveArgGroups(match, 1, constants);
+      if (target !== null) targets.add(target);
+    }
+    return targets;
+  }
+
+  const variables = shellVariables(source);
+  const resolveTarget = (raw) => {
+    let target = raw.replace(/^["']|["']$/g, '');
+    if (target.startsWith('$')) target = variables.get(target.slice(1).replace(/[{}]/g, '')) ?? '';
+    return target;
+  };
+
+  // The target stops at shell metacharacters: `if grep -qF x path; then` must yield
+  // `path`, not `path;`. Capturing `\S+` swallowed the semicolon, so existsSync
+  // failed and the target was silently dropped -- which is how the funnel gate's
+  // negative guard on the dead AuthContext stayed invisible to this check.
+  const grepPattern = /grep\s+-[A-Za-z]*q[A-Za-z]*F?\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/;
+  for (const { text } of logicalShellLines(source)) {
+    const grep = grepPattern.exec(text)
+      ?? /grep\s+-[A-Za-z]*F[A-Za-z]*q?[A-Za-z]*\s*(?:--\s*)?(['"])((?:\\.|(?!\1).)*)\1\s+([^\s;|&()]+)/.exec(text);
+    if (!grep) continue;
+    const target = resolveTarget(grep[3]);
+    if (target) targets.add(target);
   }
   return targets;
 }
@@ -285,7 +323,62 @@ function isRepoTarget(target) {
  * ------------------------------------------------------------------ */
 
 const FRONTEND_EXTENSIONS = ['', '.js', '.jsx', '.ts', '.tsx', '.mjs', '/index.js', '/index.jsx', '/index.ts', '/index.tsx'];
-const IMPORT_PATTERN = /(?:import\s[^'"]*?from\s*|import\s*|export\s[^'"]*?from\s*|require\(\s*|import\(\s*)['"]([^'"]+)['"]/g;
+/** Module extensions `asserted-orphan` will judge. Must match what the graph resolves. */
+const FRONTEND_MODULE_TARGET = /^src\/.*\.(jsx?|tsx?|mjs|cjs)$/;
+const IMPORT_PATTERN = /(?:import\s[^'"`]*?from\s*|import\s*|export\s[^'"`]*?from\s*|require\(\s*|import\(\s*)['"`]([^'"`]+)['"`]/g;
+
+/**
+ * Removes JavaScript comments while leaving string, template and regex-ish text intact.
+ *
+ * The import scan reads source text, so a commented-out import is not an import.
+ * `// import './orphan.jsx'` inside a reachable module used to mark that orphan as
+ * reachable and hide it from `asserted-orphan` -- the exact false negative the check
+ * exists to prevent. String bodies are copied verbatim so a `//` inside a URL
+ * literal is not mistaken for a comment.
+ */
+function stripJsComments(source) {
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (char === "'" || char === '"' || char === '`') {
+      const quote = char;
+      out += char;
+      i += 1;
+      while (i < source.length) {
+        if (source[i] === '\\') {
+          out += source[i] + (source[i + 1] ?? '');
+          i += 2;
+          continue;
+        }
+        out += source[i];
+        const done = source[i] === quote;
+        i += 1;
+        if (done) break;
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      const end = source.indexOf('*/', i + 2);
+      i = end === -1 ? source.length : end + 2;
+      out += ' ';
+      continue;
+    }
+
+    if (char === '/' && next === '/') {
+      const end = source.indexOf('\n', i);
+      i = end === -1 ? source.length : end;
+      continue;
+    }
+
+    out += char;
+    i += 1;
+  }
+  return out;
+}
 
 let frontendGraphCache = null;
 
@@ -299,10 +392,13 @@ let frontendGraphCache = null;
  * `/reembolsos/` defect: a gate asserted an orphaned React screen while the
  * shipped page was static HTML in `public/`.
  *
- * Resolution is deliberately conservative: a specifier that cannot be resolved
- * is treated as external and skipped, and any failure to read a file leaves its
- * importers reachable rather than inventing an orphan. False negatives here are
- * cheap; a false orphan accusation is not.
+ * Resolution is deliberately conservative, because a false orphan accusation is
+ * worse than a missed one:
+ *   - comments are stripped first, so a commented-out import does not count;
+ *   - a specifier that cannot be resolved is treated as external and skipped;
+ *   - a COMPUTED specifier (`./locales/${lang}.json`) marks every module in its
+ *     static prefix directory as reachable, since the code can load any of them;
+ *   - if there is no entry point at all the whole analysis is skipped with a note.
  */
 function frontendReachableModules() {
   if (frontendGraphCache) return frontendGraphCache;
@@ -325,6 +421,26 @@ function frontendReachableModules() {
     return null;
   };
 
+  /** Every module under a directory, for computed specifiers. */
+  const modulesUnder = (dir) => {
+    const found = [];
+    const walk = (current) => {
+      let entries;
+      try {
+        entries = readdirSync(join(ROOT, current), { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entryInfo of entries) {
+        const path = `${current}/${entryInfo.name}`;
+        if (entryInfo.isDirectory()) walk(path);
+        else if (/\.(jsx?|tsx?|mjs|cjs)$/.test(entryInfo.name)) found.push(path);
+      }
+    };
+    walk(dir);
+    return found;
+  };
+
   const queue = [entry];
   while (queue.length > 0) {
     const file = queue.pop();
@@ -332,12 +448,31 @@ function frontendReachableModules() {
     reachable.add(file);
     let source;
     try {
-      source = readRepoFile(file);
+      source = stripJsComments(readRepoFile(file));
     } catch {
       continue;
     }
     for (const match of source.matchAll(IMPORT_PATTERN)) {
-      const resolved = resolveSpecifier(file, match[1]);
+      const specifier = match[1];
+
+      if (specifier.includes('${')) {
+        // Computed specifier: the code can load any file the static prefix can
+        // name, so treat the whole prefix directory as reachable. Marking a live
+        // module as an orphan would accuse a gate of observing nothing when it is
+        // observing the shipped code.
+        const prefix = specifier.slice(0, specifier.indexOf('${'));
+        const prefixDir = prefix.slice(0, prefix.lastIndexOf('/'));
+        if (prefixDir === '') continue;
+        const resolvedDir = prefix.startsWith('.')
+          ? join(dirname(file), prefixDir)
+          : prefixDir;
+        for (const candidate of modulesUnder(resolvedDir)) {
+          if (!reachable.has(candidate)) queue.push(candidate);
+        }
+        continue;
+      }
+
+      const resolved = resolveSpecifier(file, specifier);
       if (resolved !== null && !reachable.has(resolved)) queue.push(resolved);
     }
   }
@@ -356,10 +491,10 @@ function checkAssertedOrphans() {
     const source = readRepoFile(gate);
     const targets = new Set();
     for (const { target } of extractAssertions(gate, source)) targets.add(target);
-    for (const target of extractAssertedTargets(source)) targets.add(target);
+    for (const target of extractAssertedTargets(gate, source)) targets.add(target);
 
     for (const target of targets) {
-      if (!/^src\/.*\.(jsx?|tsx?)$/.test(target)) continue;
+      if (!FRONTEND_MODULE_TARGET.test(target)) continue;
       if (!existsSync(join(ROOT, target))) continue;
       if (reachable.has(target)) continue;
       hits.push({
@@ -383,6 +518,37 @@ function stripShellComments(source) {
 }
 
 /**
+ * Shell LOGICAL commands, with line continuations joined.
+ *
+ * Scanning physical lines misses a pipeline written across a continuation:
+ *
+ *     if grep -qF x file \
+ *        | grep -qF y; then
+ *
+ * is the same never-succeeding pipeline as the one-line form, but neither
+ * physical line contains both greps. Each entry carries the 1-based PHYSICAL line
+ * number where the logical command starts, so reports still point at real lines.
+ */
+function logicalShellLines(source) {
+  const result = [];
+  let buffer = '';
+  let startLine = 1;
+
+  source.split('\n').forEach((raw, index) => {
+    const physical = index + 1;
+    if (buffer === '') startLine = physical;
+    const continued = /\\\s*$/.test(raw);
+    buffer += continued ? raw.replace(/\\\s*$/, ' ') : raw;
+    if (continued) return;
+    result.push({ text: stripShellComment(buffer), line: startLine });
+    buffer = '';
+  });
+
+  if (buffer !== '') result.push({ text: stripShellComment(buffer), line: startLine });
+  return result;
+}
+
+/**
  * `grep -q ... | grep -q ...` can never succeed.
  *
  * `grep -q` writes nothing to stdout, so the right-hand side always reads an
@@ -393,18 +559,23 @@ function stripShellComments(source) {
  */
 function checkNeverFails() {
   const hits = [];
-  const pipedQuietGrep = /(?:^|[;&|(]\s*|\s)(?:if\s+|elif\s+|while\s+)?grep\s+-[A-Za-z]*q[A-Za-z]*[^|\n]*\|[^|\n]*grep\s+-[A-Za-z]*q/;
+  const pipedQuietGrep = /(?:^|[;&|(]\s*|\s)(?:if\s+|elif\s+|while\s+)?grep\s+-[A-Za-z]*q[A-Za-z]*[^|]*\|[^|]*grep\s+-[A-Za-z]*q/;
   for (const gate of gateFiles()) {
-    const source = stripShellComments(readRepoFile(gate));
-    source.split('\n').forEach((line, index) => {
-      if (!pipedQuietGrep.test(line)) return;
+    // Shell pipelines are a shell shape. Applying this scan to `.mjs` gates means
+    // parsing JavaScript as shell, which produced a false positive on this very
+    // file's docstring the moment continuations were joined. A Node gate that
+    // shells out to a piped grep is a documented limit, not something to guess at.
+    if (!gate.endsWith('.sh')) continue;
+    // Logical commands, so a pipeline continued with `\` cannot escape the check.
+    for (const { text, line } of logicalShellLines(readRepoFile(gate))) {
+      if (!pipedQuietGrep.test(text)) continue;
       hits.push({
         check: 'never-fails',
         gate,
-        target: `${gate}:${index + 1}`,
-        detail: `${gate}:${index + 1} pipes \`grep -q\` into \`grep -q\`; the left side writes no stdout, so this condition can never be true and the check cannot fail`,
+        target: `${gate}:${line}`,
+        detail: `${gate}:${line} pipes \`grep -q\` into \`grep -q\`; the left side writes no stdout, so this condition can never be true and the check cannot fail`,
       });
-    });
+    }
   }
   return hits;
 }
@@ -412,12 +583,20 @@ function checkNeverFails() {
 /**
  * Gates with no evidence that anything proves they can fail.
  *
- * Three proxies, in decreasing strength: a companion `scripts/<name>.test.*`
- * file; a `tests/**\/*.test.mjs` that names the gate; or an in-gate self-test
- * (the gate runs `node --test` or an inline assertion program). A gate matching
- * none of them may still have a control this heuristic cannot see, which is why
- * the existing population is grandfathered through the baseline file rather than
- * reported as broken.
+ * Proxies, in decreasing strength:
+ *   1. a companion `scripts/<name>.test.*` file;
+ *   2. a `tests/**\/*.test.mjs` that names the gate;
+ *   3. an in-gate proof -- the gate runs `node --test`, or it is itself an
+ *      assertion program (`scripts/vertical-seo-contract.mjs` style), or it embeds
+ *      one in a heredoc.
+ *
+ * The heredoc delimiter is matched by PREFIX, not exactly: real gates use suffixed
+ * delimiters such as `PY_EXPIRY`, and requiring exactly `PY`/`JS`/`NODE` reported
+ * gates that do prove their own assertions as having no control.
+ *
+ * A gate matching none of these may still have a control this heuristic cannot
+ * see, which is why the existing population is grandfathered through the baseline
+ * file rather than reported as broken.
  */
 function gateHasControlEvidence(gate) {
   const base = gate.split('/').pop();
@@ -440,8 +619,16 @@ function gateHasControlEvidence(gate) {
 
   const source = readRepoFile(gate);
   if (/\bnode --test\b/.test(source)) return 'in-gate node --test';
-  if (/<<\s*['"]?(?:PY|JS|NODE)\b/.test(source) && /\b(?:assert|deepEqual|sys\.exit)\b/.test(source)) {
-    return 'in-gate assertion program';
+
+  const assertsProgrammatically = /\bassert\s*[.(]|\bdeepStrictEqual\b|\bdeepEqual\b|\bstrictEqual\b|\bsys\.exit\(/.test(source);
+
+  // A Node assertion gate: the file IS the program that proves its assertions.
+  if (/\.(mjs|cjs)$/.test(gate) && assertsProgrammatically) return 'standalone assertion program';
+
+  // An embedded assertion program, with or without a suffixed delimiter.
+  const heredoc = /<<-?\s*['"]?([A-Za-z_][A-Za-z0-9_]*)['"]?/.exec(source);
+  if (heredoc && /^(PY|JS|NODE|SH)/i.test(heredoc[1]) && assertsProgrammatically) {
+    return `in-gate assertion program (${heredoc[1]})`;
   }
   return null;
 }
@@ -1075,7 +1262,7 @@ function checkGateTriggerCoverage() {
   // positive or negative: root files and workflow files count too, otherwise
   // dropping their trigger goes unnoticed.
   const targets = new Set();
-  for (const target of extractAssertedTargets(guardSource)) {
+  for (const target of extractAssertedTargets(GUARD, guardSource)) {
     if (isRepoTarget(target)) targets.add(target);
   }
   for (const match of guardSource.matchAll(/(?:read|readFileSync)\(\s*'([^']+)'/g)) {
@@ -1176,7 +1363,12 @@ const allHits = [
 
 // The baseline grandfathers an existing population. It may not grow: any finding
 // not listed still fails, and an entry that no longer matches a finding is stale.
-const baselineEntries = Array.isArray(baseline?.entries) ? baseline.entries : [];
+// Malformed entries (null, a string, an object with no `gate`) are reported as
+// invalid-baseline by loadBaseline(), so they are dropped here rather than
+// dereferenced: a `"entries": [null]` used to throw a TypeError and make --json
+// emit a stack trace instead of its documented machine-readable report.
+const baselineEntries = (Array.isArray(baseline?.entries) ? baseline.entries : [])
+  .filter((entry) => entry !== null && typeof entry === 'object' && !Array.isArray(entry) && typeof entry.gate === 'string');
 const baselineKeys = new Set(baselineEntries.map((e) => `${e.check}\u0000${e.gate}\u0000${e.target ?? ''}`));
 const usedBaseline = new Set();
 const afterBaseline = [];

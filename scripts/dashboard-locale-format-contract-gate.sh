@@ -27,14 +27,23 @@ if grep -Eq "en-US|es-MX|pt-BR|ru-RU|toLocale(DateString|String)\\(" "$DASH" "$S
   echo "Dashboard surfaces must use the shared locale formatter" >&2
   exit 1
 fi
-# NOTE: the left side must NOT use `grep -q`. `grep -q` writes nothing to stdout,
-# so piping it into another `grep -q` produced an always-empty stream and this
-# guard could never fire (found by scripts/gate-integrity-check.mjs, RC-4 /
-# retrospective-2 case 5). Without `-q` the left side emits its matches and the
-# guard behaves as intended. Verified on the current sources: the corrected
-# pipeline still does not fire, so the gate's result is unchanged and the check is
-# now capable of failing.
-if grep -E "\{t\.[A-Za-z0-9_]+\}" "$DASH" | grep -q "'"; then
+# NOTE: this must be a SINGLE grep, not a pipeline. Two defects were found here by
+# scripts/gate-integrity-check.mjs:
+#   1. `grep -Eq ... | grep -q "'"` -- the left `-q` writes nothing to stdout, so
+#      the stream was always empty and the guard could never fire (RC-4 /
+#      retrospective-2 case 5).
+#   2. Repairing that to `grep -E ... | grep -q "'"` was still not enough under
+#      `set -o pipefail`, which this script sets. The downstream `grep -q` exits on
+#      its first match, the upstream grep takes SIGPIPE and returns 141, and
+#      pipefail makes the pipeline non-zero -- so the guard was skipped exactly
+#      when the file was large enough to keep the pipe busy. Measured on a 20,001
+#      line control with a quote on line 1 and 20,000 matching lines after:
+#      pipeline rc=141 under pipefail, rc=0 without. The guard missed a real match.
+#
+# One grep matching "a {t.x} expression AND a quote on the same line", in either
+# order, has no pipeline and therefore no SIGPIPE. Verified: it fires on that
+# control and still does not fire on the current sources.
+if grep -Eq "(\{t\.[A-Za-z0-9_]+\}[^']*')|('[^']*\{t\.[A-Za-z0-9_]+\})" "$DASH"; then
   echo "Dashboard must not contain stringified translation expressions" >&2
   exit 1
 fi

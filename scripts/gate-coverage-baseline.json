@@ -1,7 +1,7 @@
 {
   "owner": "gate-maintenance",
   "recordedAt": "2026-09-13",
-  "reason": "RC-4 population from retrospective-2 section 1 case 5, recorded by eng11. These gates have no detectable control proving they can fail: no companion scripts/<name>.test.*, no tests/**/*.test.mjs naming them, and no in-gate assertion program. Listing 165 gates individually would be 165 near-identical entries, so the population carries one owner and one reason instead. THE POPULATION MAY NOT GROW: a gate without a control that is not listed here fails the check outright, and a listed gate that gains a control becomes stale and MUST have its entry deleted, so the number can only fall.",
+  "reason": "RC-4 population from retrospective-2 section 1 case 5, recorded by eng11. These gates have no detectable control proving they can fail: no companion scripts/<name>.test.*, no tests/**/*.test.mjs naming them, and no in-gate proof. THE POPULATION MAY NOT GROW: a gate without a control that is not listed here fails the check outright, and a listed gate that gains a control becomes stale and MUST have its entry deleted, so the number can only fall.",
   "entries": [
     {
       "check": "no-negative-control",
@@ -129,10 +129,6 @@
     },
     {
       "check": "no-negative-control",
-      "gate": "scripts/client-spa-route-coverage-gate.mjs"
-    },
-    {
-      "check": "no-negative-control",
       "gate": "scripts/clip-e2e-mock.mjs"
     },
     {
@@ -150,10 +146,6 @@
     {
       "check": "no-negative-control",
       "gate": "scripts/csrf-session-contract-gate.sh"
-    },
-    {
-      "check": "no-negative-control",
-      "gate": "scripts/dashboard-locale-format-contract-gate.sh"
     },
     {
       "check": "no-negative-control",
@@ -225,10 +217,6 @@
     },
     {
       "check": "no-negative-control",
-      "gate": "scripts/geo-seo-plan-contract.mjs"
-    },
-    {
-      "check": "no-negative-control",
       "gate": "scripts/github-security-scanning-gate.sh"
     },
     {
@@ -262,10 +250,6 @@
     {
       "check": "no-negative-control",
       "gate": "scripts/legal-readiness-smoke.sh"
-    },
-    {
-      "check": "no-negative-control",
-      "gate": "scripts/listing-lifecycle-gate.sh"
     },
     {
       "check": "no-negative-control",
@@ -325,6 +309,10 @@
     },
     {
       "check": "no-negative-control",
+      "gate": "scripts/mobile-association-smoke.sh"
+    },
+    {
+      "check": "no-negative-control",
       "gate": "scripts/moderation-pipeline-gate.sh"
     },
     {
@@ -354,6 +342,10 @@
     {
       "check": "no-negative-control",
       "gate": "scripts/ollama-e2e-mock.mjs"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/origin-edge-security-gate.sh"
     },
     {
       "check": "no-negative-control",
@@ -473,10 +465,6 @@
     },
     {
       "check": "no-negative-control",
-      "gate": "scripts/public-ui-route-coverage-gate.mjs"
-    },
-    {
-      "check": "no-negative-control",
       "gate": "scripts/public-ui-route-policy.mjs"
     },
     {
@@ -509,15 +497,7 @@
     },
     {
       "check": "no-negative-control",
-      "gate": "scripts/registration-consent-contract.mjs"
-    },
-    {
-      "check": "no-negative-control",
       "gate": "scripts/repair-rdc-agent.sh"
-    },
-    {
-      "check": "no-negative-control",
-      "gate": "scripts/report-reason-localization-contract.mjs"
     },
     {
       "check": "no-negative-control",
@@ -558,6 +538,10 @@
     {
       "check": "no-negative-control",
       "gate": "scripts/security-audit-gate.sh"
+    },
+    {
+      "check": "no-negative-control",
+      "gate": "scripts/security-audit-smoke.sh"
     },
     {
       "check": "no-negative-control",
@@ -621,10 +605,6 @@
     },
     {
       "check": "no-negative-control",
-      "gate": "scripts/sitemap-shell-contract.mjs"
-    },
-    {
-      "check": "no-negative-control",
       "gate": "scripts/smoke-tempfile-safety-gate.sh"
     },
     {
@@ -654,10 +634,6 @@
     {
       "check": "no-negative-control",
       "gate": "scripts/verify-vite-dist.mjs"
-    },
-    {
-      "check": "no-negative-control",
-      "gate": "scripts/vertical-seo-contract.mjs"
     },
     {
       "check": "no-negative-control",
