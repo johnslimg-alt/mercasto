@@ -47,13 +47,14 @@ jobs:
           done
           cat /tmp/consent-preview.log; exit 1
 
-      - name: Repeated critical-shard consent spec (full file, retries=0)
+      - name: Repeated withdrawal test only (80 iterations, retries=0)
         continue-on-error: true
         run: |
           set -o pipefail
           BASE_URL=http://127.0.0.1:4181 CI=1 npx playwright test \
             tests/e2e/consent-gated-vendors.spec.js \
-            --project=chromium-desktop --workers=1 --retries=0 --repeat-each=12 \
+            -g "withdrawing consent" \
+            --project=chromium-desktop --workers=1 --retries=0 --repeat-each=80 \
             --trace=on --reporter=list 2>&1 | tee /tmp/consent-repeat.log
 
       - name: Summarize
