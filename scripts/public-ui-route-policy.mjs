@@ -26,8 +26,22 @@ export const backendRedirectRoutes = browserRoutes
   .map(route => route.uri)
   .sort();
 
+// Composited social previews (`/share/ads/{id}/og.jpg`) answer with image bytes, not a
+// browser screen, so they have no visual sample resolver and must never be demanded as
+// one. Classified explicitly -- exactly like the sitemap XML routes -- so that adding
+// another non-visual dynamic route stays a deliberate, reviewed change instead of
+// silently widening the set of routes the visual matrix claims to cover.
+export const ogPreviewRoutes = browserRoutes
+  .filter(route => route.action.includes('ShareOgImageController'))
+  .map(route => route.uri)
+  .sort();
+
 export const backendDynamicRouteTemplates = browserRoutes
-  .filter(route => route.uri.includes('{') && !route.action.includes('SitemapController'))
+  .filter(route => (
+    route.uri.includes('{')
+    && !route.action.includes('SitemapController')
+    && !route.action.includes('ShareOgImageController')
+  ))
   .map(route => route.uri)
   .sort();
 
