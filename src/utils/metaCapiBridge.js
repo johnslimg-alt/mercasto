@@ -6,22 +6,26 @@ const META_API_BASE = '/api/meta/events';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
 const META_BROWSER_SENT_MARKER = '__mercastoMetaBrowserSent';
 
-// Deferred replay is only for events raised while consent was granted. Items
-// stamped before a grant (or pushed while consent was unknown) must never be
-// delivered later: consent cannot retroactively authorise that collection.
-function isReplayableConsentState(item = {}) {
+// Consent invariant for every vendor-side delivery: only an explicit
+// `consent_state === 'granted'` stamp is deliverable or replayable. Missing,
+// empty, unknown and unstampable (frozen) items are treated as pre-consent and
+// must never reach a vendor. The first-party server relay is the documented
+// exception (decision D-111) and is not gated by this check.
+function isGrantedConsentState(item = {}) {
   return String(item?.consent_state || '').toLowerCase() === 'granted';
 }
 
-// Stamps an item with the consent state at push time, so a later replay can tell
-// which side of the grant it came from. Already stamped items are untouched.
+// Stamps an item with the consent state at push time, so delivery and replay can
+// tell which side of the grant it came from. Already stamped items are
+// untouched; an item that cannot be stamped (frozen/immutable) stays unstamped
+// and is therefore never delivered or replayed.
 function stampConsentState(item = {}) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
   if (item.consent_state) return item;
   try {
     item.consent_state = getVendorConsentState();
   } catch {
-    // Frozen or exotic items stay unstamped and are never replayed.
+    // Frozen or exotic items stay unstamped: not granted, never delivered.
   }
   return item;
 }
@@ -150,7 +154,7 @@ function sendBrowserEvent(metaConfig, payload, eventID) {
   return true;
 }
 
-function sendMappedEvent(metaConfig, item = {}) {
+function sendMappedEvent(metaConfig, item = {}, { browserAllowed = true } = {}) {
   const payload = buildPayload(item);
   const isReg = metaConfig.metaName === 'CompleteRegistration';
   const isPostAd = metaConfig.metaName === 'PostAd';
@@ -176,7 +180,8 @@ function sendMappedEvent(metaConfig, item = {}) {
     // Analytics must never block the user action when a frozen object is supplied.
   }
 
-  if (sendBrowserEvent(metaConfig, serverPayload, id)) {
+  // Browser copy: consented items only (see isGrantedConsentState).
+  if (browserAllowed && sendBrowserEvent(metaConfig, serverPayload, id)) {
     try {
       item[META_BROWSER_SENT_MARKER] = true;
     } catch {
@@ -184,6 +189,9 @@ function sendMappedEvent(metaConfig, item = {}) {
     }
   }
 
+  // Server relay: intentionally NOT gated by cookie consent (D-111). Mapped
+  // events keep flowing to POST /api/meta/events/* for every visitor and the
+  // server's own consent handling decides what leaves it.
   if (metaConfig.server !== false && metaConfig.endpoint) {
     void sendServerEvent(metaConfig.endpoint, serverPayload);
   }
@@ -194,11 +202,10 @@ function handleDataLayerItem(item = {}) {
   const normalizedEvent = String(item.event || '').trim().toLowerCase();
   const metaConfig = EVENT_MAP[normalizedEvent];
   if (!metaConfig) return;
-  // No consent check on this path on purpose: the browser Pixel copy is consent
-  // gated inside sendBrowserEvent(), while the server CAPI relay must keep
-  // receiving mapped funnel events for every visitor. Only deferred browser
-  // replay (replayMetaBrowserEvents) filters on the consent stamp.
-  sendMappedEvent(metaConfig, item);
+  // Browser Pixel copy requires an explicit granted stamp; missing, unknown and
+  // unstampable items are pre-consent and never reach Meta's browser pixel. The
+  // server relay inside sendMappedEvent stays ungated (D-111).
+  sendMappedEvent(metaConfig, item, { browserAllowed: isGrantedConsentState(item) });
 }
 
 function isRegistrationRequest(input, init = {}) {
@@ -318,10 +325,12 @@ export function installMetaCapiBridge() {
   patchRegistrationFetch();
 
   window.dataLayer = window.dataLayer || [];
-  // Items already in the layer are stamped with the state at bridge install time
-  // (the first-party bootstrap runs before the visitor decides), so a later
-  // replay can never mistake them for consented events.
-  window.dataLayer.forEach((item) => handleDataLayerItem(stampConsentState(item)));
+  // History is NOT stamped here. Labelling an old item with the state observed
+  // at install time would mark pre-consent events as granted whenever the
+  // visitor accepted before this bridge loaded, and they would then be replayed.
+  // Unstamped history therefore stays unstamped and is never delivered to a
+  // vendor; only the items pushed from now on are stamped, at push time.
+  window.dataLayer.forEach((item) => handleDataLayerItem(item));
 
   const originalPush = window.dataLayer.push.bind(window.dataLayer);
   window.dataLayer.push = (...items) => {
@@ -339,9 +348,10 @@ export function replayMetaBrowserEvents() {
 
   dataLayer.forEach((item = {}) => {
     if (!item || typeof item !== 'object' || item[META_BROWSER_SENT_MARKER]) return;
-    // Deferred replay is consented-only: events raised before the grant stay
-    // local and are never sent to Meta after the visitor agrees.
-    if (!isReplayableConsentState(item)) return;
+    // Deferred replay is consented-only: only an explicit granted stamp is
+    // replayable, so events raised before the grant (or items that could not be
+    // stamped) stay local and are never sent to Meta after the visitor agrees.
+    if (!isGrantedConsentState(item)) return;
     const normalizedEvent = String(item.event || '').trim().toLowerCase();
     const metaConfig = EVENT_MAP[normalizedEvent];
     if (!metaConfig) return;

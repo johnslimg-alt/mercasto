@@ -471,6 +471,54 @@ test('a grant is measured with exactly one page view', async () => {
   }
 });
 
+test('the OpenAI bridge never measures history that predates the grant', async () => {
+  const env = installFakeBrowser({ consent: 'all' });
+
+  try {
+    const openAiCalls = [];
+    // The SDK queue stub is what measure() pushes to when the pixel is configured.
+    env.window.oaiq = Object.assign((...args) => openAiCalls.push(args), { q: [] });
+
+    // History that predates this page's grant: one pre-consent item, one granted.
+    env.window.dataLayer.push({ event: 'page_view', page_path: '/pre-consent', consent_state: 'unknown' });
+    env.window.dataLayer.push({ event: 'page_view', page_path: '/granted', consent_state: 'granted' });
+
+    moduleCounter += 1;
+    const { installOpenAIAdsBridge } = await import(`../src/utils/openaiAdsBridge.js?case=${moduleCounter}`);
+    installOpenAIAdsBridge();
+
+    const measuredIds = openAiCalls
+      .filter(([method]) => method === 'measure')
+      .map(([, , data]) => data?.contents?.[0]?.id || '');
+    assert.equal(measuredIds.includes('/pre-consent'), false, 'a pre-consent item must never be measured');
+    assert.equal(measuredIds.includes('/granted'), true, 'a granted item is still measured');
+  } finally {
+    env.restore();
+  }
+});
+
+test('stale attribution from an earlier release is not restored for an already-refused visitor', async () => {
+  const env = installFakeBrowser({ consent: 'essential', href: 'https://mercasto.test/' });
+  const stale = JSON.stringify({ source: 'google', campaign: 'old_campaign', capturedAt: Date.now() });
+  env.localStore.set(ATTRIBUTION_KEYS[0], stale);
+  env.localStore.set(ATTRIBUTION_KEYS[1], stale);
+  env.sessionStore.set(ATTRIBUTION_KEYS[2], stale);
+
+  try {
+    const { installCampaignAttribution, getCampaignAttribution } = await loadCampaignAttribution();
+    installCampaignAttribution();
+    assert.deepEqual(storedAttributionKeys(env), [], 'startup cleanup drops what an older release stored');
+
+    // The visitor changes their mind on a direct visit: no old campaign is revived.
+    env.setConsent('all');
+    assert.deepEqual(storedAttributionKeys(env), [], 'a direct grant must not resurrect stale attribution');
+    assert.equal(getCampaignAttribution().attribution_campaign, '');
+    assert.equal(getCampaignAttribution().first_touch_campaign, '');
+  } finally {
+    env.restore();
+  }
+});
+
 test('events raised before consent are never delivered after the grant', async () => {
   const env = installFakeBrowser({ consent: null });
 

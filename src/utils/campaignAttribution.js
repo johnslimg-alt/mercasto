@@ -14,6 +14,8 @@ const ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 // campaign of that page load), which is re-captured from the new URL/referrer.
 let pendingFirstTouch = null;
 let pendingLastTouch = null;
+// True once this page session persisted attribution under a grant.
+let persistedWhileGranted = false;
 
 const PARAMS = {
   source: 'utm_source',
@@ -138,6 +140,11 @@ export function attributionFromUrl(rawUrl = window.location.href, allowReferrer 
 function persistAttribution(attribution) {
   if (!attribution) return;
 
+  // Persistence only happens under a grant (capture gate or flush), so this marks
+  // that a later refusal is a live granted -> denied withdrawal whose values are
+  // worth keeping in memory for a possible re-grant.
+  persistedWhileGranted = true;
+
   const firstTouch = safeRead(localStorage, FIRST_TOUCH_KEY);
   if (!firstTouch) safeWrite(localStorage, FIRST_TOUCH_KEY, attribution);
 
@@ -165,10 +172,13 @@ function flushPendingAttribution() {
   if (last && last !== first) persistAttribution(last);
 }
 
-// A refusal erases campaign storage written by an earlier session. The values
-// are moved into the in-memory capture first (memory only, never persisted), so
-// withdrawing and then granting again on the same landing page keeps its
-// attribution instead of losing the campaign context.
+// A refusal erases campaign storage written by an earlier session. For a live
+// granted -> denied withdrawal the values are first moved into the in-memory
+// capture (memory only, never persisted), so withdrawing and granting again on
+// the same landing page keeps its attribution. That preservation is deliberately
+// limited to withdrawals this page session actually granted: copying stale
+// attribution during the initial cleanup of an already-refused visitor would
+// resurrect an old campaign for their next grant and misattribute the session.
 function preservePendingFromStorage() {
   if (!pendingFirstTouch) {
     const storedFirst = safeRead(localStorage, FIRST_TOUCH_KEY);
@@ -180,8 +190,8 @@ function preservePendingFromStorage() {
   }
 }
 
-function clearStoredAttribution() {
-  preservePendingFromStorage();
+function clearStoredAttribution({ preserve = false } = {}) {
+  if (preserve && persistedWhileGranted) preservePendingFromStorage();
 
   try {
     localStorage.removeItem(FIRST_TOUCH_KEY);
@@ -296,13 +306,17 @@ export function installCampaignAttribution() {
   window.__mercastoCampaignAttribution = getCampaignAttribution;
 
   // Consent gate: attribute storage is written only after a grant. A visitor who
-  // already refused starts clean, and a later grant flushes the in-memory capture.
+  // already refused starts clean (initial cleanup, nothing preserved), and a
+  // later grant flushes the in-memory capture.
   if (getVendorConsentState() === 'denied') clearStoredAttribution();
   subscribeTrackingConsent((state) => {
     if (state === 'granted') {
       flushPendingAttribution();
       return;
     }
-    if (state === 'denied') clearStoredAttribution();
+    if (state === 'denied') {
+      // Live withdrawal: keep this session's values in memory for a re-grant.
+      clearStoredAttribution({ preserve: true });
+    }
   });
 }
