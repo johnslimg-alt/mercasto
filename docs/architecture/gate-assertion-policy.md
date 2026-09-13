@@ -86,6 +86,42 @@ When a text assertion really is the only option, make it robust:
 - Never assert line counts or exact occurrence counts that a legitimate addition breaks.
 - Never pin a comment.
 
+### RC-3 for the database engine: a suite that runs on a different engine
+
+The same root cause appears one layer down, where the observation surface is not a file
+but a database engine.
+
+`backend/phpunit.xml:27-28` forces `DB_CONNECTION=sqlite` and `DB_DATABASE=:memory:`. The
+migration suite therefore proves every migration against SQLite while production executes
+the same migrations against PostgreSQL 18.6. SQLite does not enforce foreign keys unless
+they are switched on, has no lock levels, no `ACCESS EXCLUSIVE`, no real
+`ALTER COLUMN ... TYPE` and no enum types, so the engine under test cannot express the
+failures that matter. Three migrations that had passed the suite were wrong on PostgreSQL
+the first time they were applied there:
+
+- one re-created `user_consents.user_id` as `ON DELETE SET NULL` under an `ACCESS
+  EXCLUSIVE` lock, and its `down()` deleted consent rows to restore the old `NOT NULL`;
+- one backfill wrote `fee_amount = 0.00` and `fee_rate_applied = 0.0000` for every settled
+  payment, because the rate it reads resolves empty and the fill-only backfill has no
+  re-run path.
+
+The rule is unchanged: assert against the artifact that is actually delivered. For a
+migration that artifact is the PostgreSQL schema, so a gate over migration *source* is a
+text assertion about behaviour and is not acceptable on its own. Run the migration on
+PostgreSQL and assert the resulting catalog:
+
+```bash
+bash scripts/verify-migrations-postgres.sh
+```
+
+See `docs/verification-gates.md` §12. The gate's own control,
+`scripts/verify-migrations-postgres.test.sh`, exists for RC-4: it installs four deliberately
+broken migrations — one purely additive control, one that cannot apply, one that is not
+idempotent, one whose `down()` deletes records — and requires the gate to pass the first
+and fail the other three with a diagnostic naming the defect.
+`.github/workflows/migration-postgres-gate.yml` runs that control before it trusts the
+gate's output, because a gate that cannot fail cannot protect anything.
+
 ## Root causes covered (retrospective-2)
 
 Retrospective 2 established that "a check that cannot see what it claims to protect"
