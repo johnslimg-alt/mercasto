@@ -112,6 +112,15 @@ class ShareAdCardTest extends TestCase
         $response->assertDontSee('desgaste diar', false);
     }
 
+    /**
+     * The advertised og:image is the composited 1200x630 preview, not the stored
+     * upload, so these are the dimensions that must be declared. Read out of the
+     * SERVED HTML, and then read again out of the bytes that URL actually serves -
+     * a declaration that disagrees with the payload is worse than none.
+     *
+     * The stored photo here is a 512x512 png, deliberately unlike the frame size:
+     * advertising 512 would mean the raw photo had leaked back into og:image.
+     */
     public function test_share_card_declares_real_dimensions_for_local_storage_photos(): void
     {
         $publicPath = sys_get_temp_dir() . '/mercasto-share-card-' . uniqid();
@@ -124,9 +133,19 @@ class ShareAdCardTest extends TestCase
 
             $response = $this->get("https://mercasto.test/share/ads/{$ad->id}");
 
-            $response->assertSee('<meta property="og:image" content="https://mercasto.test/storage/ads/photo.png">', false);
-            $response->assertSee('<meta property="og:image:width" content="512">', false);
-            $response->assertSee('<meta property="og:image:height" content="512">', false);
+            $response->assertOk();
+            $response->assertSee('<meta property="og:image" content="https://mercasto.test/share/ads/'
+                . $ad->id . '/og.jpg?v=', false);
+            $response->assertSee('<meta property="og:image:width" content="1200">', false);
+            $response->assertSee('<meta property="og:image:height" content="630">', false);
+            $response->assertDontSee('<meta property="og:image:width" content="512">', false);
+
+            $image = $this->get("https://mercasto.test/share/ads/{$ad->id}/og.jpg");
+            $image->assertOk();
+
+            $dimensions = getimagesizefromstring((string) $image->getContent());
+            $this->assertIsArray($dimensions);
+            $this->assertSame([1200, 630], [(int) $dimensions[0], (int) $dimensions[1]]);
         } finally {
             @unlink($publicPath . '/storage/ads/photo.png');
             @rmdir($publicPath . '/storage/ads');
@@ -145,6 +164,13 @@ class ShareAdCardTest extends TestCase
         $response->assertDontSee('og:image:width', false);
     }
 
+    /**
+     * A traversal path cannot be read, so it cannot be composited: the card must
+     * degrade to the branded 1200x630 preview and must never advertise the
+     * traversal target's size. The important half of this test is unchanged - no
+     * unverifiable dimensions - but the URL is now the composer's, not the raw
+     * path, and the size that is declared is the known frame size of that route.
+     */
     public function test_share_card_does_not_follow_traversal_paths_when_resolving_dimensions(): void
     {
         $ad = $this->activeAd(['image_url' => 'storage/../../../etc/passwd']);
@@ -152,7 +178,11 @@ class ShareAdCardTest extends TestCase
         $response = $this->get("https://mercasto.test/share/ads/{$ad->id}");
 
         $response->assertOk();
-        $response->assertDontSee('og:image:width', false);
+        $response->assertDontSee('/etc/passwd', false);
+        $response->assertSee('<meta property="og:image" content="https://mercasto.test/share/ads/'
+            . $ad->id . '/og.jpg?v=brand"', false);
+        $response->assertSee('<meta property="og:image:width" content="1200"', false);
+        $response->assertSee('<meta property="og:image:height" content="630"', false);
     }
 
     public function test_share_card_uses_the_branded_card_when_the_listing_has_no_photo(): void
@@ -161,8 +191,11 @@ class ShareAdCardTest extends TestCase
 
         $response = $this->get("https://mercasto.test/share/ads/{$ad->id}");
 
-        // Never the square app icon: it is below the large-preview minimum.
-        $response->assertSee('<meta property="og:image" content="https://mercasto.test/og-default-1200x630.jpg">', false);
+        // Never the square app icon: it is below the large-preview minimum. A listing
+        // with no photo is composable (the branded card IS the result), so the URL is
+        // the preview route with the deterministic `brand` token, not a static asset.
+        $response->assertSee('<meta property="og:image" content="https://mercasto.test/share/ads/'
+            . $ad->id . '/og.jpg?v=brand"', false);
         $response->assertDontSee('icon-512x512.png', false);
     }
 
@@ -205,10 +238,11 @@ class ShareAdCardTest extends TestCase
     }
 
     /**
-     * Root-level paths must never win dimensions by pattern match alone. Production
-     * serves the SPA shell with HTTP 200 for unknown root paths, so a naive
-     * "does this URL resolve" check would happily advertise a preview size for an
-     * HTML document.
+     * Root-level paths must never be composited. Production serves the SPA shell
+     * with HTTP 200 for unknown root paths, so a naive "does this URL resolve"
+     * check would happily advertise a preview size for an HTML document. The
+     * composer refuses anything that is not a readable storage path, so these ads
+     * fall to the branded card - whose 1200x630 size is real and is declared.
      */
     public function test_share_card_does_not_advertise_dimensions_for_other_public_assets(): void
     {
@@ -218,7 +252,9 @@ class ShareAdCardTest extends TestCase
             $response = $this->get("https://mercasto.test/share/ads/{$ad->id}");
 
             $response->assertOk();
-            $response->assertDontSee('og:image:width', false);
+            $response->assertDontSee('content="https://mercasto.test' . $path . '"', false);
+            $response->assertSee('<meta property="og:image:width" content="1200">', false);
+            $response->assertSee('<meta property="og:image:height" content="630">', false);
         }
     }
 

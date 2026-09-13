@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ad;
+use App\Services\OgPreviewComposer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -68,7 +69,13 @@ class ShareAdController extends Controller
         );
         $canonicalUrl = url('/ads/' . $ad->id);
         $redirectUrl = $canonicalUrl . $this->forwardedQueryString($request);
-        $imageUrl = $this->resolveImage($ad);
+        // The composited 1200x630 preview is what a crawler must see: platforms
+        // crop og:image to ~1.905:1 before rendering a large card, and the stored
+        // uploads are 1200x1800 / 1600x1067, so the raw photo loses up to 65% of
+        // its height. urlFor() is null only for a third-party-hosted photo, where
+        // proxying an external host from a crawler endpoint is out of scope and
+        // the previous URL is kept unchanged.
+        $imageUrl = app(OgPreviewComposer::class)->urlFor($ad) ?? $this->resolveImage($ad);
         $imageSize = $this->resolveImageSize($imageUrl);
         $price = $ad->price ? '$' . number_format((float) $ad->price, 0, '.', ',') . ' MXN' : 'Precio en Mercasto';
         $pageTitle = e($title . ' | ' . $price . ' | Mercasto');
@@ -167,10 +174,13 @@ HTML;
     /**
      * Dimensions of the image we actually serve, so og:image:width/height are only
      * emitted when they are real (never guessed). Remote/CDN images are skipped, and
-     * only two path shapes are inspected (no traversal):
+     * only these path shapes are inspected (no traversal):
      *
-     *   storage/...        an uploaded listing photo, measured from disk
-     *   <default card>     the branded fallback, whose size is a known constant
+     *   <composited preview>  every payload ShareOgImageController can serve is
+     *                         rendered at the composer's frame size, so the size is
+     *                         a property of the route rather than of a file
+     *   storage/...           an uploaded listing photo, measured from disk
+     *   <default card>        the branded fallback, whose size is a known constant
      *
      * The path is compared against an allowlist rather than pattern-matched, so no
      * other public asset can have its size advertised as a preview size. That also
@@ -185,6 +195,13 @@ HTML;
 
         if (! is_string($path) || $path === '') {
             return null;
+        }
+
+        // Recognised, not guessed: only a URL this application produced (the
+        // preview route plus the `v` token urlFor() always adds) takes this
+        // branch, and that route's contract is a frame-sized image.
+        if (app(OgPreviewComposer::class)->isShareImageUrl($imageUrl)) {
+            return app(OgPreviewComposer::class)->frameSize();
         }
 
         $relative = ltrim($path, '/');

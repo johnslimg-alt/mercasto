@@ -42,6 +42,14 @@ class OgPreviewComposer
     /** Bump to invalidate every cached preview after a geometry/style change. */
     public const CACHE_VERSION = 'v1';
 
+    /**
+     * Path of the preview route, defined once. The composer emits URLs on this
+     * path ({@see self::urlFor()}), the share card matches it to recognise a URL
+     * this service produced, and the route file points here instead of repeating
+     * the literal. Keep in sync with the `share.og-image` route in routes/web.php.
+     */
+    public const SHARE_IMAGE_PATH = '/share/ads/{id}/og.jpg';
+
     /** Same whitelist as ImageController: only formats GD can decode. */
     private const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 
@@ -71,6 +79,51 @@ class OgPreviewComposer
         }
 
         return route('share.og-image', ['id' => $ad->id, 'v' => $this->versionToken($ad)]);
+    }
+
+    /**
+     * True when a URL was produced by this service, i.e. it addresses the preview
+     * route and carries the `v` token urlFor() always adds.
+     *
+     * Callers use this to advertise the served dimensions of a URL they did not
+     * build themselves: the frame size below is guaranteed for this route because
+     * ShareOgImageController always serves a preview at exactly that size, and
+     * every degradation path in it (photo, branded card, deployed static card,
+     * last-resort original) returns a 1200x630 payload or a 404.
+     *
+     * The host is deliberately not checked: a URL on this path is ours by
+     * construction, and hosts differ legitimately between the request that served
+     * the HTML and the one that renders it.
+     */
+    public function isShareImageUrl(string $url): bool
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (! is_string($path) || $path === '') {
+            return false;
+        }
+
+        if (preg_match('#^/share/ads/[0-9]+/og\.jpg$#', $path) !== 1) {
+            return false;
+        }
+
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+
+        return isset($query['v']) && is_string($query['v']) && $query['v'] !== '';
+    }
+
+    /**
+     * Declared size of every preview this service can serve, as
+     * [width, height]. Single source of truth for the og:image:width/height tags
+     * the crawler-facing emitters publish: they are the frame this composer
+     * renders, which is also the size OgPreviewResult reports and the size
+     * ShareOgImageController's own validity check enforces.
+     *
+     * @return array{0:int,1:int}
+     */
+    public function frameSize(): array
+    {
+        return [$this->frameWidth(), $this->frameHeight()];
     }
 
     /**
