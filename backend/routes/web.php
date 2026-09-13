@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ShareAdController;
+use App\Http\Controllers\ShareOgImageController;
 use App\Http\Controllers\SeoShellController;
 use App\Http\Controllers\Api\SitemapController;
 
@@ -14,6 +15,11 @@ Route::get('/sitemap-ads.xml', [SitemapController::class, 'ads']);
 Route::get('/sitemap-ads-{chunk}.xml', [SitemapController::class, 'adsChunk'])->whereNumber('chunk');
 
 Route::get('/share/ads/{id}', ShareAdController::class)->whereNumber('id');
+// Composited 1200x630 social preview (og:image). Separate route so the share-card
+// controller stays untouched; wired in via OgPreviewComposer::urlFor().
+Route::get('/share/ads/{id}/og.jpg', ShareOgImageController::class)
+    ->whereNumber('id')
+    ->name('share.og-image');
 Route::get('/listings', [SeoShellController::class, 'listings']);
 foreach (array_keys((array) config('vertical_seo.pages', [])) as $vertical) {
     Route::get('/' . $vertical, [SeoShellController::class, 'vertical']);

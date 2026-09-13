@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-11T05:49:53Z
-Commit: a15173f3
+Generated at: 2026-09-13T03:49:23Z
+Commit: 448df834
 Source: php artisan route:list --except-vendor -v
 
 ```text
@@ -718,6 +718,10 @@ Source: php artisan route:list --except-vendor -v
             ⇂ web
   GET|HEAD  share/ads/{id} ... generated::<auto> › ShareAdController
             ⇂ web
+  GET|HEAD  share/ads/{id}/og.jpg .... share.og-image › ShareOgImageController
+            ⇂ web
+  GET|HEAD  sitemap-ads-{chunk}.xml generated::<auto> › Api\SitemapController@adsChunk
+            ⇂ web
   GET|HEAD  sitemap-ads.xml generated::<auto> › Api\SitemapController@ads
             ⇂ web
   GET|HEAD  sitemap-categories.xml generated::<auto> › Api\SitemapController@categories
@@ -756,6 +760,6 @@ Source: php artisan route:list --except-vendor -v
   GET|HEAD  vendedores generated::<auto> › SeoShellController@publicPage
             ⇂ web
 
-                                                          Showing [251] routes
+                                                          Showing [253] routes
 
 ```

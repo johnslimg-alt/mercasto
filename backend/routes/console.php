@@ -83,6 +83,15 @@ Schedule::command('ads:notify-seller-corrections --execute --limit=500')
 
 // Expire ads that passed their expires_at date, notify owners
 Schedule::command('ads:expire')->daily();
+
+// Social preview cards are generated on demand and cached on the private disk.
+// Pruning on write only triggers once the directory passes og.cache.max_files, so
+// this sweep is what enforces the 45-day TTL on a cache that stays under the cap.
+Schedule::command('og:prune-previews')
+    ->dailyAt('04:20')
+    ->timezone('America/Mexico_City')
+    ->withoutOverlapping(30)
+    ->runInBackground();
 Schedule::command('ads:process-expiry')->dailyAt('08:00')->timezone('America/Mexico_City')->withoutOverlapping();
 
 // Weekly digest email — every Monday at 08:00 Mexico City time
