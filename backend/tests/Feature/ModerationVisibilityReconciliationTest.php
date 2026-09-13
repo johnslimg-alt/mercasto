@@ -512,4 +512,128 @@ class ModerationVisibilityReconciliationTest extends TestCase
             ['--apply' => true, '--dry-run' => true]
         ));
     }
+
+    // ---------------------------------------------------------------------
+    // Activation preflight: what the operator is told before committing
+    // ---------------------------------------------------------------------
+
+    /**
+     * Whole-table snapshot of the surface this command can write, so "the dry run writes
+     * nothing" is asserted against every column of every row rather than one field.
+     *
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private function writeSurfaceSnapshot(): array
+    {
+        $dump = fn (string $table): array => DB::table($table)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (object $row): array => (array) $row)
+            ->all();
+
+        return [
+            'ads' => $dump('ads'),
+            'ad_moderation_decisions' => $dump('ad_moderation_decisions'),
+        ];
+    }
+
+    /**
+     * The preflight block is wrapped at a fixed width, so sentence-level assertions are made
+     * with the line breaks collapsed.
+     */
+    private function preflightText(string $output): string
+    {
+        return (string) preg_replace('/\s+/', ' ', $output);
+    }
+
+    public function test_dry_run_prints_the_activation_preflight_and_writes_nothing(): void
+    {
+        $this->freezeTime();
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $before = $this->writeSurfaceSnapshot();
+        $this->assertCount(1, $before['ads'], 'The read-only assertion must not be vacuous.');
+
+        $this->assertSame(0, Artisan::call('ads:reconcile-moderation-visibility'));
+        $output = Artisan::output();
+        $text = $this->preflightText($output);
+
+        // The resolved lifetime, where it came from, and the expiry the rows would receive.
+        $this->assertStringContainsString(sprintf('ad_lifetime_days : %d day(s)', Ad::lifetimeDays()), $output);
+        $this->assertStringContainsString('source           : code default in config/marketplace.php', $output);
+        $this->assertStringContainsString('expires_at       : '.Ad::freshExpiry()->format('Y-m-d H:i:s T'), $output);
+
+        // The one-shot statement, in the terms the operator acts on.
+        $this->assertStringContainsString('ONE-SHOT', $output);
+        $this->assertStringContainsString(
+            "activation requires status='archived' and writes status='active', so a later --apply selects none of the activated rows",
+            $text
+        );
+        $this->assertStringContainsString('re-running is not an undo', $text);
+        $this->assertStringContainsString('No command restores the archived state or the granted lifetime', $text);
+
+        // A dry run is read-only, on every row of every table this command writes.
+        $this->assertSame($before, $this->writeSurfaceSnapshot(), 'A dry run must not write.');
+        $this->assertSame('archived', $ad->fresh()->status);
+        $this->assertNull($ad->fresh()->expires_at);
+    }
+
+    public function test_apply_preflight_names_the_expiry_the_rows_actually_receive(): void
+    {
+        $this->freezeTime();
+        $seller = User::factory()->create();
+
+        $first = $this->hiddenApprovedAd($seller);
+        $second = $this->hiddenApprovedAd($seller);
+        $alreadyActive = $this->createAd($seller, [
+            'status' => 'active',
+            'ai_moderation_status' => Ad::MODERATION_APPROVED,
+            'expires_at' => now()->addDays(2),
+        ]);
+        $manual = $this->createAd($seller, [
+            'status' => 'archived', 'ai_moderation_status' => 'manual_review', 'expires_at' => null,
+        ]);
+        $filler = $this->hiddenApprovedAd($seller, ['is_catalog_filler' => true]);
+        $sellerArchived = $this->hiddenApprovedAd($seller, ['expires_at' => now()->addDays(3)]);
+
+        $expectedExpiry = Ad::freshExpiry();
+
+        $this->assertSame(0, Artisan::call('ads:reconcile-moderation-visibility', ['--apply' => true]));
+        $output = Artisan::output();
+
+        // The warning is on the --apply path too, before the first write.
+        $this->assertStringContainsString('PREFLIGHT', $output);
+        $this->assertStringContainsString('ONE-SHOT', $output);
+        $this->assertStringContainsString('expires_at       : '.$expectedExpiry->format('Y-m-d H:i:s T'), $output);
+
+        // Exactly the two pipeline-archived ads are published, with the preflighted expiry.
+        // Compared at second precision: the column stores whole seconds and the preflight
+        // prints the same second-precision value, while the in-memory Carbon keeps the
+        // fractional part of the frozen clock.
+        foreach ([$first, $second] as $ad) {
+            $ad->refresh();
+            $this->assertSame('active', $ad->status);
+            $this->assertSame(
+                $expectedExpiry->toDateTimeString(),
+                $ad->expires_at?->toDateTimeString(),
+                'An activated row must carry exactly the expiry the preflight printed.'
+            );
+            $this->assertIndexable($ad);
+        }
+
+        $this->assertSame(
+            [$first->id, $second->id, $alreadyActive->id],
+            Ad::query()->where('status', 'active')->orderBy('id')->pluck('id')->all(),
+            'Activation must change exactly the rows the predicate selects.'
+        );
+        $this->assertSame(
+            now()->addDays(2)->toDateTimeString(),
+            $alreadyActive->fresh()->expires_at?->toDateTimeString()
+        );
+        $this->assertSame('archived', $manual->fresh()->status);
+        $this->assertSame('manual_review', $manual->fresh()->ai_moderation_status);
+        $this->assertSame('archived', $filler->fresh()->status);
+        $this->assertSame('archived', $sellerArchived->fresh()->status);
+        $this->assertSame(0, Ad::query()->approvedButHidden()->count());
+    }
 }

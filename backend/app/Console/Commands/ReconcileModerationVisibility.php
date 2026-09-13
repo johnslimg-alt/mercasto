@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Http\Controllers\Api\SitemapController;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
+use App\Traits\ReportsAdLifetimePreflight;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -32,9 +33,18 @@ use Illuminate\Support\Facades\DB;
  * seller-archived ad keeps the remaining time on its listing. The default run
  * therefore skips rows with a non-null `expires_at`; --include-owner-archived
  * widens the run to the literal predicate above.
+ *
+ * Irreversibility: the idempotence above is not an undo. Activation writes
+ * `status = 'active'` and a single lifetime (`Ad::freshExpiry()`), so after a run
+ * the predicate `status = 'archived'` selects none of the activated rows: a second
+ * --apply is a no-op that cannot restore the archived state or the granted
+ * lifetime. The preflight block below states that, with the resolved lifetime and
+ * the expiry the rows will receive, before any write and in dry-run too.
  */
 class ReconcileModerationVisibility extends Command
 {
+    use ReportsAdLifetimePreflight;
+
     protected $signature = 'ads:reconcile-moderation-visibility
         {--dry-run : Report the activation plan without writing anything (default)}
         {--apply : Persist the activations}
@@ -56,6 +66,14 @@ class ReconcileModerationVisibility extends Command
         }
 
         $limit = max(0, (int) $this->option('limit'));
+
+        // Printed in both modes, before the first write: the operator reads the lifetime
+        // the rows will receive and the fact that the action cannot be repeated before
+        // committing to it. Additive output only - the command's contract is unchanged.
+        $this->printActivationPreflight([
+            'ONE-SHOT' => "activation requires status='archived' and writes status='active', so a later --apply selects none of the activated rows: re-running is not an undo. No command restores the archived state or the granted lifetime; when that lifetime ends, the scheduled daily ads:expire task moves the rows from 'active' to 'expired'.",
+            'REMEDY' => 'if the lifetime above is not the intended one, stop and set AD_LIFETIME_DAYS first (the runbook step is: decide the lifetime, then activate).',
+        ]);
 
         if (! $apply) {
             $this->info('DRY RUN: no changes will be written. Re-run with --apply to persist.');
