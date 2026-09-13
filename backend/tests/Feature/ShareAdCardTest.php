@@ -155,13 +155,71 @@ class ShareAdCardTest extends TestCase
         $response->assertDontSee('og:image:width', false);
     }
 
-    public function test_share_card_uses_the_site_icon_when_the_listing_has_no_photo(): void
+    public function test_share_card_uses_the_branded_card_when_the_listing_has_no_photo(): void
     {
         $ad = $this->activeAd(['image_url' => null, 'image' => null]);
 
         $response = $this->get("https://mercasto.test/share/ads/{$ad->id}");
 
-        $response->assertSee('<meta property="og:image" content="https://mercasto.test/icon-512x512.png">', false);
+        // Never the square app icon: it is below the large-preview minimum.
+        $response->assertSee('<meta property="og:image" content="https://mercasto.test/og-default-1200x630.jpg">', false);
+        $response->assertDontSee('icon-512x512.png', false);
+    }
+
+    /**
+     * The fallback card lives in public/ (not storage/), so it needs its own entry in
+     * resolveImageSize(). Without this the preview would advertise no dimensions and
+     * platforms would guess - which is how the square icon got cropped in the first place.
+     */
+    public function test_share_card_declares_real_dimensions_for_the_branded_default_card(): void
+    {
+        $ad = $this->activeAd(['image_url' => null, 'image' => null]);
+
+        $response = $this->get("https://mercasto.test/share/ads/{$ad->id}");
+
+        $response->assertSee('<meta property="og:image:width" content="1200">', false);
+        $response->assertSee('<meta property="og:image:height" content="630">', false);
+    }
+
+    /**
+     * The fallback card ships with the static frontend, so it cannot be measured at
+     * runtime from the backend container - its size is declared as constants in
+     * ShareAdController. This test is what keeps those constants honest, by measuring
+     * the committed asset instead of trusting the numbers.
+     */
+    public function test_declared_default_card_size_matches_the_committed_asset(): void
+    {
+        $asset = base_path('../public/og-default-1200x630.jpg');
+
+        $this->assertFileExists(
+            $asset,
+            'The branded default share card is missing. Regenerate it with: node scripts/rasterize-og-default.mjs',
+        );
+
+        $size = getimagesize($asset);
+
+        $this->assertIsArray($size, 'The default share card is not a readable image.');
+        $this->assertSame(1200, $size[0], 'Card width disagrees with ShareAdController::DEFAULT_SHARE_IMAGE_WIDTH.');
+        $this->assertSame(630, $size[1], 'Card height disagrees with ShareAdController::DEFAULT_SHARE_IMAGE_HEIGHT.');
+        $this->assertSame('image/jpeg', $size['mime'] ?? null, 'The filename promises .jpg but the file is not JPEG.');
+    }
+
+    /**
+     * Root-level paths must never win dimensions by pattern match alone. Production
+     * serves the SPA shell with HTTP 200 for unknown root paths, so a naive
+     * "does this URL resolve" check would happily advertise a preview size for an
+     * HTML document.
+     */
+    public function test_share_card_does_not_advertise_dimensions_for_other_public_assets(): void
+    {
+        foreach (['/favicon.svg', '/icon-512x512.png', '/definitely-missing-xyz.jpg'] as $path) {
+            $ad = $this->activeAd(['image_url' => $path]);
+
+            $response = $this->get("https://mercasto.test/share/ads/{$ad->id}");
+
+            $response->assertOk();
+            $response->assertDontSee('og:image:width', false);
+        }
     }
 
     public function test_share_card_is_noindex_and_follows_the_canonical_listing(): void
