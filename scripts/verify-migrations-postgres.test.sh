@@ -23,8 +23,9 @@
 #   I  table created then renamed                       -> PASS (rename retires the old expectation)
 #   M  column added and filled with '' on every row        -> PASS, and the fill report says <empty>
 #
-# Cases J, K and L are cheap and need no container: option parsing, target selection for
-# a renamed migration, and the workflow's push-run comparison base.
+# Cases J, K, L, N, O, P and R are cheap and need no container: option parsing, target
+# selection for a renamed migration, the workflow's push-run comparison base, a deleted
+# migration, the contiguous-range expansion, and the unique-index lock classification.
 #
 # Requires docker, php with pdo_pgsql, and backend/vendor. Set
 # MIGVERIFY_TEST_REQUIRE_DOCKER=1 to turn a missing prerequisite into a failure
@@ -96,6 +97,15 @@ run_tool() { # name expect_rc pipe-separated-expected-strings
   fi
   local IFS='|'
   for want in $expect_text; do
+    # A leading ! means the string must NOT appear: some fixes are the absence of a
+    # false claim rather than the presence of a diagnostic.
+    if [ "${want#!}" != "$want" ]; then
+      if grep -qF "${want#!}" "$log"; then
+        fail "$name: the log contains '${want#!}', which must not appear (see $log)"
+        return
+      fi
+      continue
+    fi
     if ! grep -qF "$want" "$log"; then
       fail "$name: exit code was right but the expected diagnostic did not appear: '$want' (see $log)"
       return
@@ -148,6 +158,66 @@ else
   printf '%s\n' "$k_out" | head -6 | sed 's/^/        /'
 fi
 
+# Case N: a deletion-only change selected nothing and exited 0, so the gate silently
+# skipped a change that alters what a fresh install runs.
+total=$((total + 1))
+rm -rf "$SCRATCH"; SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/migverify-scratch.XXXXXX")"
+mkdir -p "$SCRATCH/backend/database/migrations" "$SCRATCH/scripts"
+cp "$TOOL" "$SCRATCH/scripts/"
+printf '<?php\n' > "$SCRATCH/backend/database/migrations/2026_01_01_000001_alpha.php"
+( cd "$SCRATCH" && git init -q . && git add -A \
+  && git -c user.email=t@example.invalid -c user.name=control commit -qm base \
+  && git rm -q backend/database/migrations/2026_01_01_000001_alpha.php \
+  && git -c user.email=t@example.invalid -c user.name=control commit -qm delete ) >/dev/null 2>&1
+rc=0
+n_out="$(bash "$SCRATCH/scripts/verify-migrations-postgres.sh" --static-only --base=HEAD~1 2>&1)" || rc=$?
+if [ "$rc" != "0" ] && printf '%s' "$n_out" | grep -q 'were deleted against'; then
+  pass "N-deleted-migration-refused: exit $rc and the tool named the deleted migration"
+else
+  fail "N-deleted-migration-refused: exit $rc without the deletion diagnostic"
+  printf '%s\n' "$n_out" | head -5 | sed 's/^/        /'
+fi
+
+# Case O: two historical targets with an untouched migration between them must pull
+# that migration into the verified range, or the later target runs against a schema
+# that never existed at that point in history.
+total=$((total + 1))
+rm -rf "$SCRATCH"; SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/migverify-scratch.XXXXXX")"
+mkdir -p "$SCRATCH/backend/database/migrations" "$SCRATCH/scripts"
+cp "$TOOL" "$SCRATCH/scripts/"
+for n in 000001_alpha 000002_between 000003_gamma; do
+  printf '<?php\n' > "$SCRATCH/backend/database/migrations/2026_01_01_$n.php"
+done
+( cd "$SCRATCH" && git init -q . && git add -A \
+  && git -c user.email=t@example.invalid -c user.name=control commit -qm base ) >/dev/null 2>&1
+o_out="$(bash "$SCRATCH/scripts/verify-migrations-postgres.sh" --static-only \
+  "$SCRATCH/backend/database/migrations/2026_01_01_000001_alpha.php" \
+  "$SCRATCH/backend/database/migrations/2026_01_01_000003_gamma.php" 2>&1 || true)"
+if printf '%s' "$o_out" | grep -q '000002_between'; then
+  pass "O-intervening-migration-included: the untouched migration between two targets was verified too"
+else
+  fail "O-intervening-migration-included: the intervening migration was skipped"
+  printf '%s\n' "$o_out" | head -6 | sed 's/^/        /'
+fi
+
+# Case P: CREATE UNIQUE INDEX takes the same lock as CREATE INDEX. It was absent from
+# the production-impact report entirely because both index branches required the bare
+# spelling.
+total=$((total + 1))
+p_ok=1
+for probe in 'create unique index "i" on "t" ("c"):SHARE' \
+             'create unique index concurrently "i" on "t" ("c"):SHARE UPDATE EXCLUSIVE' \
+             'create index "i" on "t" ("c"):SHARE'; do
+  stmt="${probe%%:*}"; want="${probe##*:}"
+  got="$(sed -n '/^lock_class() {/,/^}/p' "$TOOL" > "$OUT_DIR/lock_class.sh"; . "$OUT_DIR/lock_class.sh"; lock_class "$stmt")"
+  case "$got" in *"$want"*) : ;; *) p_ok=0; printf '        %s -> %s\n' "$stmt" "${got:-<empty>}" ;; esac
+done
+if [ "$p_ok" = "1" ]; then
+  pass "P-unique-index-lock-classified: unique index creation reports its lock in all three forms"
+else
+  fail "P-unique-index-lock-classified: a unique index form was not classified"
+fi
+
 # Case L: the workflow must not leave push runs comparing HEAD with HEAD. Wiring
 # assertion: the base ref for a push comes from github.event.before and is passed
 # through to --base.
@@ -157,6 +227,47 @@ if grep -q 'github.event.before' "$WORKFLOW" && grep -q -- '--base=' "$WORKFLOW"
 else
   fail "L-push-run-base: the workflow can still compare a push against HEAD and verify nothing"
 fi
+
+# Case R: a migration can execute application code, so a change to a helper changes what
+# a fresh install persists without touching any migration file. The workflow triggers on
+# backend/app/Support/**, and the verifier selects the migrations that depend on whatever
+# helper changed.
+total=$((total + 1))
+rm -rf "$SCRATCH"; SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/migverify-scratch.XXXXXX")"
+mkdir -p "$SCRATCH/backend/database/migrations" "$SCRATCH/backend/app/Support" "$SCRATCH/scripts"
+cp "$TOOL" "$SCRATCH/scripts/"
+cat > "$SCRATCH/backend/database/migrations/2026_01_01_000001_uses_helper.php" <<'PHP'
+<?php
+
+use App\Support\MigverifyHelper;
+use Illuminate\Database\Migrations\Migration;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        MigverifyHelper::run();
+    }
+
+    public function down(): void
+    {
+    }
+};
+PHP
+printf '<?php\n' > "$SCRATCH/backend/database/migrations/2026_01_01_000002_unrelated.php"
+printf '<?php\nclass MigverifyHelper { public static function run(): void {} }\n' > "$SCRATCH/backend/app/Support/MigverifyHelper.php"
+( cd "$SCRATCH" && git init -q . && git add -A \
+  && git -c user.email=t@example.invalid -c user.name=control commit -qm base \
+  && printf '<?php\nclass MigverifyHelper { public static function run(): void { /* changed */ } }\n' > backend/app/Support/MigverifyHelper.php \
+  && git add -A && git -c user.email=t@example.invalid -c user.name=control commit -qm "change helper" ) >/dev/null 2>&1
+r_out="$(bash "$SCRATCH/scripts/verify-migrations-postgres.sh" --static-only --base=HEAD~1 2>&1 || true)"
+if printf '%s' "$r_out" | grep -q 'uses_helper.php' && printf '%s' "$r_out" | grep -q 'depends on the changed'; then
+  pass "R-support-dependency-selected: the dependent migration was selected after its helper changed"
+else
+  fail "R-support-dependency-selected: a helper-only change selected no migration"
+  printf '%s\n' "$r_out" | head -6 | sed 's/^/        /'
+fi
+rm -rf "$SCRATCH"
 
 # ---------------------------------------------------------------- with container
 command -v docker >/dev/null 2>&1 || skip_or_fail "docker is not available"
@@ -195,7 +306,7 @@ return new class extends Migration
     }
 };
 PHP
-run_tool "A-additive-passes" 0 "RESULT: PASS"
+run_tool "A-additive-passes" 0 "RESULT: PASS|!up() changed rows in:"
 
 # B. up() cannot apply: the referenced table does not exist. Only a real engine
 #    rejects this; reading the file cannot.
@@ -537,7 +648,7 @@ return new class extends Migration
     }
 };
 PHP
-run_tool "H-leftover-function-fails" 1 "down() did not restore the baseline schema|FUN|"
+run_tool "H-leftover-function-fails" 1 "down() did not restore the baseline schema|FUN||[8/8] Production impact"
 
 # I. A table is created and then renamed, and a new column is filled with ''. The
 #    rename must retire the old table expectation, and the fill report must not treat

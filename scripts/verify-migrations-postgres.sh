@@ -42,6 +42,7 @@
 #   scripts/verify-migrations-postgres.sh --static-only              # fast scan, no container
 #   scripts/verify-migrations-postgres.sh --allow-down-data-loss     # accept a lossy down()
 #   scripts/verify-migrations-postgres.sh --require-targets          # an empty selection is an error
+#   scripts/verify-migrations-postgres.sh --allow-deleted-migrations # accept a migration deletion
 #   scripts/verify-migrations-postgres.sh --no-lock-probe            # skip contention probe
 #   scripts/verify-migrations-postgres.sh --seed-sql=rows.sql        # realistic rows before up()
 #   scripts/verify-migrations-postgres.sh --out-dir=/tmp/evidence --keep
@@ -105,6 +106,7 @@ done
 # Initialised BEFORE parsing: assigning defaults after the loop silently erased
 # --require-targets, so an explicit request to fail on an empty selection returned 0.
 REQUIRE_TARGETS=0
+ALLOW_DELETED_MIGRATIONS=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -124,6 +126,7 @@ while [ $# -gt 0 ]; do
     --allow-down-data-loss) ALLOW_DOWN_DATA_LOSS=1; shift ;;
     --strict)               STRICT=1; shift ;;
     --require-targets)      REQUIRE_TARGETS=1; shift ;;
+    --allow-deleted-migrations) ALLOW_DELETED_MIGRATIONS=1; shift ;;
     --production-container=*) PROD_CONTAINER="${1#*=}"; shift ;;
     --)                     shift; while [ $# -gt 0 ]; do TARGETS+=("$1"); shift; done ;;
     -*)                     die "unknown option: $1 (try --help)" ;;
@@ -133,6 +136,36 @@ done
 [ "${#TARGETS[@]}" -gt 0 ] && MODE="files"
 
 # -------------------------------------------------------------- target selection
+
+# Targets are sorted and, when more than one migration is selected from history, the
+# range is filled in. A PR that edits two historical migrations with an untouched one
+# between them would otherwise apply only the two endpoints, so the later target would
+# run against a schema missing everything in between -- including migrations it
+# originally depended on. Filling the range applies those migrations too; they are
+# reported as context, and a defect in one of them will also be reported, which is the
+# honest outcome for a range that is being re-verified.
+expand_to_contiguous_range() {
+  [ "${#TARGETS[@]}" -gt 1 ] || return 0
+  local first last mfile name
+  local -a sorted=() expanded=()
+  local -A selected=()
+  for mfile in "${TARGETS[@]}"; do selected["$(basename "$mfile" .php)"]=1; done
+  while IFS= read -r mfile; do sorted+=("$mfile"); done \
+    < <(find "$MIGRATIONS_DIR" -maxdepth 1 -name '*.php' | sort)
+  first="$(basename "${TARGETS[0]}" .php)"
+  last="$(basename "${TARGETS[${#TARGETS[@]}-1]}" .php)"
+  for mfile in ${sorted[@]+"${sorted[@]}"}; do
+    name="$(basename "$mfile" .php)"
+    if [[ "$name" > "$first" || "$name" = "$first" ]] && [[ "$name" < "$last" || "$name" = "$last" ]]; then
+      expanded+=("$mfile")
+      [ -n "${selected[$name]:-}" ] || CONTEXT_ADDED=$((CONTEXT_ADDED + 1))
+    fi
+  done
+  if [ "${#expanded[@]}" -gt "${#TARGETS[@]}" ]; then
+    TARGETS=(${expanded[@]+"${expanded[@]}"})
+  fi
+  return 0
+}
 
 select_targets() {
   local f base
@@ -144,16 +177,55 @@ select_targets() {
     changed)
       base="$(git -C "$ROOT_DIR" merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
       [ -n "$base" ] || die "cannot resolve --base=$BASE_REF; pass explicit files or use --all"
-      while IFS= read -r f; do
-        if [ -n "$f" ]; then TARGETS+=("$ROOT_DIR/$f"); fi
+
       # A renamed migration is classified R, which an AM filter drops: the workflow
       # still fires because a migration path changed, but the verifier would select
       # nothing and exit 0. Renaming a migration also changes its recorded name, so
       # Laravel can execute it again -- exactly the case that must not be skipped.
       # --no-renames turns a rename into D+A so the destination is selected as an add;
       # R stays in the filter in case rename detection survives.
+      while IFS= read -r f; do
+        if [ -n "$f" ]; then TARGETS+=("$ROOT_DIR/$f"); fi
       done < <(git -C "$ROOT_DIR" diff --name-only --no-renames --diff-filter=AMR "$base" HEAD -- \
                  backend/database/migrations 2>/dev/null | grep '\.php$' | sort || true)
+
+      # A migration can call application code (App\Support\*). A change to such a
+      # helper changes what a fresh PostgreSQL install persists without touching any
+      # migration file, so the workflows that own that code would otherwise never be
+      # exercised. Select the migrations that reference a changed helper.
+      CHANGED_SUPPORT="$(git -C "$ROOT_DIR" diff --name-only --no-renames --diff-filter=AMR "$base" HEAD -- \
+                 backend/app/Support 2>/dev/null | grep '\.php$' | sort || true)"
+      if [ -n "$CHANGED_SUPPORT" ]; then
+        while IFS= read -r dep; do
+          [ -n "$dep" ] || continue
+          while IFS= read -r mfile; do
+            if support_class_closure "$mfile" | grep -Fxq "$ROOT_DIR/$dep"; then
+              TARGETS+=("$mfile")
+              info "selected ${mfile#"$ROOT_DIR"/}: it depends on the changed $dep"
+            fi
+          done < <(find "$MIGRATIONS_DIR" -maxdepth 1 -name '*.php' | sort)
+        done <<< "$CHANGED_SUPPORT"
+      fi
+
+      # A deletion-only change selected nothing and exited 0. Deleting a migration
+      # changes what a fresh install runs and can break one, so it must not pass
+      # unexamined; the tool cannot verify a file that is gone, so it refuses and says
+      # what to do about it.
+      DELETED_MIGRATIONS=()
+      while IFS= read -r f; do
+        if [ -n "$f" ]; then DELETED_MIGRATIONS+=("$f"); fi
+      done < <(git -C "$ROOT_DIR" diff --name-only -M --diff-filter=D "$base" HEAD -- \
+                 backend/database/migrations 2>/dev/null | grep '\.php$' | sort || true)
+      if [ "${#DELETED_MIGRATIONS[@]}" -gt 0 ] && [ "$ALLOW_DELETED_MIGRATIONS" = "0" ]; then
+        {
+          printf 'ERROR: %s migration(s) were deleted against %s and cannot be verified:\n' \
+            "${#DELETED_MIGRATIONS[@]}" "$BASE_REF"
+          printf '  %s\n' "${DELETED_MIGRATIONS[@]}"
+          printf 'Deleting a migration changes what a fresh PostgreSQL install runs.\n'
+          printf 'Re-run with --allow-deleted-migrations once that has been reviewed.\n'
+        } >&2
+        exit 3
+      fi
       ;;
     files) : ;;
   esac
@@ -575,6 +647,25 @@ row_snapshot_over() { # db table "col1,col2"
   psql_db "$db" "SELECT count(*)::text || '|' || coalesce(md5(string_agg(x, E'\n' ORDER BY x)),'empty') FROM (SELECT $expr AS x FROM public.\"$tbl\") s"
 }
 
+# Primary-key columns of a table, comma separated; empty when it has none.
+row_pk_columns() {
+  psql_db "$1" "SELECT coalesce(string_agg(a.attname, ',' ORDER BY array_position(i.indkey, a.attnum)),'') FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid JOIN pg_namespace n ON n.oid = c.relnamespace JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY (i.indkey) WHERE n.nspname='public' AND c.relname='$2' AND i.indisprimary"
+}
+
+# Row identity over the primary key. Unlike a hash over all columns this survives a
+# column being dropped, so the pre-rollback value stays comparable after the rollback.
+# A rollback that deletes rows and re-inserts them with the same count changes the keys
+# (a serial id advances) even when every surviving column looks untouched.
+row_pk_hash() { # db table
+  local db="$1" tbl="$2" pk
+  pk="$(row_pk_columns "$db" "$tbl")"
+  if [ -z "$pk" ]; then
+    printf 'no-primary-key'
+    return
+  fi
+  row_snapshot_over "$db" "$tbl" "$pk" | cut -d'|' -f2
+}
+
 # Intersection of two comma-separated lists, in the order of the first.
 list_intersect() {
   local a="$1" b="$2" out="" x old_ifs="$IFS"
@@ -658,8 +749,10 @@ lock_class() {
   if [[ "$stmt" =~ ^alter[[:space:]]+table.*add[[:space:]]+constraint.*foreign[[:space:]]+key ]]; then
     echo "ACCESS EXCLUSIVE on the table + SHARE ROW EXCLUSIVE on the referenced table"
   elif [[ "$stmt" =~ ^alter[[:space:]]+table ]]; then echo "ACCESS EXCLUSIVE (blocks reads and writes)"
-  elif [[ "$stmt" =~ ^create[[:space:]]+index[[:space:]]+concurrently ]]; then echo "SHARE UPDATE EXCLUSIVE (does not block writes)"
-  elif [[ "$stmt" =~ ^create[[:space:]]+index ]]; then echo "SHARE (blocks writes, allows reads)"
+  # `unique` is optional in both index forms; requiring the bare spelling dropped
+  # CREATE UNIQUE INDEX from this report entirely.
+  elif [[ "$stmt" =~ ^create[[:space:]]+(unique[[:space:]]+)?index[[:space:]]+concurrently ]]; then echo "SHARE UPDATE EXCLUSIVE (does not block writes)"
+  elif [[ "$stmt" =~ ^create[[:space:]]+(unique[[:space:]]+)?index ]]; then echo "SHARE (blocks writes, allows reads)"
   elif [[ "$stmt" =~ ^drop[[:space:]]+index[[:space:]]+concurrently ]]; then echo "SHARE UPDATE EXCLUSIVE (does not block writes)"
   elif [[ "$stmt" =~ ^drop[[:space:]]+index ]]; then echo "ACCESS EXCLUSIVE (blocks reads and writes)"
   elif [[ "$stmt" =~ ^(drop[[:space:]]+table|truncate) ]]; then echo "ACCESS EXCLUSIVE (blocks reads and writes)"
@@ -825,6 +918,13 @@ no_targets() {
 
 select_targets
 
+# Migration order, so "before" and "between" mean what they say.
+CONTEXT_ADDED=0
+if [ "${#TARGETS[@]}" -gt 1 ]; then
+  mapfile -t TARGETS < <(printf '%s\n' "${TARGETS[@]}" | sort -u)
+fi
+[ "$MODE" = "all" ] || expand_to_contiguous_range
+
 if [ "$STATIC_ONLY" = "1" ]; then
 
   [ "${#TARGETS[@]}" -gt 0 ] || no_targets
@@ -926,6 +1026,10 @@ declare -A BASE_TABLE_PRESENT=()
 while IFS= read -r t; do
   if [ -n "$t" ]; then BASE_TABLE_PRESENT[$t]=1; fi
 done < <(psql_db mc_base "SELECT tablename FROM pg_tables WHERE schemaname='public'")
+if [ "${CONTEXT_ADDED:-0}" -gt 0 ]; then
+  info "$CONTEXT_ADDED intervening migration(s) added to the verified range so a later"
+  info "target runs against the schema it originally depended on"
+fi
 if [ "$SUCCESSORS_EXCLUDED" -gt 0 ]; then
   info "$SUCCESSORS_EXCLUDED later migration(s) excluded from the baseline: a target that"
   info "modifies history runs against the schema that preceded it, not the current tip"
@@ -1125,7 +1229,7 @@ for t in ${SCOPE_TABLES[@]+"${SCOPE_TABLES[@]}"}; do
 done
 if [ -s "$OUT_DIR/rows-baseline.txt" ]; then
   MUTATED="$(join -t'|' -j1 <(sort "$OUT_DIR/rows-baseline.txt") <(sort "$OUT_DIR/rows-after-up.txt") \
-    | awk -F'|' '$2 != $3 { print $1 }' | tr '\n' ' ')"
+    | awk -F'|' '$2 != $4 || $3 != $5 { print $1 }' | tr '\n' ' ')"
   if [ -n "${MUTATED// /}" ]; then
     info "up() changed rows in: ${MUTATED% }"
     say "        (the DML it ran is listed under '[8/8] Production impact' with its table and lock)"
@@ -1463,6 +1567,7 @@ LIFECYCLE_SKIPPED=0
 DESTROYED_ROWS=0
 REPLACED_TABLES=0
 DROPPED_TABLES=0
+REPLACED_UNCHECKED=0
 if [ "$MODE" = "all" ]; then
   LIFECYCLE_SKIPPED=1
   head1 "[5-7/8] Idempotency, down() and round trip"
@@ -1494,7 +1599,7 @@ if [ "$FP_REAPPLY" = "$FP_AFTER_UP" ]; then
   ok "schema unchanged by the second apply: double-apply is a schema no-op"
 else
   bad "the second up() changed the schema; double-apply is NOT a no-op"
-  diff "$OUT_DIR/fingerprint-after-up.txt" "$OUT_DIR/fingerprint-after-reapply.txt" | head -20 | sed 's/^/        /'
+  diff "$OUT_DIR/fingerprint-after-up.txt" "$OUT_DIR/fingerprint-after-reapply.txt" | head -20 | sed 's/^/        /' || true
 fi
 
 : > "$OUT_DIR/rows-after-reapply.txt"
@@ -1506,7 +1611,7 @@ if diff -q "$OUT_DIR/rows-after-up.txt" "$OUT_DIR/rows-after-reapply.txt" >/dev/
   ok "data unchanged by the second apply (the backfill is fill-only)"
 else
   bad "the second up() mutated rows; the backfill is not idempotent"
-  diff "$OUT_DIR/rows-after-up.txt" "$OUT_DIR/rows-after-reapply.txt" | head -20 | sed 's/^/        /'
+  diff "$OUT_DIR/rows-after-up.txt" "$OUT_DIR/rows-after-reapply.txt" | head -20 | sed 's/^/        /' || true
 fi
 
 # ------------------------------------------------------------------ 6. down()
@@ -1556,7 +1661,8 @@ snapshot_scope() { # outfile
   : > "$1"
   for t in ${DOWN_TABLES[@]+"${DOWN_TABLES[@]}"}; do
     if table_exists mc_base "$t"; then
-      printf '%s|%s|%s\n' "$t" "$(row_snapshot mc_base "$t")" "$(row_columns mc_base "$t")" >> "$1"
+      printf '%s|%s|%s|%s\n' "$t" "$(row_snapshot mc_base "$t")" "$(row_columns mc_base "$t")" \
+        "$(row_pk_hash mc_base "$t")" >> "$1"
     fi
   done
   return 0
@@ -1602,20 +1708,34 @@ while [ "$STEP" -ge 0 ]; do
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     t="${line%%|*}"; rest="${line#*|}"; before="${rest%%|*}"; rest="${rest#*|}"
-    before_hash="${rest%%|*}"; before_cols="${rest#*|}"
+    before_hash="${rest%%|*}"; rest="${rest#*|}"
+    before_cols="${rest%%|*}"; before_pk="${rest#*|}"
     if table_exists mc_base "$t"; then
       after_raw="$(row_snapshot mc_base "$t")"
       after="${after_raw%%|*}"; after_hash="${after_raw#*|}"
       after_cols="$(row_columns mc_base "$t")"
+      IDENTITY_COMPARED="rows"
       if [ "$before_cols" != "$after_cols" ]; then
-        common="$(list_intersect "$before_cols" "$after_cols")"
-        before_hash="$(row_snapshot_over mc_base "$t" "$common" | cut -d'|' -f2)"
-        after_hash="$(row_snapshot_over mc_base "$t" "$common" | cut -d'|' -f2)"
+        # The column set changed, so the whole-row hashes are not comparable. The
+        # pre-rollback value has to have been captured before the rollback, which is
+        # what the primary-key hash is for; recomputing a common-column hash here would
+        # read the already-rolled-back contents on both sides and match by construction.
+        if [ "$before_pk" != "no-primary-key" ] && [ -n "$before_pk" ]; then
+          after_hash="$(row_pk_hash mc_base "$t")"
+          before_hash="$before_pk"
+          IDENTITY_COMPARED="primary key"
+        else
+          # No primary key and no comparable projection: say so rather than implying
+          # the rows were checked.
+          warn "row identity in $t could not be checked across a column change (no primary key)"
+          REPLACED_UNCHECKED=$((REPLACED_UNCHECKED + 1))
+          IDENTITY_COMPARED="none"
+        fi
       fi
       if [ "$before" -gt "$after" ] 2>/dev/null; then
         say "    rows    : $t $before -> $after (destroyed $((before - after)) by $name)"
         DESTROYED_ROWS=$((DESTROYED_ROWS + before - after))
-      elif [ "$before" = "$after" ] && [ "$before_hash" != "$after_hash" ]; then
+      elif [ "$IDENTITY_COMPARED" != "none" ] && [ "$before" = "$after" ] && [ "$before_hash" != "$after_hash" ]; then
         # Same cardinality, different content: a rollback that deletes the records and
         # inserts replacements, or truncates and repopulates. Comparing counts alone
         # reported this as "destroyed no rows" while every original record was gone.
@@ -1671,7 +1791,7 @@ if [ "$FP_AFTER_DOWN" = "$BASE_FP" ]; then
   ok "down() restored the pre-migration schema exactly"
 else
   bad "down() did not restore the baseline schema"
-  diff "$OUT_DIR/fingerprint-baseline.txt" "$OUT_DIR/fingerprint-after-down.txt" | head -30 | sed 's/^/        /'
+  diff "$OUT_DIR/fingerprint-baseline.txt" "$OUT_DIR/fingerprint-after-down.txt" | head -30 | sed 's/^/        /' || true
 fi
 
 fi  # end of the idempotency / down() / round-trip lifecycle
