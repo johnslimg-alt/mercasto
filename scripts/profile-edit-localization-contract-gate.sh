@@ -6,6 +6,13 @@ BUSINESS_EDITOR="$ROOT/src/components/profile/BusinessProfileEditor.jsx"
 TRANSLATIONS="$ROOT/src/constants/translations"
 
 echo "== Profile edit localization contract gate =="
+
+# Both guarded surfaces below must exist, or the "must not surface backend
+# messages / inline fallbacks" guards pass while observing nothing.
+for file in "$SCREEN" "$BUSINESS_EDITOR"; do
+  test -f "$file" || { echo "FAIL: missing observed file $file" >&2; exit 1; }
+done
+
 for key in delete_confirmation_word profile_save_error password_update_error profile_photo_alt; do
   for lang in es en pt fr zh ko de it ar ru ja; do
     grep -qF "${key}:" "$TRANSLATIONS/${lang}.js"

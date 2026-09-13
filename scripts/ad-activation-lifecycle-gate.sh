@@ -6,6 +6,7 @@ AD_CONTROLLER="$ROOT/backend/app/Http/Controllers/Api/AdController.php"
 ADMIN_CONTROLLER="$ROOT/backend/app/Http/Controllers/Api/AdminAdModerationController.php"
 APP="$ROOT/src/App.jsx"
 ADMIN_CENTER="$ROOT/src/components/admin/AdminModerationCenter.jsx"
+RENEWAL_MIDDLEWARE="$ROOT/backend/app/Http/Middleware/EnforcePaidAdRenewal.php"
 
 printf '%s\n' '== Ad activation lifecycle gate =='
 
@@ -31,7 +32,8 @@ fi
 
 grep -qF "approveSellerConfirmation" "$ADMIN_CENTER"
 
-if grep -q "api/ads/(\\d+)/status" "$ROOT/backend/app/Http/Middleware/EnforcePaidAdRenewal.php"; then
+test -f "$RENEWAL_MIDDLEWARE" || { echo "FAIL: missing observed file $RENEWAL_MIDDLEWARE" >&2; exit 1; }
+if grep -q "api/ads/(\\d+)/status" "$RENEWAL_MIDDLEWARE"; then
   echo 'renewal middleware must not intercept generic status activation' >&2
   exit 1
 fi

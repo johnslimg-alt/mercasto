@@ -10,6 +10,14 @@ echo "== Backend AI provider boundary gate =="
 
 test ! -e "$DEAD_CONTROLLER"
 test -f "$DESCRIPTION"
+
+# `grep -R` against a missing root or file exits non-zero, which would make the
+# boundary guard below pass while observing nothing. ('server' was retired in
+# 342181c2 and is therefore not asserted here, though it is still listed below.)
+for root in backend/app backend/config backend/routes ops/agents; do
+  test -d "$root" || { echo "FAIL: missing scan root $root" >&2; exit 1; }
+done
+test -f "$SERVICES" || { echo "FAIL: missing observed file $SERVICES" >&2; exit 1; }
 grep -qF 'AiDescriptionController::class' "$ROUTES"
 EXTERNAL_AI_PATTERN='generativelanguage[.]googleapis[.]com|api[.]deepseek[.]com|api[.]anthropic[.]com|api[.]groq[.]com|api[.]openai[.]com|GEMINI_API_KEY|DEEPSEEK_API_KEY|ANTHROPIC_API_KEY|GROQ_API_KEY|OPENAI_API_KEY|services[.](gemini|deepseek|anthropic|groq|openai)'
 if grep -RInE --include='*.php' --include='*.js' --include='*.mjs' --include='*.py' "$EXTERNAL_AI_PATTERN" backend/app backend/config backend/routes server ops/agents 2>/dev/null; then
