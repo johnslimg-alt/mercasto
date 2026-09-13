@@ -19,13 +19,12 @@ namespace App\Support;
  * this already; Meta and TikTok are brought to the same rule here, in one audited
  * place.
  *
- * Note on `app.frontend_url`: Laravel's base config defaults it to
- * `http://localhost:3000` (vendor/laravel/framework/config/app.php) and this
- * repository's deployment configuration never sets `FRONTEND_URL`. Rewriting a
- * valid page URL to a configured "canonical" origin would therefore be able to
- * replace real page URLs with localhost:3000 in production. This helper keeps the
- * candidate's own origin instead, and only falls back to configuration when there
- * is no usable URL at all.
+ * Note on `app.frontend_url`: the framework's base config ships a non-public
+ * default for it and this repository's deployment configuration never sets
+ * `FRONTEND_URL`. Rewriting a valid page URL to a configured "canonical" origin
+ * could therefore replace real page URLs with a non-public host in production.
+ * This helper keeps the candidate's own origin instead, and only falls back to
+ * configuration when there is no usable URL at all.
  *
  * Legitimate behaviour that must NOT be lost, and is not: the vendor still learns
  * the page the conversion happened on (origin + path), and TikTok click
