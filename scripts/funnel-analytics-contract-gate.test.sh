@@ -38,12 +38,24 @@ echo "control 0 OK: bare 'if grep' on a missing file is a silent no-op (the holl
 
 # The gate and its test need only tracked files (no node_modules), so a git
 # archive of HEAD is enough. The files under test are then overlaid from the
-# working tree, so this control also validates uncommitted edits.
-git -C "${ROOT_DIR}" archive HEAD | tar -x -C "${scratch}"
-for rel in "${GATE_REL}" "${FUNNEL_TEST_REL}" "${LIVE_AUTH_REL}"; do
-  mkdir -p "${scratch}/$(dirname "${rel}")"
-  cp "${ROOT_DIR}/${rel}" "${scratch}/${rel}"
-done
+# working tree, so this control also validates uncommitted edits — including the
+# shared matcher module, which does not exist in HEAD yet.
+OVERLAY_FILES=(
+  "${GATE_REL}"
+  "${FUNNEL_TEST_REL}"
+  "${LIVE_AUTH_REL}"
+  "scripts/funnel-emitter-contract.mjs"
+)
+
+overlay_working_tree() {
+  git -C "${ROOT_DIR}" archive HEAD | tar -x -C "${scratch}"
+  for rel in "${OVERLAY_FILES[@]}"; do
+    mkdir -p "${scratch}/$(dirname "${rel}")"
+    cp "${ROOT_DIR}/${rel}" "${scratch}/${rel}"
+  done
+}
+
+overlay_working_tree
 
 run_gate() { ( cd "${scratch}" && bash "${GATE_REL}" ); }
 
@@ -79,31 +91,78 @@ if [ "${status}" -eq 0 ]; then
 fi
 echo "control 3 OK: the funnel contract test fails when its asserted file is missing"
 
-# Control 4 — reintroducing a duplicate email emitter in the live App.jsx fails.
-git -C "${ROOT_DIR}" archive HEAD | tar -x -C "${scratch}"
-for rel in "${GATE_REL}" "${FUNNEL_TEST_REL}" "${LIVE_AUTH_REL}"; do
-  mkdir -p "${scratch}/$(dirname "${rel}")"
-  cp "${ROOT_DIR}/${rel}" "${scratch}/${rel}"
+# Control 4 — every equivalent spelling of a duplicate email emitter in the live
+# App.jsx fails the gate AND the unit contract. The first version of the guard saw
+# only the single-quoted, single-spaced form, so the rest escaped both.
+reset_scratch() {
+  overlay_working_tree
+}
+
+spellings=(
+  "events.registered({ event_id: 'control', meta_event_id: 'control', method: 'email' });"
+  'events.registered({ method: "email" });'
+  'events.registered({ method: `email` });'
+  'events.registered({method:"email"});'
+  "events.registered ( { method : 'email' } );"
+)
+for spelling in "${spellings[@]}"; do
+  reset_scratch
+  printf '\n// control injection: a duplicate email sign_up emitter\n%s\n' "${spelling}" >>"${scratch}/src/App.jsx"
+
+  status=0
+  gate_output="$( cd "${scratch}" && bash "${GATE_REL}" 2>&1 )" || status=$?
+  if [ "${status}" -eq 0 ]; then
+    echo "Control 4 failed: the gate accepted this duplicate email emitter: ${spelling}" >&2
+    exit 1
+  fi
+  if ! printf '%s' "${gate_output}" | grep -qF "must not be duplicated"; then
+    echo "Control 4 failed: expected the duplicate-emitter guard to fire for ${spelling}, got: ${gate_output}" >&2
+    exit 1
+  fi
+
+  status=0
+  test_output="$( cd "${scratch}" && node --test "${FUNNEL_TEST_REL}" 2>&1 )" || status=$?
+  if [ "${status}" -eq 0 ]; then
+    echo "Control 4 failed: the unit contract accepted this duplicate email emitter: ${spelling}" >&2
+    exit 1
+  fi
 done
+echo "control 4 OK: duplicate email emitters fail the gate and the unit contract in all 5 spellings"
+
+# Control 4b — the guard must not over-block: legitimate non-email channels and a
+# plain duplicate-channel call still pass, so the fix cannot start failing real code.
+reset_scratch
 cat >>"${scratch}/src/App.jsx" <<'EOF'
 
-// control injection: a duplicate email sign_up emitter
-events.registered({ event_id: 'control', meta_event_id: 'control', method: 'email' });
+// control injection: legitimate non-email registration channels
+events.registered({ method: 'telegram' });
+events.registered({ method: oauthRegistrationMethod });
+events.registered({ provider: 'email' });
 EOF
+if ! ( cd "${scratch}" && bash "${GATE_REL}" >/dev/null 2>&1 ); then
+  echo "Control 4b failed: legitimate non-email emitters must not fail the gate" >&2
+  ( cd "${scratch}" && bash "${GATE_REL}" ) >&2 || true
+  exit 1
+fi
+if ! ( cd "${scratch}" && node --test "${FUNNEL_TEST_REL}" >/dev/null 2>&1 ); then
+  echo "Control 4b failed: legitimate non-email emitters must not fail the unit contract" >&2
+  exit 1
+fi
+echo "control 4b OK: legitimate non-email emitters still pass the gate and the contract"
+
+# Control 4c — an unreadable asserted file fails the matcher closed (exit 2), so a
+# missing App.jsx can never read as "no duplicate emitter".
 status=0
-gate_output="$( cd "${scratch}" && bash "${GATE_REL}" 2>&1 )" || status=$?
-if [ "${status}" -eq 0 ]; then
-  echo "Control 4 failed: the gate accepted a duplicate email sign_up emitter" >&2
+missing_output="$( cd "${scratch}" && node scripts/funnel-emitter-contract.mjs src/definitely-missing.jsx 2>&1 )" || status=$?
+if [ "${status}" -ne 2 ]; then
+  echo "Control 4c failed: expected exit 2 for an unreadable target, got ${status}: ${missing_output}" >&2
   exit 1
 fi
-if ! printf '%s' "${gate_output}" | grep -qF "must not be duplicated"; then
-  echo "Control 4 failed: expected the duplicate-emitter guard to fire, got: ${gate_output}" >&2
-  exit 1
-fi
-echo "control 4 OK: a duplicate email emitter fails the gate"
+echo "control 4c OK: the matcher fails closed (exit 2) on an unreadable target"
 
 # Control 5 — a duplicate emitter in the live auth state module fails too, so the
 # retargeted contract is not weaker than the dead-file assertion it replaced.
+reset_scratch
 cat >>"${scratch}/${LIVE_AUTH_REL}" <<'EOF'
 
 // control injection: a registration emitter in the live auth state module
@@ -122,5 +181,23 @@ if ! printf '%s' "${gate_output}" | grep -qF "must not emit registration events"
   exit 1
 fi
 echo "control 5 OK: a registration emitter in the live auth state fails the gate"
+
+# Control 6 — the reviewer's exact reproduction: the double-quoted spelling,
+# appended to App.jsx, must be rejected by the shared matcher invoked the way the
+# gate invokes it.
+reset_scratch
+printf '\n// control injection: the reviewer double-quoted spelling\nevents.registered({ method: "email" });\n' >>"${scratch}/src/App.jsx"
+status=0
+reviewer_output="$( cd "${scratch}" && node scripts/funnel-emitter-contract.mjs src/App.jsx 2>&1 )" || status=$?
+if [ "${status}" -eq 0 ]; then
+  echo "Control 6 failed: the matcher accepted a double-quoted duplicate emitter" >&2
+  exit 1
+fi
+if ! printf '%s' "${reviewer_output}" | grep -qF "duplicate email registration emitter"; then
+  echo "Control 6 failed: expected the matcher to name the duplicate, got: ${reviewer_output}" >&2
+  exit 1
+fi
+echo "control 6 OK: the reviewer's double-quoted emitter is rejected by the shared matcher"
+echo "  ${reviewer_output}"
 
 echo "funnel gate hollowing control OK"

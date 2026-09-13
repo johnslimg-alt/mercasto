@@ -7,6 +7,10 @@ import {
   listingAnalyticsParams,
   registrationEventId,
 } from '../src/utils/funnelAnalytics.js';
+import {
+  countRegistrationEmitters,
+  findEmailRegistrationEmitters,
+} from '../scripts/funnel-emitter-contract.mjs';
 
 const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
@@ -77,8 +81,18 @@ test('web analytics enforces platform/version and avoids duplicate signup hooks'
   assert.doesNotMatch(liveAuthState, /events\.registered/);
   // Email/password sign_up is emitted exactly once, by the registration fetch
   // interceptor in metaCapiBridge.js. App.jsx may only emit the OAuth, phone and
-  // Telegram channels, never a second email conversion.
-  assert.doesNotMatch(app, /events\.registered\(\{[^}]*method: 'email'/);
+  // Telegram channels, never a second email conversion. The matcher lives in
+  // scripts/funnel-emitter-contract.mjs and is shared with the shell gate, so
+  // quote style and whitespace cannot let a duplicate escape it.
+  assert.deepEqual(
+    findEmailRegistrationEmitters(app),
+    [],
+    'App.jsx must not emit a duplicate email registration event',
+  );
+  assert.ok(
+    countRegistrationEmitters(app) >= 3,
+    'the OAuth, phone and Telegram registration emitters must still be present in App.jsx',
+  );
   assert.match(bridge, /if \(!response\.ok\)/);
   assert.match(bridge, /if \(isPostAd && !payload\.listing_id\) return;/);
   assert.match(openAiBridge, /if \(!content\) return;/);
@@ -120,4 +134,59 @@ test('homepage analytics uses the active pipeline and excludes catalog/detail st
     assert.match(app, new RegExp(`['"]${key}['"]`));
   }
   assert.match(app, /\^#\(\?:ad-\|company-\)/);
+});
+
+test('email-emitter matcher sees every equivalent spelling and nothing else', () => {
+  // Positive cases: all semantically identical, all must be caught. The first
+  // version of this guard matched only the first of them, which is the defect
+  // this test now prevents from coming back.
+  const duplicates = [
+    "events.registered({ method: 'email' })",
+    'events.registered({ method: "email" })',
+    'events.registered({ method: `email` })',
+    'events.registered({method:"email"})',
+    "events.registered ( { method : 'email' } )",
+    "events.registered({\n  method:\n    'email',\n})",
+    'events.registered({ "method": "email" })',
+    "events.registered({ method: 'EMAIL' })",
+    'events.registered({ event_id: x, meta_event_id: x, method: "email", source: "y" })',
+  ];
+  for (const snippet of duplicates) {
+    assert.equal(
+      findEmailRegistrationEmitters(snippet).length,
+      1,
+      `must be detected as a duplicate email emitter: ${snippet}`,
+    );
+  }
+
+  // Negative cases: other channels and lookalike keys must never be flagged, so
+  // the guard cannot start failing legitimate code.
+  const legitimate = [
+    "events.registered({ method: oauthRegistrationMethod })",
+    "events.registered({ method: result.registration_method || 'phone' })",
+    "events.registered({ method: data.registration_method || 'telegram' })",
+    "events.registered({ method: 'google' })",
+    "events.contactOpened('whatsapp', ad.id, ad.category, { contact_method: 'email' })",
+    "events.registered({ provider: 'email' })",
+    "config.method = 'email'",
+    "someMethod({ methodology: 'email' })",
+    "events.messageStarted({ channel: 'email' })",
+  ];
+  for (const snippet of legitimate) {
+    assert.deepEqual(
+      findEmailRegistrationEmitters(snippet),
+      [],
+      `must NOT be flagged: ${snippet}`,
+    );
+  }
+
+  // Structural boundary: a following statement's `method: 'email'` must not be
+  // attributed to a registration call.
+  assert.deepEqual(
+    findEmailRegistrationEmitters("events.registered({ method: 'telegram' });\nconst x = { method: 'email' };"),
+    [],
+    'the matcher must not bleed past the end of the call',
+  );
+  assert.equal(countRegistrationEmitters("events.registered({ a: 1 })"), 1);
+  assert.equal(countRegistrationEmitters("events.registered ( { a: 1 } )"), 1);
 });

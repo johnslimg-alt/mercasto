@@ -43,17 +43,6 @@ must_not_contain() { # <file> <fixed-string> <message>
   esac
 }
 
-must_not_match() { # <file> <extended-regex> <message>
-  test -f "$1" || { echo "Missing asserted file: $1" >&2; exit 1; }
-  local status=0
-  grep -qE -- "$2" "$1" || status=$?
-  case "$status" in
-    0) echo "$3" >&2; exit 1 ;;
-    1) return 0 ;;
-    *) echo "grep failed (status $status) while checking $1" >&2; exit 1 ;;
-  esac
-}
-
 grep -qF "export function useAuthSessionState" "$LIVE_AUTH_STATE"
 
 grep -qF "FUNNEL_ANALYTICS_VERSION = '2026-08-04'" "$CONTRACT"
@@ -94,9 +83,14 @@ must_not_contain "$LIVE_AUTH_STATE" \
   "events.registered" \
   "The live auth session state must not emit registration events; email sign_up comes from the registration fetch interceptor."
 
-must_not_match "$APP" \
-  "events\.registered\(\{[^}]*method: 'email'" \
-  "Email registration is already emitted by the registration fetch interceptor and must not be duplicated."
+# The email-emitter matcher is shared with the unit contract through
+# scripts/funnel-emitter-contract.mjs. A bare regex here matched only
+# `method: 'email'`, so the equally valid double-quoted and backtick spellings
+# escaped the gate entirely. The module normalizes quote style and whitespace and
+# parses the call's argument list; it exits 2 (fail closed) on unreadable input.
+if ! node scripts/funnel-emitter-contract.mjs "$APP"; then
+  exit 1
+fi
 
 node --test "$TEST"
 echo "unified funnel analytics contract gate OK"
