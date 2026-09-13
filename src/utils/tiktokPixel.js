@@ -257,6 +257,10 @@ async function trackTikTokEvent(eventName, data = {}) {
 function handleDataLayerItem(item) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) return;
   if (!hasVendorConsent()) return;
+  // Events raised before the grant stay local: the dataLayer walk performed when
+  // the pixel installs must not deliver them retroactively.
+  const stampedState = cleanString(item.consent_state, 20).toLowerCase();
+  if (stampedState && stampedState !== 'granted') return;
   const analyticsEvent = cleanString(item.event, 80).toLowerCase();
   if (!analyticsEvent) return;
 

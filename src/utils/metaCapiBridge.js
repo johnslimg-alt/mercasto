@@ -1,10 +1,30 @@
 import { trackEvent } from './analytics';
 import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
-import { hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
+import { getVendorConsentState, hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const META_API_BASE = '/api/meta/events';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
 const META_BROWSER_SENT_MARKER = '__mercastoMetaBrowserSent';
+
+// Deferred replay is only for events raised while consent was granted. Items
+// stamped before a grant (or pushed while consent was unknown) must never be
+// delivered later: consent cannot retroactively authorise that collection.
+function isReplayableConsentState(item = {}) {
+  return String(item?.consent_state || '').toLowerCase() === 'granted';
+}
+
+// Stamps an item with the consent state at push time, so a later replay can tell
+// which side of the grant it came from. Already stamped items are untouched.
+function stampConsentState(item = {}) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+  if (item.consent_state) return item;
+  try {
+    item.consent_state = getVendorConsentState();
+  } catch {
+    // Frozen or exotic items stay unstamped and are never replayed.
+  }
+  return item;
+}
 
 const EVENT_MAP = {
   ad_posted: { endpoint: 'post-ad', metaName: 'PostAd', custom: true },
@@ -174,6 +194,8 @@ function handleDataLayerItem(item = {}) {
   const normalizedEvent = String(item.event || '').trim().toLowerCase();
   const metaConfig = EVENT_MAP[normalizedEvent];
   if (!metaConfig) return;
+  // Live handling only: an item stamped before a grant is dead for vendors.
+  if (item.consent_state && !isReplayableConsentState(item)) return;
   sendMappedEvent(metaConfig, item);
 }
 
@@ -294,12 +316,15 @@ export function installMetaCapiBridge() {
   patchRegistrationFetch();
 
   window.dataLayer = window.dataLayer || [];
-  window.dataLayer.forEach(handleDataLayerItem);
+  // Items already in the layer are stamped with the state at bridge install time
+  // (the first-party bootstrap runs before the visitor decides), so a later
+  // replay can never mistake them for consented events.
+  window.dataLayer.forEach((item) => handleDataLayerItem(stampConsentState(item)));
 
   const originalPush = window.dataLayer.push.bind(window.dataLayer);
   window.dataLayer.push = (...items) => {
     const result = originalPush(...items);
-    items.forEach(handleDataLayerItem);
+    items.forEach((item) => handleDataLayerItem(stampConsentState(item)));
     return result;
   };
 
@@ -312,6 +337,9 @@ export function replayMetaBrowserEvents() {
 
   dataLayer.forEach((item = {}) => {
     if (!item || typeof item !== 'object' || item[META_BROWSER_SENT_MARKER]) return;
+    // Deferred replay is consented-only: events raised before the grant stay
+    // local and are never sent to Meta after the visitor agrees.
+    if (!isReplayableConsentState(item)) return;
     const normalizedEvent = String(item.event || '').trim().toLowerCase();
     const metaConfig = EVENT_MAP[normalizedEvent];
     if (!metaConfig) return;

@@ -39,6 +39,7 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {} } = {
 
   const document = {
     title: 'Mercasto | test',
+    referrer: '',
     documentElement: { lang: 'es-MX' },
     head: { appendChild: (node) => record(node) },
     createElement: () => ({ tagName: 'SCRIPT', async: false, src: '', setAttribute() {} }),
@@ -64,6 +65,10 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {} } = {
     innerWidth: 1280,
     innerHeight: 800,
     document,
+    history: {
+      pushState() {},
+      replaceState() {},
+    },
     addEventListener,
     removeEventListener,
     dispatchEvent,
@@ -108,6 +113,7 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {} } = {
     window,
     document,
     localStore,
+    sessionStore,
     requests,
     registered,
     setConsent(value) {
@@ -137,6 +143,25 @@ async function loadAnalyticsModules() {
   const tiktok = await import(`../src/utils/tiktokPixel.js?case=${moduleCounter}`);
   return { ...analytics, initTikTokPixel: tiktok.initTikTokPixel };
 }
+
+async function loadCampaignAttribution() {
+  moduleCounter += 1;
+  return import(`../src/utils/campaignAttribution.js?case=${moduleCounter}`);
+}
+
+const ATTRIBUTION_KEYS = [
+  'mercasto.attribution.first.v1',
+  'mercasto.attribution.last.v1',
+  'mercasto.attribution.session.v1',
+];
+const SESSION_KEY = 'mercasto_analytics_session_id';
+
+const storedAttributionKeys = (env) => [
+  ...env.localStore.keys(),
+  ...env.sessionStore.keys(),
+].filter((key) => key.startsWith('mercasto.attribution.'));
+
+const storedSessionKeys = (env) => [...env.sessionStore.keys()].filter((key) => key === SESSION_KEY);
 
 // Exact vendor hosts only. Request src strings may be relative in the fake
 // browser, so they are resolved against this base before the hostname is
@@ -324,4 +349,107 @@ test('withdrawal stops vendor delivery, revokes loaded vendors and purges their 
     vendor === 'meta' && kind === 'consent' && value === 'grant'
   ));
   assert.ok(grantedIndex >= 0, 're-granting consent must resume the Meta Pixel');
+});
+
+test('attribution and session identifiers are not persisted before a grant', async () => {
+  const env = installFakeBrowser({ consent: null });
+
+  try {
+    const { installCampaignAttribution, getCampaignAttribution } = await loadCampaignAttribution();
+    installCampaignAttribution();
+
+    // The landing campaign is captured, but only in memory: a visitor who never
+    // answers (or refuses) leaves nothing in localStorage/sessionStorage.
+    assert.equal(getCampaignAttribution().attribution_source, 'facebook');
+    assert.deepEqual(storedAttributionKeys(env), [], 'no attribution key may be written before consent');
+    assert.deepEqual([...env.localStore.keys()], [], 'the pre-consent window must not touch localStorage');
+
+    const analytics = await loadAnalyticsModules();
+    analytics.trackEvent('page_view');
+    assert.deepEqual(storedSessionKeys(env), [], 'no analytics session id may be written before consent');
+    assert.deepEqual(storedAttributionKeys(env), []);
+    assert.equal(env.sessionStore.size, 0);
+
+    // Granting flushes the in-memory capture and only then persists identifiers.
+    env.setConsent('all');
+    assert.deepEqual(
+      [...env.localStore.keys()].filter((key) => key.startsWith('mercasto.attribution.')).sort(),
+      [ATTRIBUTION_KEYS[0], ATTRIBUTION_KEYS[1]],
+    );
+    assert.ok(env.sessionStore.has(ATTRIBUTION_KEYS[2]), 'a grant persists the session touch');
+    assert.equal(getCampaignAttribution().attribution_campaign, 'consent_unit');
+
+    analytics.trackEvent('page_view');
+    assert.deepEqual(storedSessionKeys(env), [SESSION_KEY], 'a grant persists the session id');
+  } finally {
+    env.restore();
+  }
+});
+
+test('a refusal erases attribution from an earlier session and writes no new identifiers', async () => {
+  const env = installFakeBrowser({ consent: 'essential' });
+  const stale = JSON.stringify({ source: 'google', capturedAt: Date.now() });
+  env.localStore.set(ATTRIBUTION_KEYS[0], stale);
+  env.localStore.set(ATTRIBUTION_KEYS[1], stale);
+  env.sessionStore.set(ATTRIBUTION_KEYS[2], stale);
+  env.sessionStore.set(SESSION_KEY, 'stale-session');
+
+  try {
+    const { installCampaignAttribution } = await loadCampaignAttribution();
+    installCampaignAttribution();
+
+    assert.deepEqual(storedAttributionKeys(env), [], 'a refusal clears attribution stored by an earlier session');
+
+    const analytics = await loadAnalyticsModules();
+    const delivered = [];
+    // Consent-mode signals are not event deliveries.
+    env.window.fbq = (...args) => {
+      if (args[0] !== 'consent') delivered.push(args);
+    };
+    analytics.revokeAnalyticsVendors();
+    analytics.trackEvent('page_view');
+    analytics.trackEvent('lead_created', { listing_id: '8080' });
+
+    assert.deepEqual(storedAttributionKeys(env), [], 'a refused visitor keeps no attribution storage');
+    assert.deepEqual(storedSessionKeys(env), [], 'a refused visitor keeps no session identifier');
+    assert.deepEqual(delivered, [], 'a refused visitor sends nothing to vendors');
+    assert.deepEqual(vendorRequests(env.requests), []);
+    // First-party measurement of the refusal-safe events is unaffected.
+    assert.ok(env.window.dataLayer.some((item) => item?.event === 'page_view'));
+  } finally {
+    env.restore();
+  }
+});
+
+test('events raised before consent are never delivered after the grant', async () => {
+  const env = installFakeBrowser({ consent: null });
+
+  try {
+    const delivered = [];
+    env.window.fbq = (...args) => delivered.push(args);
+    const analytics = await loadAnalyticsModules();
+
+    analytics.trackEvent('lead_created', { listing_id: '9090', value: 10 });
+    const preConsentItem = env.window.dataLayer.find((item) => item?.event === 'lead_created');
+    assert.equal(preConsentItem.consent_state, 'unknown', 'events are stamped with the consent state at creation');
+    assert.deepEqual(vendorRequests(env.requests), [], 'nothing loads before consent');
+
+    env.setConsent('all');
+    assert.equal(analytics.activateAnalyticsVendors(), true);
+
+    assert.equal(
+      delivered.some(([kind, name]) => kind === 'trackCustom' && name === 'lead_created'),
+      false,
+      'a pre-consent event must never reach a vendor after the grant',
+    );
+
+    // Post-grant events still deliver, and the dropped pre-consent page_view is
+    // replaced by a fresh one for the page the visitor granted on.
+    analytics.trackEvent('lead_created', { listing_id: '9091', value: 11 });
+    assert.ok(delivered.some(([kind, name, params]) => (
+      kind === 'trackCustom' && name === 'lead_created' && params.listing_id === '9091'
+    )), 'post-grant events must still reach vendors');
+  } finally {
+    env.restore();
+  }
 });
