@@ -9,8 +9,10 @@ const META_BROWSER_SENT_MARKER = '__mercastoMetaBrowserSent';
 // Consent invariant for every vendor-side delivery: only an explicit
 // `consent_state === 'granted'` stamp is deliverable or replayable. Missing,
 // empty, unknown and unstampable (frozen) items are treated as pre-consent and
-// must never reach a vendor. The first-party server relay is the documented
-// exception (decision D-111) and is not gated by this check.
+// must never reach a vendor. This governs the browser copy only: the
+// first-party server relay (POST /api/meta/events/*) receives the event
+// regardless, and gates its own onward transfer to Meta/TikTok/OpenAI in the
+// backend (App\Support\AnalyticsTrackingConsent::allowsVendorEgress).
 function isGrantedConsentState(item = {}) {
   return String(item?.consent_state || '').toLowerCase() === 'granted';
 }
@@ -189,9 +191,11 @@ function sendMappedEvent(metaConfig, item = {}, { browserAllowed = true } = {}) 
     }
   }
 
-  // Server relay: intentionally NOT gated by cookie consent (D-111). Mapped
-  // events keep flowing to POST /api/meta/events/* for every visitor and the
-  // server's own consent handling decides what leaves it.
+  // Server relay: first-party receipt, so it is intentionally not gated by
+  // cookie consent here. Mapped events keep flowing to POST /api/meta/events/*
+  // for every visitor; the backend decides what leaves the server, and it
+  // forwards to Meta/TikTok/OpenAI only on an explicit affirmative consent
+  // signal (App\Support\AnalyticsTrackingConsent::allowsVendorEgress).
   if (metaConfig.server !== false && metaConfig.endpoint) {
     void sendServerEvent(metaConfig.endpoint, serverPayload);
   }
@@ -204,7 +208,8 @@ function handleDataLayerItem(item = {}) {
   if (!metaConfig) return;
   // Browser Pixel copy requires an explicit granted stamp; missing, unknown and
   // unstampable items are pre-consent and never reach Meta's browser pixel. The
-  // server relay inside sendMappedEvent stays ungated (D-111).
+  // server relay inside sendMappedEvent stays ungated because receipt is
+  // first-party; its onward transfer is gated in the backend.
   sendMappedEvent(metaConfig, item, { browserAllowed: isGrantedConsentState(item) });
 }
 
