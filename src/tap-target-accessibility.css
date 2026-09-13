@@ -15,7 +15,13 @@
  */
 .app-footer-nav a,
 .app-footer-nav button,
+/* `button` as well as `a` in the legal bar: #1139 (consent preferences, merged
+   after this branch was written) added a cookie-preferences <button> next to the
+   links. Same treatment, hit box only — its testid, handler and position are
+   untouched. Without this the control stays 137x18 and passes only via the
+   WCAG 2.5.8 spacing exception, which is exactly what this file exists to remove. */
 .app-footer-legal a,
+.app-footer-legal button,
 .home-see-all {
   display: inline-flex;
   align-items: center;
