@@ -17,7 +17,9 @@ const CATALOG_BODY = 'Este producto se muestra como referencia';
 
 const referenceAd = {
   id: FILLER_ID,
-  title: 'Refrigerador de catálogo 300L',
+  // A real catalogue title (production ad 6376): long enough to need two lines on a
+  // narrow grid card, which is the case where the badge used to outrank the title.
+  title: 'Fundas para Asientos de Piel Sintética - Modelo G',
   price: 8999,
   category: 'electronica',
   state: 'Jalisco',
@@ -50,7 +52,16 @@ const stringFlagAd = {
   is_catalog_filler: 'false',
 };
 
-const allAds = [referenceAd, realAd, stringFlagAd];
+// Short reference titles are what the seeding path actually emits (TestAdsSeeder:
+// "iPad Mini (Tablets) - 123"). A max-line clamp cannot protect these, so they are the
+// case that proves the card reserves title space instead of only capping it.
+const shortReferenceAd = {
+  ...referenceAd,
+  id: 91004,
+  title: 'iPad Mini (Tablets) - 123',
+};
+
+const allAds = [referenceAd, shortReferenceAd, realAd, stringFlagAd];
 
 async function mockPublicApi(page, { catalogView = 'grid' } = {}) {
   await page.addInitScript((view) => {
@@ -89,6 +100,22 @@ async function badgeGeometry(badge) {
     }
     return { fontSize: styles.fontSize, position: styles.position, insideImage };
   });
+}
+
+// The reference badge is the honest disclosure that a card is not seller inventory, so the
+// listing's own title must never render shorter (and therefore visually lighter) than it.
+async function expectTitleOutranksBadge(page, ad, label) {
+  const card = cardByTitle(page, ad.title).first();
+  await expect(card, `"${ad.title}" card ${label}`).toBeVisible({ timeout: 20_000 });
+
+  const title = await card.locator('h2,h3,h4').first().boundingBox();
+  const badge = await card.getByTestId('catalog-reference-badge').boundingBox();
+  expect(title, `title box ${label}`).not.toBeNull();
+  expect(badge, `badge box ${label}`).not.toBeNull();
+  expect(
+    title.height,
+    `"${ad.title}" title (${title.height}px) must not be shorter than the reference badge (${badge.height}px) ${label}`,
+  ).toBeGreaterThanOrEqual(badge.height);
 }
 
 // Visible headings in document order, so skipped levels are caught the way a
@@ -196,6 +223,33 @@ test.describe('reference inventory is labelled', () => {
 
     await expect(page.getByTestId('catalog-reference-badge')).toHaveCount(0);
     await expect(page.getByTestId('catalog-reference-notice')).toHaveCount(0);
+  });
+
+  test('the listing title keeps more visual weight than the reference badge', async ({ page }) => {
+    // Regression guard for the inverted card hierarchy. The 11px badge label is long, so on
+    // narrow grid cards it wraps to two lines (34px); in the list layout it stays on one line
+    // but the pill is still 21px tall. A title clamp is only a MAXIMUM, so a LONG title is
+    // protected by line-clamp-2 while a SHORT one ("iPad Mini (Tablets) - 123", the shape the
+    // seeding path emits) renders a single line and is outweighed. Reference titles therefore
+    // reserve two lines. Both shapes are asserted because the long-title case cannot fail for
+    // the short-title regression, and both layouts are asserted because both are shipped.
+    for (const width of [360, 390, 430, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/listings', { waitUntil: 'domcontentloaded' });
+      for (const ad of [referenceAd, shortReferenceAd]) {
+        await expectTitleOutranksBadge(page, ad, `in the grid at ${width}px`);
+      }
+    }
+
+    await page.unroute('**/api/**');
+    await mockPublicApi(page, { catalogView: 'list' });
+    for (const width of [390, 412]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto('/listings', { waitUntil: 'domcontentloaded' });
+      for (const ad of [referenceAd, shortReferenceAd]) {
+        await expectTitleOutranksBadge(page, ad, `in the list at ${width}px`);
+      }
+    }
   });
 });
 
