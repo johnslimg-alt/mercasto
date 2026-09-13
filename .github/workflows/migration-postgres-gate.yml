@@ -19,6 +19,11 @@ on:
       - main
     paths:
       - 'backend/database/migrations/**'
+      # A migration can execute application code (2026_08_04_170000_minimize_payment_
+      # provider_payloads.php calls App\Support\PaymentPayloadSanitizer), so a change to
+      # a helper alters what a fresh install persists without touching a migration file.
+      # The verifier selects the migrations that depend on whichever helper changed.
+      - 'backend/app/Support/**'
       - 'scripts/verify-migrations-postgres.sh'
       - 'scripts/verify-migrations-postgres.test.sh'
       - '.github/workflows/migration-postgres-gate.yml'
@@ -27,6 +32,7 @@ on:
       - main
     paths:
       - 'backend/database/migrations/**'
+      - 'backend/app/Support/**'
       - 'scripts/verify-migrations-postgres.sh'
       - '.github/workflows/migration-postgres-gate.yml'
 
