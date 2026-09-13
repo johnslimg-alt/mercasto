@@ -439,6 +439,55 @@ test.describe('consent gated tracking vendors', () => {
     expect(dwell.dwell_seconds).toBeLessThanOrEqual(7);
   });
 
+  test('scroll thresholds reached before the grant are not reported as granted', async ({ page }) => {
+    test.setTimeout(90_000);
+    await interceptVendorTraffic(page);
+    await page.addInitScript(seedBrowserState, null);
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const banner = page.getByRole('dialog', { name: 'Aviso de cookies' });
+    await expect(banner).toBeVisible();
+
+    // Reach 60% of the page while consent is unknown: the 25/50 thresholds are
+    // passed here, and handleScroll() recomputes absolute depth afterwards.
+    await page.evaluate(() => {
+      const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      window.scrollTo(0, Math.round(scrollable * 0.6));
+    });
+    await page.waitForTimeout(500);
+
+    await banner.getByRole('button', { name: ACCEPT_LABEL }).click();
+    await expect(banner).toBeHidden();
+    await expect
+      .poll(() => page.evaluate(() => Boolean(window.__mercastoAnalyticsVendorsActivated)), { timeout: 20_000 })
+      .toBeTruthy();
+
+    // A small post-grant scroll must not re-announce depth reached pre-consent.
+    await page.evaluate(() => {
+      const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      window.scrollTo(0, Math.round(scrollable * 0.65));
+    });
+    await page.waitForTimeout(800);
+
+    const grantedDepths = await page.evaluate(() => (
+      (window.dataLayer || [])
+        .filter((item) => item?.event === 'scroll_depth' && item?.consent_state === 'granted')
+        .map((item) => item.percent)
+    ));
+    expect(grantedDepths.filter((percent) => percent <= 50)).toEqual([]);
+
+    // Positive control: depth genuinely reached after the grant is still reported.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect
+      .poll(async () => page.evaluate(() => (
+        (window.dataLayer || [])
+          .filter((item) => item?.event === 'scroll_depth' && item?.consent_state === 'granted')
+          .map((item) => item.percent)
+      )), { message: 'post-grant scroll depth must still be measured' })
+      .toContain(90);
+  });
+
   test('a mid-session grant does not report pre-consent dwell time or scroll depth', async ({ page }) => {
     test.setTimeout(60_000);
     await interceptVendorTraffic(page);

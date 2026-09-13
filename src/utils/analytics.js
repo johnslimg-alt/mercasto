@@ -631,9 +631,13 @@ function resetPageEngagement() {
 // be reported afterwards, so scroll depth restarts at zero instead of inheriting
 // the position already reached while consent was unknown.
 function resetConsentScopedEngagement() {
+  const currentPercent = getScrollPercent();
   pageStartedAt = Date.now();
   maxScrollPercent = 0;
-  scrollThresholdsHit = new Set();
+  // Thresholds already reached are seeded as seen: handleScroll() recomputes the
+  // absolute document percentage, so without this a single post-grant scroll
+  // would re-emit 25/50/75 as granted engagement that happened pre-consent.
+  scrollThresholdsHit = new Set(SCROLL_THRESHOLDS.filter((threshold) => currentPercent >= threshold));
   recentClicks = [];
 }
 
