@@ -127,7 +127,24 @@ class CorrectActivationLifetime extends Command
             return self::FAILURE;
         }
 
-        $limit = max(0, (int) $this->option('limit'));
+        // A malformed --limit must fail loudly rather than be cast: PHP turns '1O0' into 1 (a tiny
+        // budget) and a wholly non-numeric or negative value into 0, which this command reads as NO
+        // limit. An operator typo would then correct far more rows than intended. Validating a
+        // supplied value adds no gate: --limit stays optional, its default is unchanged, and
+        // nothing here prompts.
+        $limitOption = $this->option('limit');
+        $limitRaw = trim((string) (is_scalar($limitOption) ? $limitOption : ''));
+
+        if (preg_match('/^\d+$/', $limitRaw) !== 1) {
+            $this->error(sprintf(
+                "--limit must be a non-negative integer (got '%s'). Nothing was read or written.",
+                $limitRaw
+            ));
+
+            return self::FAILURE;
+        }
+
+        $limit = (int) $limitRaw;
 
         // Printed in both modes, before the first write, from the same trait the activation
         // runbook uses: the resolved lifetime, where it came from, the env-layer desync warning
@@ -264,7 +281,7 @@ class CorrectActivationLifetime extends Command
 
         if ($skipped > 0) {
             $this->warn(sprintf(
-                '%d row(s) were skipped because the row changed while the command was running. Re-run to re-evaluate.',
+                '%d row(s) were skipped because the row changed or the intended lifetime passed while the command was running. Re-run to re-evaluate.',
                 $skipped
             ));
         }
@@ -279,9 +296,21 @@ class CorrectActivationLifetime extends Command
                 count($exclusions)
             ));
 
-            if ($changed > 0) {
-                $this->clearPublicCaches();
+            // Always invalidated on --apply, even when this run corrected nothing. Corrections
+            // commit row by row and the invalidation happens after the loop, so an interruption —
+            // Ctrl-C, OOM, a deploy — or a throwing cache operation can leave the database ahead of
+            // the public caches. A retry then finds no rows to correct; if invalidation were
+            // conditional on $changed it would skip again and the corrected inventory would stay
+            // dark until each cache's TTL expired, with nothing in the output to show it.
+            $cacheFailures = $this->clearPublicCaches();
+
+            if ($cacheFailures === []) {
                 $this->line('Public catalog caches cleared.');
+            } else {
+                $this->warn(sprintf(
+                    'Public catalog caches NOT fully cleared: %s failed. The database was corrected, so re-run --apply once the cache store is healthy.',
+                    implode(', ', $cacheFailures)
+                ));
             }
         } else {
             $this->info(sprintf(
@@ -528,6 +557,17 @@ class CorrectActivationLifetime extends Command
                 return 0;
             }
 
+            // The target comes from the activation anchor, not from now(), so `target > now()` is a
+            // guard about the passage of time rather than about this row's state — and the
+            // evaluation happened OUTSIDE this lock. If the transaction had to wait on a contended
+            // row lock, the intended window can elapse while waiting, and writing then would set
+            // `status = 'active'` with a past `expires_at`: an active but non-indexable listing,
+            // dark again rather than corrected, and reported as corrected. Re-asserted here,
+            // immediately before the write, exactly like every other guard above.
+            if ($target->lessThanOrEqualTo(now())) {
+                return 0;
+            }
+
             // Captured before the write: this is what the audit row records as having changed.
             $previousStatus = (string) $fresh->status;
 
@@ -574,15 +614,38 @@ class CorrectActivationLifetime extends Command
      * Mirrors ReconcileModerationVisibility::clearPublicCaches(): the correction goes through a
      * conditional query-builder update, so AdObserver never fires and the cached catalog would
      * keep serving the old inventory.
+     *
+     * Best-effort per target rather than all-or-nothing: one throwing cache operation must not
+     * leave the remaining keys stale, and a partial invalidation must be reported instead of
+     * silently skipped. Returns the labels that could not be forgotten.
+     *
+     * @return list<string>
      */
-    private function clearPublicCaches(): void
+    private function clearPublicCaches(): array
     {
-        Cache::forget('sitemap_xml');
-        SitemapController::forgetAdsCache();
-        Cache::forget('google_merchant_xml');
-        Cache::forget('ads_featured_block');
+        $failures = [];
+        $forget = function (string $key, string $label) use (&$failures): void {
+            try {
+                Cache::forget($key);
+            } catch (\Throwable) {
+                $failures[] = $label;
+            }
+        };
+
+        $forget('sitemap_xml', 'sitemap_xml');
+        $forget('google_merchant_xml', 'google_merchant_xml');
+        $forget('ads_featured_block', 'ads_featured_block');
+
         for ($page = 1; $page <= 10; $page++) {
-            Cache::forget("ads_index_page_{$page}");
+            $forget("ads_index_page_{$page}", "ads_index_page_{$page}");
         }
+
+        try {
+            SitemapController::forgetAdsCache();
+        } catch (\Throwable) {
+            $failures[] = 'sitemap-ads generation';
+        }
+
+        return $failures;
     }
 }

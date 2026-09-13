@@ -740,6 +740,209 @@ class CorrectActivationLifetimeTest extends TestCase
         );
     }
 
+    // ---------------------------------------------------------------------
+    // Review round 2: robustness of the mechanism itself
+    // ---------------------------------------------------------------------
+
+    /**
+     * The `target > now()` guard is evaluated OUTSIDE the row lock. If the transaction then waits
+     * on a contended lock, the intended window can elapse before the update runs, and the command
+     * would write `status = 'active'` with a past `expires_at` — an active, non-indexable listing,
+     * i.e. dark again rather than corrected, and reported as corrected. The guard is therefore
+     * re-asserted inside the locked transaction, like every other guard already is.
+     *
+     * The lock wait is simulated by advancing the clock when the locked read executes, which is
+     * exactly the window in which real elapsed time would pass.
+     */
+    public function test_it_re_asserts_the_target_is_still_in_the_future_after_taking_the_lock(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);
+
+        // Six days on, a 10-day lifetime leaves the target 4 days ahead: a valid correction.
+        Carbon::setTestNow('2026-08-11 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 10]);
+
+        $before = $this->adRow($ad->id);
+        $advanced = false;
+
+        DB::listen(function ($query) use (&$advanced): void {
+            // The locked single-row read that applyCorrection() takes. sqlite has no FOR UPDATE
+            // (its compileLock() is empty), so the LIMIT 1 shape identifies it there.
+            $isLockedRead = str_contains($query->sql, 'from "ads"')
+                && (str_contains($query->sql, 'for update') || str_contains($query->sql, 'limit 1'));
+
+            if (! $advanced && $isLockedRead) {
+                $advanced = true;
+                Carbon::setTestNow(Carbon::now()->addDays(30));
+            }
+        });
+
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+        $output = Artisan::output();
+        $this->assertTrue($advanced, 'The control must actually have reached the locked read.');
+        $this->assertStringContainsString('Applied: 0 ad(s) corrected', $output);
+        $this->assertStringContainsString('the intended lifetime passed while the command was running', $output);
+
+        // The row must be untouched. Writing here would have set expires_at to the target the
+        // command computed before the clock moved — an active row with a past expiry, which is
+        // not indexable and would have been reported as corrected.
+        $this->assertSame($before, $this->adRow($ad->id), 'The row must be left exactly as it was.');
+
+        // Non-vacuous: the intended target really is in the past by the time the write was reached.
+        $intendedTarget = Carbon::parse('2026-08-05 12:00:00')->addDays(10);
+        $this->assertTrue(
+            now()->greaterThan($intendedTarget),
+            'The control must have pushed now() past the target the command had computed.'
+        );
+    }
+
+    /**
+     * The hardest restamp to see: another path writes `status` + `expires_at` with the same formula,
+     * one second after the activation, leaving no payment and no `republished_at`. It must NOT be
+     * classified as the operator's lifetime. The recorded instant is compared EXACTLY, because the
+     * driver never sees sub-second precision (the grammar truncates to whole seconds before
+     * binding), so no rounding window is needed — that window would only admit restamps like this.
+     */
+    public function test_a_restamp_one_second_after_activation_is_not_treated_as_the_operators(): void
+    {
+        $this->withoutMiddleware(EnforcePaidAdRenewal::class);
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);
+
+        // AdController::renew writes exactly this: status + expires_at, nothing else.
+        Carbon::setTestNow('2026-08-05 12:00:01');
+        $this->actingAs($seller, 'sanctum')
+            ->putJson("/api/ads/{$ad->id}/renew")
+            ->assertOk();
+
+        $restamped = $this->adRow($ad->id);
+        $this->assertSame(
+            now()->addDays(7)->toDateTimeString(),
+            Carbon::parse($restamped['expires_at'])->toDateTimeString(),
+            'The restamp must be exactly one second away from the recorded grant.'
+        );
+        $this->assertNull($restamped['republished_at'], 'This path leaves no republished_at.');
+        $this->assertSame(0, DB::table('payments')->where('ad_id', $ad->id)->count());
+
+        Carbon::setTestNow('2026-08-06 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+
+        $this->assertSame(
+            $restamped,
+            $this->adRow($ad->id),
+            'A lifetime written one second after the activation is not the operator\'s to correct.'
+        );
+        $this->assertStringContainsString('another path wrote this lifetime', Artisan::output());
+    }
+
+    public function test_the_recorded_instant_is_matched_exactly_with_no_adjacent_second_window(): void
+    {
+        $recorded = Carbon::parse('2026-08-12 12:00:00');
+
+        $this->assertTrue(ActivationLifetimeProvenance::matches($recorded->copy(), $recorded->copy()));
+        $this->assertFalse(
+            ActivationLifetimeProvenance::matches($recorded->copy()->addSecond(), $recorded),
+            'The next second is a different instant, not a rounding artefact.'
+        );
+        $this->assertFalse(ActivationLifetimeProvenance::matches($recorded->copy()->subSecond(), $recorded));
+        $this->assertFalse(ActivationLifetimeProvenance::matches($recorded->copy()->subSeconds(2), $recorded));
+        $this->assertFalse(ActivationLifetimeProvenance::matches(null, $recorded));
+        $this->assertFalse(ActivationLifetimeProvenance::matches($recorded, null));
+
+        // Why no window is needed: a Carbon carrying microseconds is truncated to whole seconds by
+        // the grammar before it is bound, so the stored column always holds exactly the recorded
+        // second. Verified on both drivers this suite can run under.
+        $seller = User::factory()->create();
+        $ad = $this->createAd($seller);
+        $withMicros = Carbon::parse('2026-08-12 12:00:00.987654');
+        DB::table('ads')->where('id', $ad->id)->update(['expires_at' => $withMicros]);
+
+        $stored = Carbon::parse((string) DB::table('ads')->where('id', $ad->id)->value('expires_at'));
+        $this->assertSame('2026-08-12 12:00:00', $stored->toDateTimeString());
+        $this->assertTrue(ActivationLifetimeProvenance::matches($stored, $withMicros));
+    }
+
+    /**
+     * `--limit` is a safety budget an operator types by hand. PHP would cast '1O0' to 1 and a
+     * wholly non-numeric or negative value to 0, and 0 means NO limit — so a typo could correct
+     * far more rows than intended. A malformed value is rejected before anything is read or written.
+     */
+    public function test_a_malformed_limit_is_rejected_before_anything_is_written(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ads = [$this->hiddenApprovedAd($seller), $this->hiddenApprovedAd($seller), $this->hiddenApprovedAd($seller)];
+        $this->activate($ads, 7);
+
+        Carbon::setTestNow('2026-08-08 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $before = $this->writeSurface();
+
+        foreach (['1O0', 'abc', '-5', '1.5', ''] as $malformed) {
+            $exit = Artisan::call('ads:correct-activation-lifetime', ['--limit' => $malformed, '--apply' => true]);
+
+            $this->assertSame(1, $exit, "--limit='{$malformed}' must be rejected");
+            $this->assertStringContainsString('--limit must be a non-negative integer', Artisan::output());
+            $this->assertSame($before, $this->writeSurface(), "--limit='{$malformed}' must write nothing");
+        }
+
+        // A well-formed value, and the documented 0 (= no limit), still work.
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--limit' => '1', '--apply' => true]));
+        $this->assertStringContainsString('Applied: 1 ad(s) corrected', Artisan::output());
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--limit' => '0', '--apply' => true]));
+        $this->assertStringContainsString('Applied: 2 ad(s) corrected', Artisan::output());
+    }
+
+    /**
+     * Corrections commit per row, and the cache clear happens after the loop. An interruption in
+     * between — or a cache operation that throws — leaves the database ahead of the public caches,
+     * invisibly. A retry that finds nothing to correct must therefore still invalidate them,
+     * otherwise the corrected inventory stays dark until each cache's TTL expires.
+     */
+    public function test_an_apply_retry_invalidates_the_caches_even_with_nothing_to_correct(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);
+
+        Carbon::setTestNow('2026-08-08 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 90]);
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+        $this->assertStringContainsString('Applied: 1 ad(s) corrected', Artisan::output());
+
+        // Retry after a hypothetical interruption: the row is already correct, caches are not.
+        Cache::spy();
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime', ['--apply' => true]));
+        $this->assertStringContainsString('Applied: 0 ad(s) corrected', Artisan::output());
+
+        Cache::shouldHaveReceived('forget')->with('sitemap_xml')->atLeast()->once();
+        Cache::shouldHaveReceived('forget')->with('google_merchant_xml')->atLeast()->once();
+        Cache::shouldHaveReceived('forget')->with('ads_index_page_1')->atLeast()->once();
+    }
+
+    public function test_a_dry_run_never_invalidates_the_caches(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $seller = User::factory()->create();
+        $ad = $this->hiddenApprovedAd($seller);
+        $this->activate([$ad], 7);
+
+        Carbon::setTestNow('2026-08-08 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 90]);
+
+        Cache::spy();
+        $this->assertSame(0, Artisan::call('ads:correct-activation-lifetime'));
+
+        Cache::shouldNotHaveReceived('forget');
+    }
+
     public function test_it_writes_an_audit_row_and_clears_the_public_caches_on_apply(): void
     {
         Carbon::setTestNow('2026-08-05 12:00:00');

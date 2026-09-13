@@ -50,17 +50,6 @@ final class ActivationLifetimeProvenance
     public const CORRECTED_EXPIRES_AT = 'corrected_expires_at';
 
     /**
-     * Slack allowed when matching a recorded instant against the stored column.
-     *
-     * The recorded value is written as an ISO-8601 string and the column stores whole
-     * seconds; a driver that rounds rather than truncates can land one second away from the
-     * recorded instant. One second is far below the shortest interval any re-stamp can
-     * produce (the shortest lifetime is one day), so the tolerance cannot hide a
-     * third-party write — it only absorbs column rounding.
-     */
-    public const MATCH_TOLERANCE_SECONDS = 1;
-
-    /**
      * The lifetime an activation is about to grant, recorded on the decision it creates.
      *
      * @return array<string, string|int> Keys merged into the decision's `reconciliation` metadata.
@@ -137,6 +126,27 @@ final class ActivationLifetimeProvenance
 
     /**
      * Whether the stored column still holds exactly the recorded instant.
+     *
+     * Compared at whole-second precision and with NO adjacent-second window.
+     *
+     * Why no window is needed: sub-second precision never reaches the driver. Laravel formats
+     * every bound date with the grammar's `dateFormat` (`Y-m-d H:i:s`), so a `now()` carrying
+     * microseconds is truncated to the whole second in the application, before the column sees
+     * it — verified against both drivers this deployment can use (pgsql and the sqlite the test
+     * suite runs on), where a requested `...:00.987654` is stored as `...:00` and compares equal
+     * to the recorded instant. So the stored value is always exactly the recorded second, and no
+     * rounding slack is required to accept a legitimate row.
+     *
+     * Why a window would be harmful: `AdController::renew` writes `status` and `expires_at` with
+     * the same `now() + lifetime` formula and leaves no payment, no `republished_at` and no
+     * `republish_count`. A renewal one second after the activation therefore produces a value one
+     * second away from the recorded grant, and a ±1s tolerance would classify that third-party
+     * lifetime as the operator's, letting a later correction overwrite it.
+     *
+     * Residual, and deliberately not papered over: a restamp inside the SAME whole second writes a
+     * numerically identical value, so no comparison can tell the two writes apart — the stored
+     * lifetime then IS the granted lifetime, so nothing distinguishable is overwritten. Closing
+     * that would need a new marker written by every publishing path, not a tolerance.
      */
     public static function matches(?Carbon $stored, ?Carbon $recorded): bool
     {
@@ -144,6 +154,6 @@ final class ActivationLifetimeProvenance
             return false;
         }
 
-        return abs($stored->getTimestamp() - $recorded->getTimestamp()) <= self::MATCH_TOLERANCE_SECONDS;
+        return $stored->getTimestamp() === $recorded->getTimestamp();
     }
 }
