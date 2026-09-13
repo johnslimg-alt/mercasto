@@ -111,6 +111,22 @@ export function hasVendorConsent() {
   return getVendorConsentState() === 'granted';
 }
 
+// Consent epoch. Every withdrawal bumps it, so an item stamped while an earlier
+// grant held can never be delivered, replayed or relayed after consent was
+// revoked and later granted again — even when the item is frozen and cannot be
+// re-stamped. Items carry the epoch they were raised under; every gate requires
+// it to still be the current one.
+let consentEpoch = 0;
+
+export function getConsentEpoch() {
+  return consentEpoch;
+}
+
+export function bumpConsentEpoch() {
+  consentEpoch += 1;
+  return consentEpoch;
+}
+
 // Subscribe to every consent signal that can happen while the page is open:
 // banner clicks, dashboard switch, server sync and other-tab storage changes.
 export function subscribeTrackingConsent(listener) {

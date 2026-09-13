@@ -1,5 +1,5 @@
 import { FUNNEL_ANALYTICS_VERSION, FUNNEL_EVENTS, listingAnalyticsParams } from './funnelAnalytics.js';
-import { getVendorConsentState, hasVendorConsent } from './trackingConsent.js';
+import { bumpConsentEpoch, getConsentEpoch, getVendorConsentState, hasVendorConsent } from './trackingConsent.js';
 
 // Cross-platform analytics layer for GA4, Meta Pixel, Microsoft/Bing UET and Clarity.
 // It intentionally does not capture raw email, phone, password, message or textarea values.
@@ -541,6 +541,10 @@ export function revokeAnalyticsVendors() {
   // it arrives from another tab or a server sync with no page activity: the next
   // grant must not report dwell/scroll accumulated before or during it.
   measurementIntervalDirty = true;
+  // And it invalidates every vendor event raised under the previous grant, so a
+  // later re-grant cannot replay one (frozen entries included: their old epoch
+  // no longer matches).
+  bumpConsentEpoch();
 
   syncVendorConsent(false);
   purgeVendorCookies();
@@ -559,9 +563,7 @@ export function revokeAnalyticsVendors() {
 export function trackEvent(eventName, params = {}) {
   if (!isEnabled()) return;
 
-  const consentState = getVendorConsentState();
-  // Remembered so the grant can drop everything accumulated before it.
-  if (consentState !== 'granted') measurementIntervalDirty = true;
+  const consentState = syncMeasurementInterval();
   const name = normalizeEventName(eventName);
   const payload = sanitizeParams({
     ...getPageContext(),
@@ -569,8 +571,11 @@ export function trackEvent(eventName, params = {}) {
     platform: 'web',
     analytics_contract_version: FUNNEL_ANALYTICS_VERSION,
     // Stamped so bridges and deferred replay can tell whether the event
-    // happened while the visitor had already granted consent.
+    // happened while the visitor had already granted consent, and under which
+    // consent epoch: a withdrawal bumps the epoch, so events that crossed a
+    // revocation boundary can never be delivered later.
     consent_state: consentState,
+    consent_epoch: getConsentEpoch(),
     session_id: getSessionId(),
   });
 
@@ -627,6 +632,25 @@ function resetPageEngagement() {
   scrollThresholdsHit = new Set();
 }
 
+// Boundary guard for the measurement interval. Every accumulator reader calls
+// this first, so the interval is corrected the moment the granted state is
+// observed — no matter how long the app takes to activate vendors (an
+// authenticated banner acceptance writes cookie_consent before awaiting the
+// consent API) and no matter how the transition arrived (banner, other tab,
+// server sync).
+function syncMeasurementInterval() {
+  const state = getVendorConsentState();
+  if (state === 'granted') {
+    if (measurementIntervalDirty) {
+      measurementIntervalDirty = false;
+      resetConsentScopedEngagement();
+    }
+  } else {
+    measurementIntervalDirty = true;
+  }
+  return state;
+}
+
 // Grant-time reset: unlike a route change, nothing measured before the grant may
 // be reported afterwards, so scroll depth restarts at zero instead of inheriting
 // the position already reached while consent was unknown.
@@ -639,10 +663,14 @@ function resetConsentScopedEngagement() {
   // would re-emit 25/50/75 as granted engagement that happened pre-consent.
   scrollThresholdsHit = new Set(SCROLL_THRESHOLDS.filter((threshold) => currentPercent >= threshold));
   recentClicks = [];
+  // Field focus timestamps predate the grant too: without clearing them, a blur
+  // after the grant reports a form_field_dwell covering the pre-consent interval.
+  fieldFocusStartedAt = new WeakMap();
 }
 
 function flushPageDwell(reason = 'route_change') {
   if (!isBrowser() || !pageStartedAt) return;
+  syncMeasurementInterval();
   const seconds = Math.round((Date.now() - pageStartedAt) / 1000);
   if (seconds < 3) return;
 
@@ -690,6 +718,7 @@ function handleScroll() {
   if (scrollTicking) return;
   scrollTicking = true;
   window.requestAnimationFrame(() => {
+    syncMeasurementInterval();
     const percent = getScrollPercent();
     maxScrollPercent = Math.max(maxScrollPercent, percent);
     SCROLL_THRESHOLDS.forEach((threshold) => {
@@ -856,6 +885,7 @@ function handleFieldBlur(event) {
   if (!(event.target instanceof HTMLElement)) return;
   if (!['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
 
+  syncMeasurementInterval();
   const startedAt = fieldFocusStartedAt.get(event.target);
   const durationMs = startedAt ? Date.now() - startedAt : 0;
   if (durationMs >= 1200) {
@@ -1013,6 +1043,7 @@ function startHeartbeat() {
   if (heartbeatTimer) return;
   heartbeatTimer = window.setInterval(() => {
     if (document.visibilityState !== 'visible') return;
+    syncMeasurementInterval();
     trackEvent('engagement_heartbeat', {
       seconds_on_page: Math.round((Date.now() - pageStartedAt) / 1000),
       max_scroll_percent: maxScrollPercent,

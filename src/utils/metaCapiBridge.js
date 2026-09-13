@@ -1,6 +1,6 @@
 import { trackEvent } from './analytics.js';
 import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
-import { getVendorConsentState, hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
+import { getConsentEpoch, getVendorConsentState, hasVendorConsent, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const META_API_BASE = '/api/meta/events';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
@@ -15,7 +15,11 @@ const ENV = import.meta.env || {};
 // regardless, and gates its own onward transfer to Meta/TikTok/OpenAI in the
 // backend (App\Support\AnalyticsTrackingConsent::allowsVendorEgress).
 function isGrantedConsentState(item = {}) {
-  return String(item?.consent_state || '').toLowerCase() === 'granted';
+  if (String(item?.consent_state || '').toLowerCase() !== 'granted') return false;
+  // The stamp only holds for the consent epoch it was raised under: a withdrawal
+  // bumps the epoch, so an item that crossed a revocation boundary (including a
+  // frozen item that could not be re-stamped) is never delivered or replayed.
+  return Number(item?.consent_epoch) === getConsentEpoch();
 }
 
 // Stamps an item with the consent state at push time, so delivery and replay can
@@ -27,6 +31,7 @@ function stampConsentState(item = {}) {
   if (item.consent_state) return item;
   try {
     item.consent_state = getVendorConsentState();
+    item.consent_epoch = getConsentEpoch();
   } catch {
     // Frozen or exotic items stay unstamped: not granted, never delivered.
   }

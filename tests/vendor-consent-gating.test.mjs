@@ -7,6 +7,8 @@ import test from 'node:test';
 
 const APP_URL = 'https://mercasto.test/?utm_source=facebook&utm_medium=cpc&utm_campaign=consent_unit';
 
+import { getConsentEpoch } from '../src/utils/trackingConsent.js';
+
 let moduleCounter = 0;
 
 function installFakeBrowser({ consent = null, href = APP_URL, cookies = {}, localStore: existingLocal, sessionStore: existingSession } = {}) {
@@ -37,10 +39,12 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {}, loca
     return node;
   };
 
+  const intervals = [];
   const document = {
     title: 'Mercasto | test',
     referrer: '',
-    documentElement: { lang: 'es-MX' },
+    visibilityState: 'visible',
+    documentElement: { lang: 'es-MX', scrollHeight: 2000 },
     head: { appendChild: (node) => record(node) },
     createElement: () => ({ tagName: 'SCRIPT', async: false, src: '', setAttribute() {} }),
     getElementsByTagName: () => [{ parentNode: { insertBefore: (node) => record(node) } }],
@@ -77,6 +81,16 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {}, loca
     dispatchEvent,
     setTimeout: (fn, ms) => setTimeout(fn, ms),
     clearTimeout: (handle) => clearTimeout(handle),
+    setInterval: (fn) => {
+      intervals.push(fn);
+      return intervals.length;
+    },
+    clearInterval: () => {},
+    requestAnimationFrame: (fn) => {
+      fn();
+      return 1;
+    },
+    scrollY: 0,
     get fetch() { return fetchImpl; },
     set fetch(impl) { fetchImpl = impl; globalThis.fetch = impl; },
     crypto: globalThis.crypto,
@@ -99,6 +113,10 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {}, loca
     },
   };
 
+  const previousHTMLElement = Object.getOwnPropertyDescriptor(globalThis, 'HTMLElement');
+  class FakeHTMLElement {}
+  Object.defineProperty(globalThis, 'HTMLElement', { value: FakeHTMLElement, configurable: true, writable: true });
+
   const previous = {
     window: globalThis.window,
     document: globalThis.document,
@@ -118,6 +136,8 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {}, loca
   return {
     window,
     document,
+    intervals,
+    FakeHTMLElement,
     localStore,
     sessionStore,
     requests,
@@ -141,6 +161,8 @@ function installFakeBrowser({ consent = null, href = APP_URL, cookies = {}, loca
       else globalThis.fetch = previousFetch;
       if (previous.navigator) Object.defineProperty(globalThis, 'navigator', previous.navigator);
       else delete globalThis.navigator;
+      if (previousHTMLElement) Object.defineProperty(globalThis, 'HTMLElement', previousHTMLElement);
+      else delete globalThis.HTMLElement;
     },
   };
 }
@@ -488,8 +510,9 @@ test('the OpenAI bridge never measures history that predates the grant', async (
     env.window.oaiq = Object.assign((...args) => openAiCalls.push(args), { q: [] });
 
     // History that predates this page's grant: one pre-consent item, one granted.
-    env.window.dataLayer.push({ event: 'page_view', page_path: '/pre-consent', consent_state: 'unknown' });
-    env.window.dataLayer.push({ event: 'page_view', page_path: '/granted', consent_state: 'granted' });
+    const currentEpoch = getConsentEpoch();
+    env.window.dataLayer.push({ event: 'page_view', page_path: '/pre-consent', consent_state: 'unknown', consent_epoch: currentEpoch });
+    env.window.dataLayer.push({ event: 'page_view', page_path: '/granted', consent_state: 'granted', consent_epoch: currentEpoch });
 
     moduleCounter += 1;
     const { installOpenAIAdsBridge } = await import(`../src/utils/openaiAdsBridge.js?case=${moduleCounter}`);
@@ -538,8 +561,9 @@ test('the relay carries the consent signal of the event, not the live page state
     };
 
     // One event raised before the grant, one raised after it. Both are relayed now.
-    env.window.dataLayer.push({ event: 'favorite_added', listing_id: '5005', consent_state: 'unknown' });
-    env.window.dataLayer.push({ event: 'favorite_added', listing_id: '5006', consent_state: 'granted' });
+    const currentEpoch = getConsentEpoch();
+    env.window.dataLayer.push({ event: 'favorite_added', listing_id: '5005', consent_state: 'unknown', consent_epoch: currentEpoch });
+    env.window.dataLayer.push({ event: 'favorite_added', listing_id: '5006', consent_state: 'granted', consent_epoch: currentEpoch });
 
     moduleCounter += 1;
     const { installMetaCapiBridge } = await import(`../src/utils/metaCapiBridge.js?case=${moduleCounter}`);
@@ -624,6 +648,113 @@ test('attribution stored before a reload survives a withdrawal and re-grant', as
     } finally {
       reloadEnv.restore();
     }
+  } finally {
+    env.restore();
+  }
+});
+
+test('an event that crossed a withdrawal is not replayed after a re-grant', async () => {
+  const env = installFakeBrowser({ consent: 'all' });
+
+  try {
+    const analytics = await loadAnalyticsModules();
+    moduleCounter += 1;
+    const bridge = await import(`../src/utils/metaCapiBridge.js?case=${moduleCounter}`);
+    bridge.installMetaCapiBridge();
+
+    // Raised while granted, but never delivered (no fbq yet when it was pushed).
+    env.window.dataLayer.push({
+      event: 'favorite_added',
+      listing_id: '4004',
+      category: 'motor',
+      event_id: 'crossed_withdrawal_4004',
+    });
+
+    // Real withdrawal path: the epoch advances, invalidating deferred events.
+    env.setConsent('essential');
+    analytics.revokeAnalyticsVendors();
+
+    const delivered = [];
+    env.window.fbq = (...args) => delivered.push(args);
+    env.setConsent('all');
+    analytics.activateAnalyticsVendors();
+    bridge.replayMetaBrowserEvents();
+
+    assert.equal(
+      delivered.some((args) => args[3]?.eventID === 'crossed_withdrawal_4004'),
+      false,
+      'an event raised before a withdrawal must not be replayed after a re-grant',
+    );
+  } finally {
+    env.restore();
+  }
+});
+
+test('the measurement interval is corrected as soon as consent is granted', async () => {
+  const env = installFakeBrowser({ consent: null });
+
+  try {
+    const analytics = await loadAnalyticsModules();
+    analytics.initBehaviorAnalytics();
+
+    // Pre-consent engagement: scroll to the bottom of the page.
+    env.window.scrollY = env.document.documentElement.scrollHeight - env.window.innerHeight;
+    env.window.dispatchEvent({ type: 'scroll' });
+
+    // Consent granted, but vendors are not activated yet: the window an
+    // authenticated banner acceptance opens while it awaits the consent API.
+    env.setConsent('all');
+
+    // The next heartbeat must observe a fresh interval, not the pre-consent one.
+    assert.equal(env.intervals.length, 1, 'the heartbeat interval is registered');
+    env.intervals[0]();
+
+    const heartbeat = [...env.window.dataLayer].reverse().find((item) => item?.event === 'engagement_heartbeat');
+    assert.ok(heartbeat, 'the heartbeat fires');
+    assert.equal(heartbeat.max_scroll_percent, 0, 'pre-consent scroll depth must not leak into a granted heartbeat');
+    assert.equal(heartbeat.consent_state, 'granted');
+  } finally {
+    env.restore();
+  }
+});
+
+test('time spent in a field before the grant is not reported as granted', async () => {
+  const env = installFakeBrowser({ consent: null });
+
+  try {
+    const analytics = await loadAnalyticsModules();
+    analytics.initBehaviorAnalytics();
+
+    const input = Object.assign(new env.FakeHTMLElement(), {
+      tagName: 'INPUT',
+      type: 'text',
+      value: '',
+      required: false,
+      getAttribute: () => 'text',
+      closest: () => null,
+    });
+
+    // Focus while consent is unknown, hold long enough to be measurable, grant,
+    // then blur: the dwell must not cover the pre-consent hold.
+    env.window.dispatchEvent({ type: 'focusin', target: input });
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    env.setConsent('all');
+    env.window.dispatchEvent({ type: 'focusout', target: input });
+
+    const grantedFieldDwell = env.window.dataLayer.filter(
+      (item) => item?.event === 'form_field_dwell' && item?.consent_state === 'granted',
+    );
+    assert.deepEqual(grantedFieldDwell, [], 'a blur after the grant must not report pre-consent field time');
+
+    // Positive control: a field held after the grant is still measured.
+    env.window.dispatchEvent({ type: 'focusin', target: input });
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    env.window.dispatchEvent({ type: 'focusout', target: input });
+    assert.equal(
+      env.window.dataLayer.some((item) => item?.event === 'form_field_dwell' && item?.consent_state === 'granted'),
+      true,
+      'post-grant field dwell must still be measured',
+    );
   } finally {
     env.restore();
   }

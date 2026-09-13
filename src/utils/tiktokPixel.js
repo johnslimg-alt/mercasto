@@ -1,4 +1,4 @@
-import { hasVendorConsent } from './trackingConsent.js';
+import { getConsentEpoch, hasVendorConsent } from './trackingConsent.js';
 
 const TIKTOK_PIXEL_ID = 'D9C3HKBC77UBS5FSD7C0';
 
@@ -263,6 +263,7 @@ function handleDataLayerItem(item) {
   // pixel installs must never deliver them retroactively.
   const stampedState = cleanString(item.consent_state, 20).toLowerCase();
   if (stampedState !== 'granted') return;
+  if (Number(item.consent_epoch) !== getConsentEpoch()) return;
   const analyticsEvent = cleanString(item.event, 80).toLowerCase();
   if (!analyticsEvent) return;
 

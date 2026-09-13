@@ -1,4 +1,4 @@
-import { isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
+import { getConsentEpoch, isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const ENV = import.meta.env || {};
 const OPENAI_ADS_PIXEL_ID = ENV.VITE_OPENAI_ADS_PIXEL_ID || '';
@@ -83,7 +83,9 @@ function measure(name, data, eventOptions = {}) {
 }
 
 function isGrantedConsentState(item = {}) {
-  return String(item?.consent_state || '').toLowerCase() === 'granted';
+  if (String(item?.consent_state || '').toLowerCase() !== 'granted') return false;
+  // Same consent-epoch rule as the Meta and TikTok bridges.
+  return Number(item?.consent_epoch) === getConsentEpoch();
 }
 
 function handleItem(item = {}) {
