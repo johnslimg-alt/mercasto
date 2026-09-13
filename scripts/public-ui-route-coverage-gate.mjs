@@ -5,6 +5,7 @@ import {
   backendStaticScreens,
   expectedIntegrationWebRoutes,
   integrationWebRoutes,
+  ogPreviewRoutes,
   redirectExpectations,
   sitemapRoutes,
   supportedDynamicTemplates,
@@ -21,6 +22,15 @@ assert.deepEqual(
   backendDynamicRouteTemplates,
   [...supportedDynamicTemplates].sort(),
   'Every dynamic browser route must have an explicit sample resolver.',
+);
+
+// Explicit allowlist instead of a bare count: the composited social-preview route answers
+// with image bytes rather than a browser screen, so it is deliberately NOT a visual
+// sample-resolver target. Adding another one is a deliberate change, not a silent one.
+assert.deepEqual(
+  ogPreviewRoutes,
+  ['share/ads/{id}/og.jpg'],
+  'Composited social-preview routes must stay on the explicit non-visual allowlist.',
 );
 
 assert.deepEqual(
