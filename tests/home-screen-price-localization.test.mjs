@@ -5,24 +5,15 @@ import test from 'node:test';
 import { formatMXN, formatNumber } from '../src/utils/localeFormat.js';
 import { SUPPORTED_LANGUAGES } from '../src/utils/translations.js';
 
-const source = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
+const source = fs.readFileSync('src/components/home/MercastoGoldenHome.jsx', 'utf8');
 
-test('HomeScreen formats all five public price paths with the active Mercasto locale', () => {
-  assert.match(source, /import \{[^}]*formatMXN[^}]*formatNumber[^}]*\} from '\.\.\/\.\.\/utils\/localeFormat'/);
-
-  assert.match(
-    source,
-    /const price = formatMXN\(ad\.price \|\| 0, lang, \{\s*minimumFractionDigits: 0,\s*maximumFractionDigits: 0,?\s*\}\);/,
-  );
-  assert.ok(source.includes('formatNumber(job.price || 0, lang)'), 'job price');
-  assert.ok(source.includes('formatNumber(srv.price || 0, lang)'), 'service price');
-  assert.ok(source.includes('formatNumber(car.price || 0, lang)'), 'automotive price');
-  assert.ok(source.includes('formatNumber(ad.price || 0, lang)'), 'recently viewed price');
-
-  assert.doesNotMatch(source, /(?:ad|job|srv|car)\.price[^\n]{0,120}toLocaleString\s*\(/);
+test('redesigned HomeScreen localizes public ad titles and prices', () => {
+  assert.match(source, /import \{ formatMXN \} from '\.\.\/\.\.\/utils\/localeFormat'/);
+  assert.match(source, /import \{ localizedText \} from '\.\.\/\.\.\/utils\/localize'/);
+  assert.match(source, /localizedText\(ad\?\.title,lang\)/);
+  assert.match(source, /formatMXN\(price,lang,\{minimumFractionDigits:0,maximumFractionDigits:0\}\)/);
   assert.doesNotMatch(source, /toLocaleString\(\s*['"]es-MX['"]/);
 });
-
 test('shared HomeScreen price formatters support exactly the 11 active runtime languages', () => {
   assert.equal(SUPPORTED_LANGUAGES.length, 11);
   assert.equal(SUPPORTED_LANGUAGES.includes('he'), false);

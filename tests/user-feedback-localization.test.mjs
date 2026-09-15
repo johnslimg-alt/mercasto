@@ -36,9 +36,11 @@ test('Mexico Spanish coupon feedback follows closing-only punctuation policy', a
 
 test('remaining user feedback uses active-language copy', () => {
   const app = fs.readFileSync('src/App.jsx', 'utf8');
-  const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
-  assert.match(home, /savingSearchAlert \? `\$\{t\.saving_word\}\.\.\.`/);
-  assert.equal(home.includes("savingSearchAlert ? 'Guardando...'"), false);
+  const catalog = fs.readFileSync('src/components/screens/CatalogScreen.jsx', 'utf8');
+  assert.match(catalog, /disabled=\{savingSearchAlert\}/);
+  assert.match(catalog, /savingSearchAlert \? <Loader2[\s\S]*?: <Bell/);
+  assert.match(catalog, /\{t\.save_search\}/);
+  assert.equal(catalog.includes("savingSearchAlert ? 'Guardando...'"), false);
   assert.match(app, /console\.error\("Review error", err\); showToast\(t\.connection_error, 'error'\)/);
   assert.match(app, /localizeServerMessage\(lang, data\.message, t\.coupon_redeem_success\)/);
   assert.match(app, /localizeServerMessage\(lang, data\.message, t\.coupon_redeem_error\)/);
