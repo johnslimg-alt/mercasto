@@ -83,6 +83,7 @@ export default function HomeScreen({
         openPricing={() => setShowPricingModal?.(true)}
         handleViewAd={handleViewAd}
         getImageUrl={getImageUrl}
+        lang={lang}
       />
 
       {safeServerAds.length > 0 && (
