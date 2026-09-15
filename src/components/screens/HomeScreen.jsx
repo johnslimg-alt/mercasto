@@ -11,6 +11,7 @@ export default function HomeScreen({
   setSearchLocationInput,
   setSearchQuery,
   setSelectedState,
+  setShowPricingModal,
   t,
   getImageUrl,
   handleViewAd,
@@ -79,6 +80,7 @@ export default function HomeScreen({
         setActiveCat={setActiveCat}
         setSearchLocationInput={setSearchLocationInput}
         setSelectedState={setSelectedState}
+        openPricing={() => setShowPricingModal?.(true)}
         handleViewAd={handleViewAd}
         getImageUrl={getImageUrl}
       />
