@@ -339,7 +339,7 @@ assertContains(
   'the registration handoff is installed with the existing Meta bridge'
 );
 
-for (const path of ['src/App.jsx', 'src/components/common/AdCard.jsx', 'src/components/screens/HomeScreen.jsx']) {
+for (const path of ['src/App.jsx', 'src/components/common/AdCard.jsx', 'src/components/screens/HomeScreen.jsx', 'src/components/home/MercastoGoldenHome.jsx']) {
   assertNotContains(
     path,
     '4 + (((Number(ad.id) || 1) % 10) / 10)',
@@ -359,7 +359,7 @@ assertContains(
 );
 
 assertContains(
-  'src/components/screens/HomeScreen.jsx',
+  'src/components/home/MercastoGoldenHome.jsx',
   'rating.hasReviews &&',
   'homepage rating social proof renders only when real review data exists'
 );
