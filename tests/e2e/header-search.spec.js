@@ -111,10 +111,12 @@ test('2FA login challenge exposes a named code control', async ({ page }, testIn
   await expect(code).toBeFocused();
 });
 
-test('auth modal traps focus and restores the Golden Home opener', async ({ page }) => {
+test('auth modal traps focus and restores the Golden Home opener', async ({ page }, testInfo) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  const opener = page.getByTestId('golden-account-button');
+  const opener = page.getByTestId(
+    testInfo.project.name.includes('mobile') ? 'golden-mobile-account-tab' : 'golden-account-button',
+  );
   await opener.focus();
   await expect(opener).toBeFocused();
   await opener.press('Enter');
