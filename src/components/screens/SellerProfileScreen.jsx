@@ -4,7 +4,9 @@ import { MapPin, Globe, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, P
 import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
 import { formatNumber } from '../../utils/localeFormat';
-import { loadLanguage, normalizeLanguage } from '../../utils/translations';
+import { getTranslations, loadLanguage, normalizeLanguage } from '../../utils/translations';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 import { formatSellerProfileCopy, getSellerProfileCopy, sellerReviewLabel } from '../../utils/sellerProfileCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -60,6 +62,8 @@ export default function SellerProfileScreen({ currentUser }) {
   const { i18n } = useTranslation();
   const lang = normalizeLanguage(i18n.resolvedLanguage || i18n.language);
   const copy = getSellerProfileCopy(lang);
+  const t = getTranslations(lang);
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const { id } = useParams();
   const navigate = useNavigate();
   const [seller, setSeller] = useState(null);
@@ -69,6 +73,11 @@ export default function SellerProfileScreen({ currentUser }) {
   const [adsRetryNonce, setAdsRetryNonce] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-seller-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-seller-active');
+  }, []);
 
   useEffect(() => {
     if (!seller) return undefined;
@@ -134,13 +143,47 @@ export default function SellerProfileScreen({ currentUser }) {
     return () => { cancelled = true; };
   }, [id, adsRetryNonce]);
 
-  if (loading) return (
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
+
+  const renderGoldenShell = content => (
+    <>
+      <MercastoGoldenHeader
+        publish={() => navigate('/post')}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={t.all_mexico || ''}
+        selectedState=""
+        t={t}
+      />
+      <div className="mcg-seller-shell">{content}</div>
+      <MercastoGoldenBottomNav
+        active="none"
+        publish={() => navigate('/post')}
+        onNotifications={() => navigate('/notificaciones')}
+        onAccount={() => navigate('/profile')}
+        unreadCount={0}
+        t={t}
+      />
+    </>
+  );
+
+  if (loading) return renderGoldenShell(
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin" />
     </div>
   );
 
-  if (error) return (
+  if (error) return renderGoldenShell(
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 p-10 text-center">
       <p className="text-slate-500 text-lg">{error === 'not_found' ? copy.sellerNotFound : copy.loadError}</p>
       <button onClick={() => navigate(-1)} className="text-sm text-lime-600 hover:underline">{copy.back}</button>
@@ -150,10 +193,10 @@ export default function SellerProfileScreen({ currentUser }) {
   const isOwner = currentUser?.id === parseInt(id);
   const memberYear = seller?.member_since ? new Date(seller.member_since).getFullYear() : null;
 
-  return (
-    <div className="min-h-screen bg-slate-50">
+  return renderGoldenShell(
+    <div data-testid="golden-seller-main" className="mcg-seller-page min-h-screen bg-slate-50">
       {/* Back nav */}
-      <div className="bg-white border-b border-slate-200 sticky top-[var(--mc-site-header-offset)] z-30">
+      <div className="mcg-seller-backbar bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
             <ChevronLeft size={20} />

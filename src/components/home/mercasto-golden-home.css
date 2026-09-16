@@ -127,3 +127,23 @@
 @media(max-width:767px){
   .mcg-location-popover{position:fixed;left:10px;right:10px;top:64px;width:auto;max-width:none}
 }
+
+/* Golden seller profile: shared shell, identical geometry in light/dark. */
+.mcg-seller-shell{min-height:calc(100vh - 70px);background:var(--mcg-soft);color:var(--mcg-ink)}
+.mcg-seller-page{background:var(--mcg-soft)!important;color:var(--mcg-ink)}
+.mcg-seller-page .bg-white,.mcg-seller-backbar{background:var(--mcg-card)!important}
+.mcg-seller-page .bg-slate-100{background:var(--mcg-soft)!important}
+.mcg-seller-page .border-slate-100,.mcg-seller-page .border-slate-200,.mcg-seller-backbar{border-color:var(--mcg-line)!important}
+.mcg-seller-page .text-slate-900,.mcg-seller-page .text-slate-800,.mcg-seller-page .text-slate-700{color:var(--mcg-ink)!important}
+.mcg-seller-page .text-slate-600,.mcg-seller-page .text-slate-500,.mcg-seller-page .text-slate-400{color:var(--mcg-muted)!important}
+.mcg-seller-backbar{top:0!important}
+.dark .mcg-seller-page .ring-slate-100{--tw-ring-color:#334155}
+.dark .mcg-seller-page .hover\:bg-slate-100:hover{background:#1f2937!important}
+.dark .mcg-seller-page .bg-lime-50{background:#1a2e05!important}
+.dark .mcg-seller-page .text-lime-700{color:#bef264!important}
+@media(max-width:1179px){.mcg-seller-shell{padding-bottom:82px}}
+@media(max-width:767px){
+  .mcg-seller-shell{min-height:calc(100vh - 58px);padding-bottom:70px}
+  .mcg-seller-page>.max-w-4xl{padding-left:14px;padding-right:14px}
+  .mcg-seller-page button,.mcg-seller-page a{min-height:24px}
+}
