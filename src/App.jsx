@@ -931,6 +931,9 @@ function App() {
       maxPrice: nextMaxPrice,
       condition: nextCondition,
       dynamicFilters: nextDynamicFilters,
+      state: filters.state,
+      city: filters.city,
+      pathname: filters.pathname,
     }));
     if (nextSearch && nextSearch.trim()) {
       events.searchPerformed(nextSearch.trim(), nextCategory || '', {
@@ -4093,6 +4096,7 @@ function App() {
       lang={lang}
       renderAdCard={renderAdCard}
       renderSkeletonCard={renderSkeletonCard}
+      searchLocationInput={searchLocationInput}
       selectedState={selectedState}
       serverAds={serverAds}
       setActiveCat={setActiveCat}
@@ -4101,6 +4105,8 @@ function App() {
       setSearchLocationInput={setSearchLocationInput}
       setSearchQuery={setSearchQuery}
       setSelectedState={setSelectedState}
+      setAuthMode={setAuthMode}
+      setShowAuthModal={setShowAuthModal}
       setShowPricingModal={setShowPricingModal}
       t={t}
       getImageUrl={getImageUrl}

@@ -16,3 +16,11 @@ test('real homepage rating blocks are conditional and guarded against regression
   assert.match(guards, /src\/components\/home\/MercastoGoldenHome\.jsx/);
   assert.match(guards, /homepage rating social proof renders only when real review data exists/);
 });
+
+test('homepage never fabricates demo listings, prices, locations, or unsupported scale metrics', () => {
+  assert.doesNotMatch(home, /id:'demo-/);
+  assert.doesNotMatch(home, /Toyota Corolla 2020|iPhone 14 128GB|\$320,000|\+2\.5M|\+780K|98%/);
+  assert.doesNotMatch(home, /millones de personas|Comunidad verificada|Transacciones seguras|Miles de anuncios/);
+  assert.match(home, /Aún no hay anuncios para mostrar/);
+  assert.match(home, /Todo México/);
+});

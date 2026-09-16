@@ -2,19 +2,27 @@ import React from 'react';
 import ItemListSchema from '../seo/ItemListSchema';
 import FAQSchema from '../seo/FAQSchema';
 import MercastoGoldenHome from '../home/MercastoGoldenHome';
+import MercastoHomeFunctionalBlocks from '../home/MercastoHomeFunctionalBlocks';
 
 export default function HomeScreen({
+  automotiveAds,
   executeSearch,
   lang,
+  realEstateAds,
+  searchLocationInput,
+  selectedState,
   serverAds,
   setActiveCat,
   setSearchLocationInput,
   setSearchQuery,
   setSelectedState,
+  setAuthMode,
+  setShowAuthModal,
   setShowPricingModal,
   t,
   getImageUrl,
   handleViewAd,
+  user,
 }) {
   const safeServerAds = React.useMemo(
     () => (Array.isArray(serverAds) ? serverAds : []),
@@ -78,12 +86,33 @@ export default function HomeScreen({
         executeSearch={executeSearch}
         setSearchQuery={setSearchQuery}
         setActiveCat={setActiveCat}
+        setAuthMode={setAuthMode}
+        setShowAuthModal={setShowAuthModal}
+        user={user}
         setSearchLocationInput={setSearchLocationInput}
+        searchLocationInput={searchLocationInput}
+        selectedState={selectedState}
         setSelectedState={setSelectedState}
         openPricing={() => setShowPricingModal?.(true)}
         handleViewAd={handleViewAd}
         getImageUrl={getImageUrl}
         lang={lang}
+        t={t}
+      />
+
+      <MercastoHomeFunctionalBlocks
+        automotiveAds={automotiveAds}
+        executeSearch={executeSearch}
+        handleViewAd={handleViewAd}
+        lang={lang}
+        realEstateAds={realEstateAds}
+        selectedState={selectedState}
+        setActiveCat={setActiveCat}
+        setSearchLocationInput={setSearchLocationInput}
+        setSearchQuery={setSearchQuery}
+        setSelectedState={setSelectedState}
+        t={t}
+        user={user}
       />
 
       {safeServerAds.length > 0 && (
@@ -95,8 +124,9 @@ export default function HomeScreen({
       )}
 
       <div className="sr-only" aria-hidden="true">
-        <FAQSchema pageType="home" lang={lang} />
+        <span>Mercasto: compra, vende y renta en todo México</span>
       </div>
+      <FAQSchema pageType="home" lang={lang} renderContent={false} />
     </>
   );
 }

@@ -4,7 +4,7 @@ import { useUI } from '../../contexts/UIContext';
 import { getTranslations } from '../../utils/translations';
 import { getHomeFaqCopy } from '../../utils/homeFaqCopy';
 
-export default function FAQSchema({ faqs, pageType = 'general', lang = 'es' }) {
+export default function FAQSchema({ faqs, pageType = 'general', lang = 'es', renderContent = true }) {
   useUI();
   const currentLang = lang || 'es';
   const t = getTranslations(currentLang);
@@ -31,6 +31,8 @@ export default function FAQSchema({ faqs, pageType = 'general', lang = 'es' }) {
 
     return () => document.getElementById('faq-schema')?.remove();
   }, [activeFaqs]);
+
+  if (!renderContent) return null;
 
   return (
     <div className="mt-8 rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
