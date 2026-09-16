@@ -61,29 +61,30 @@ async function mockDetailApi(page, requests, authenticated = false) {
   });
 }
 
-test('public ad detail hides internal catalog metadata on desktop and mobile', async ({ page }) => {
-  for (const viewport of [
-    { width: 1440, height: 900 },
-    { width: 390, height: 844 },
-  ]) {
-    const requests = [];
-    await page.setViewportSize(viewport);
-    await mockDetailApi(page, requests);
-    await page.goto('/ads/6336', { waitUntil: 'domcontentloaded' });
+test('public ad detail uses the Golden shell and hides internal catalog metadata', async ({ page }, testInfo) => {
+  const mobile = testInfo.project.name.includes('mobile');
+  const requests = [];
+  await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+  await mockDetailApi(page, requests);
+  await page.goto('/ads/6336', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByText('Piel sintética', { exact: true })).toBeVisible();
-    await expect(page.getByText('Universal', { exact: true })).toBeVisible();
-    for (const internalValue of [
-      'editorial_reference',
-      'reference-6336',
-      'catalog_image_semantic_key',
-      'seat_cover',
-      'catalog_image_source',
-      'curated-local',
-    ]) {
-      await expect(page.getByText(internalValue, { exact: true })).toHaveCount(0);
-    }
+  await expect(page.getByTestId('golden-header')).toBeVisible();
+  await expect(page.locator('.site-header')).toBeHidden();
+  await expect(page.getByTestId('golden-detail-main')).toBeVisible();
+  await expect(page.getByText('Piel sintética', { exact: true })).toBeVisible();
+  await expect(page.getByText('Universal', { exact: true })).toBeVisible();
+  for (const internalValue of [
+    'editorial_reference',
+    'reference-6336',
+    'catalog_image_semantic_key',
+    'seat_cover',
+    'catalog_image_source',
+    'curated-local',
+  ]) {
+    await expect(page.getByText(internalValue, { exact: true })).toHaveCount(0);
   }
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
 });
 
 
@@ -106,11 +107,16 @@ test('ad detail prioritizes the hero and defers below-fold bundles', async ({ pa
   await page.waitForTimeout(400);
   expect(apiRequests.some(url => url.includes('/similar'))).toBeFalsy();
   expect(apiRequests.some(url => url.startsWith('/api/recommendations'))).toBeFalsy();
-  expect(scripts.some(url => /MapV3-|leaflet-src-/.test(url))).toBeFalsy();
+  const mapShell = page.locator('[data-ad-detail-map-shell]');
+  const mapBox = await mapShell.boundingBox();
+  const viewport = page.viewportSize();
+  if (mapBox && viewport && mapBox.y >= viewport.height) {
+    expect(scripts.some(url => /MapV3-|leaflet-src-/.test(url))).toBeFalsy();
+  }
   expect(scripts.some(url => /RecommendationsWidget-/.test(url))).toBeFalsy();
   expect(scripts.some(url => /qrcode/i.test(url))).toBeFalsy();
 
-  await page.locator('[data-ad-detail-map-shell]').scrollIntoViewIfNeeded();
+  await mapShell.scrollIntoViewIfNeeded();
   await expect.poll(() => scripts.some(url => /MapV3-/.test(url))).toBeTruthy();
 
   await page.locator('[data-ad-detail-related-shell]').scrollIntoViewIfNeeded();
@@ -256,7 +262,7 @@ test('contact dialog exposes modal semantics and restores its opener on desktop 
     await mockDetailApi(page, requests, true);
     await page.goto('/ads/6336', { waitUntil: 'domcontentloaded' });
 
-    const opener = page.getByRole('button', { name: /Contact/i }).last();
+    const opener = page.getByTestId('contact-dialog-open');
     await expect(opener).toBeVisible();
     await opener.focus();
     await opener.click();

@@ -90,6 +90,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
     <>
       <button
         type="button"
+        data-testid="contact-dialog-open"
         onClick={() => setIsOpen(true)}
         className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all ${className}`}
       >

@@ -29,7 +29,10 @@ const detailAd = {
 };
 
 async function mockDetailApi(page, requests) {
-  await page.addInitScript(() => localStorage.setItem('cookiesAccepted', 'true'));
+  await page.addInitScript(() => {
+    localStorage.setItem('cookiesAccepted', 'true');
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+  });
   await page.route('**/api/**', async route => {
     const request = route.request();
     const url = new URL(request.url());
@@ -60,7 +63,7 @@ async function contactEvents(page) {
     .map(item => item.event));
 }
 
-test('share links are crawler-visible routes with per-channel UTMs', async ({ page }) => {
+test('share links are crawler-visible routes with per-channel UTMs', async ({ page }, testInfo) => {
   const requests = [];
   await mockDetailApi(page, requests);
   await page.goto(`/ads/${AD_ID}`, { waitUntil: 'domcontentloaded' });
@@ -70,7 +73,7 @@ test('share links are crawler-visible routes with per-channel UTMs', async ({ pa
   const expected = buildShareTargets({ id: AD_ID, origin, title: detailAd.title, message: 'Mira este anuncio en Mercasto' });
 
   await page.getByRole('button', { name: /Compartir|Share/ }).first().click();
-  const menu = page.locator('.hidden.md\\:block');
+  const menu = page.getByTestId(testInfo.project.name.includes('mobile') ? 'ad-share-mobile-menu' : 'ad-share-desktop-menu');
   await expect(menu).toBeVisible();
 
   const rendered = await menu.locator('a[data-share-channel]').evaluateAll(nodes => nodes.map(node => ({
@@ -99,7 +102,7 @@ test('share links are crawler-visible routes with per-channel UTMs', async ({ pa
   expect(utmSets.size).toBe(5);
 });
 
-test('the QR dialog and the clipboard carry the same share url', async ({ page }) => {
+test('the QR dialog and the clipboard carry the same share url', async ({ page }, testInfo) => {
   const requests = [];
   await mockDetailApi(page, requests);
   await page.goto(`/ads/${AD_ID}`, { waitUntil: 'domcontentloaded' });
@@ -108,7 +111,7 @@ test('the QR dialog and the clipboard carry the same share url', async ({ page }
   const origin = await page.evaluate(() => window.location.origin);
   const expected = buildShareTargets({ id: AD_ID, origin, title: detailAd.title, message: 'Mira este anuncio en Mercasto' });
   const shareButton = page.getByRole('button', { name: /Compartir|Share/ }).first();
-  const menu = page.locator('.hidden.md\\:block');
+  const menu = page.getByTestId(testInfo.project.name.includes('mobile') ? 'ad-share-mobile-menu' : 'ad-share-desktop-menu');
 
   await shareButton.click();
   await menu.getByRole('button', { name: /Copiar enlace|Copy link/ }).click();
@@ -164,14 +167,14 @@ test('the QR dialog and the clipboard carry the same share url', async ({ page }
   expect(await shareEvents(page)).toEqual(['copy', 'qr']);
 });
 
-test('sharing never emits a contact conversion and emits exactly one share event', async ({ page }) => {
+test('sharing never emits a contact conversion and emits exactly one share event', async ({ page }, testInfo) => {
   const requests = [];
   await mockDetailApi(page, requests);
   await page.goto(`/ads/${AD_ID}`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('Piel sintética', { exact: true })).toBeVisible();
 
   const shareButton = page.getByRole('button', { name: /Compartir|Share/ }).first();
-  const menu = page.locator('.hidden.md\\:block');
+  const menu = page.getByTestId(testInfo.project.name.includes('mobile') ? 'ad-share-mobile-menu' : 'ad-share-desktop-menu');
 
   await shareButton.click();
   await menu.locator('a[data-share-channel="whatsapp"]').click();
