@@ -226,8 +226,7 @@ test('fresh session applies the theme on the first toggle click', async ({ page 
   });
   await page.goto('/');
 
-  const mobile = testInfo.project.name.includes('mobile');
-  const toggle = page.getByTestId(mobile ? 'mobile-theme-toggle' : 'desktop-theme-toggle');
+  const toggle = page.getByTestId('golden-theme-toggle');
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBeFalsy();

@@ -333,7 +333,7 @@ export default function MyAdsScreen({
                 </button>
               </>
             )}
-            <button onClick={() => setCurrentTab('post')} className="text-[13px] font-semibold text-[#65A30D] hover:text-[#84CC16] flex items-center gap-1">
+            <button onClick={() => setCurrentTab('post')} className="text-[13px] font-semibold text-[#4D7C0F] hover:text-[#365314] dark:text-[#BEF264] dark:hover:text-[#D9F99D] flex items-center gap-1">
               <PlusCircle className="w-4 h-4" /> {t.post}
             </button>
           </div>

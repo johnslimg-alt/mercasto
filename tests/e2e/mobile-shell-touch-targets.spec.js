@@ -23,13 +23,12 @@ test('mobile shell keeps primary controls at 48px without horizontal overflow', 
   for (const width of MOBILE_WIDTHS) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/');
-    await expect(page.getByTestId('mobile-header-search')).toBeVisible();
+    await expect(page.getByTestId('golden-mobile-search-input')).toBeVisible();
 
     const squareTargets = [
-      page.getByTestId('mobile-theme-toggle'),
-      page.getByTestId('mobile-language-select'),
-      page.getByTestId('mobile-account-button'),
-      page.getByTestId('mobile-search-submit'),
+      page.getByTestId('golden-theme-toggle'),
+      page.locator('.mcg-lang'),
+      page.getByTestId('golden-mobile-filter'),
     ];
 
     for (const target of squareTargets) {
@@ -38,12 +37,12 @@ test('mobile shell keeps primary controls at 48px without horizontal overflow', 
       expect(rect.height).toBeGreaterThanOrEqual(MIN_TARGET);
     }
 
-    for (const target of [page.getByTestId('mobile-location-button'), page.getByTestId('mobile-search-input')]) {
+    for (const target of [page.getByTestId('golden-location-button'), page.getByTestId('golden-mobile-search-input')]) {
       const rect = await box(target);
       expect(rect.height).toBeGreaterThanOrEqual(MIN_TARGET);
     }
 
-    const tabButtons = page.locator('.mobile-tabbar > button');
+    const tabButtons = page.locator('.mcg-bottom-nav > a, .mcg-bottom-nav > button');
     await expect(tabButtons).toHaveCount(5);
     for (let index = 0; index < 5; index += 1) {
       const rect = await box(tabButtons.nth(index));
@@ -75,7 +74,7 @@ test('cookie notice stays above the mobile tabbar', async ({ page }, testInfo) =
     await page.goto('/');
 
     const notice = page.getByRole('dialog', { name: 'Aviso de cookies' });
-    const tabbar = page.locator('.mobile-tabbar');
+    const tabbar = page.locator('.mcg-bottom-nav');
     const noticeRect = await box(notice);
     const tabbarRect = await box(tabbar);
 
