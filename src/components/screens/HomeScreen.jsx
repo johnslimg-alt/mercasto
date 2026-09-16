@@ -22,6 +22,7 @@ export default function HomeScreen({
   t,
   getImageUrl,
   handleViewAd,
+  unreadCount,
   user,
 }) {
   const safeServerAds = React.useMemo(
@@ -89,6 +90,7 @@ export default function HomeScreen({
         setAuthMode={setAuthMode}
         setShowAuthModal={setShowAuthModal}
         user={user}
+        unreadCount={unreadCount}
         setSearchLocationInput={setSearchLocationInput}
         searchLocationInput={searchLocationInput}
         selectedState={selectedState}

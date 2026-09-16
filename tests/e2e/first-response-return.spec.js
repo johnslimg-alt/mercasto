@@ -98,10 +98,10 @@ test('mobile seller opens a first-response notification and lands in the exact c
   await mockApi(page);
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  const tabbar = page.locator('.mobile-tabbar');
+  const tabbar = page.locator('.mcg-bottom-nav');
   await expect(tabbar).toBeVisible();
-  await expect(page.getByTestId('mobile-notifications-unread')).toBeVisible();
-  await page.getByTestId('mobile-notifications-tab').click();
+  await expect(tabbar.getByTestId('golden-mobile-notifications-unread')).toBeVisible();
+  await tabbar.getByTestId('golden-mobile-notifications-tab').click();
   await expect(page).toHaveURL(/\/notificaciones$/);
   await expect(page.getByText('Comprador QA', { exact: true })).toBeVisible();
   await expect(page.getByText('Hola, sigue disponible?', { exact: true })).toBeVisible();

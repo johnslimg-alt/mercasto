@@ -68,7 +68,7 @@ test.describe('cookie preferences entry point', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    const settings = page.getByTestId('cookie-settings');
+    const settings = page.getByTestId('golden-cookie-settings');
     await expect(settings).toBeAttached();
     await expect.poll(traffic.isChunkInFlight, { timeout: 15_000 }).toBe(true);
 
@@ -105,7 +105,7 @@ test.describe('cookie preferences entry point', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     traffic.releaseChunk();
 
-    const settings = page.getByTestId('cookie-settings');
+    const settings = page.getByTestId('golden-cookie-settings');
     await expect(settings).toBeAttached();
     await settings.scrollIntoViewIfNeeded();
     await settings.click();

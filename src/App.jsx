@@ -4118,6 +4118,7 @@ function App() {
       serviceAds={serviceAds}
       automotiveAds={automotiveAds}
       user={user}
+      unreadCount={unreadCount}
       viewedAd={viewedAd}
     />
   );
