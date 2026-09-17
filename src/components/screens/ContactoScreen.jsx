@@ -11,6 +11,7 @@ import {
   ChevronLeft, Mail, Clock, Send,
   CheckCircle, AlertCircle, ExternalLink, HelpCircle,
 } from 'lucide-react';
+import GoldenPublicPageShell from '../shell/GoldenPublicPageShell';
 
 const SOCIALS = [
   { icon: ExternalLink, label: 'Instagram', href: 'https://instagram.com/mercasto', color: 'hover:text-pink-500' },
@@ -90,9 +91,10 @@ export default function ContactoScreen() {
   }
 
   return (
+    <GoldenPublicPageShell testId="golden-contact-main" className="mcg-contact-page">
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-slate-200 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2 text-sm">
           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors">
             <ChevronLeft className="w-4 h-4" /> {t.back}
@@ -312,5 +314,6 @@ export default function ContactoScreen() {
         </div>
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }
