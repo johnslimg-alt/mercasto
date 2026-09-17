@@ -5,7 +5,9 @@ import {
   ChevronRight, Sparkles, Store, Loader2, Globe, Heart, ShieldCheck, Briefcase
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { normalizeLanguage } from '../../utils/translations';
+import { getTranslations, normalizeLanguage } from '../../utils/translations';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 import { getStoresDirectoryCategories, getStoresDirectoryCopy } from '../../utils/storesDirectoryCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -23,6 +25,8 @@ export default function StoresScreen() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const lang = normalizeLanguage(i18n.resolvedLanguage || i18n.language);
+  const goldenT = getTranslations(lang);
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const copy = getStoresDirectoryCopy(lang);
   const categories = getStoresDirectoryCategories(lang);
   const [stores, setStores] = useState([]);
@@ -33,6 +37,19 @@ export default function StoresScreen() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalStores, setTotalStores] = useState(0);
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-stores-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-stores-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +110,20 @@ export default function StoresScreen() {
   };
 
   return (
-    <div className="stores-dark-scope min-h-screen bg-slate-50 pb-20">
+    <>
+      <MercastoGoldenHeader
+        publish={() => navigate('/post')}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={goldenT.all_mexico || ''}
+        selectedState=""
+        t={goldenT}
+      />
+      <div data-testid="golden-stores-main" className="mcg-stores-page stores-dark-scope min-h-screen bg-slate-50 pb-20">
       {/* Dynamic Sleek Header Cover */}
       <section
         className="relative overflow-hidden py-16 md:py-24 text-center text-white"
@@ -378,6 +408,15 @@ export default function StoresScreen() {
           </div>
         </div>
       </section>
+      <MercastoGoldenBottomNav
+        active="none"
+        publish={() => navigate('/post')}
+        onNotifications={() => navigate('/notificaciones')}
+        onAccount={() => navigate('/profile')}
+        unreadCount={0}
+        t={goldenT}
+      />
     </div>
+    </>
   );
 }

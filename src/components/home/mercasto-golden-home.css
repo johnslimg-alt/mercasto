@@ -195,3 +195,20 @@
 @media(max-width:767px){
   .mcg-chat-page>.mx-auto.grid,.mcg-chat-page section{min-height:calc(100vh - 58px - 64px - 70px)!important}
 }
+
+/* Golden stores directory + storefront surfaces. */
+.mcg-stores-page,.mcg-storefront-page{background:var(--mcg-soft)!important;color:var(--mcg-ink)}
+.mcg-stores-page .bg-white,.mcg-storefront-page .bg-white{background:var(--mcg-card)!important}
+.mcg-stores-page .border-slate-100,.mcg-stores-page .border-slate-200,.mcg-stores-page .border-slate-300,
+.mcg-storefront-page .border-slate-100,.mcg-storefront-page .border-slate-200,.mcg-storefront-page .border-slate-300,.mcg-storefront-page .border-slate-700{border-color:var(--mcg-line)!important}
+.mcg-stores-page .text-slate-900,.mcg-stores-page .text-slate-800,.mcg-stores-page .text-slate-700,
+.mcg-storefront-page .text-slate-900,.mcg-storefront-page .text-slate-800,.mcg-storefront-page .text-slate-700{color:var(--mcg-ink)!important}
+.mcg-stores-page .text-slate-600,.mcg-stores-page .text-slate-500,.mcg-stores-page .text-slate-400,
+.mcg-storefront-page .text-slate-600,.mcg-storefront-page .text-slate-500,.mcg-storefront-page .text-slate-400{color:var(--mcg-muted)!important}
+.dark .mcg-storefront-page .dark\:bg-slate-800,.dark .mcg-storefront-page .dark\:bg-slate-900{background:var(--mcg-card)!important}
+@media(max-width:1179px){
+  .mcg-stores-page,.mcg-storefront-page{padding-bottom:96px!important}
+}
+@media(max-width:767px){
+  .mcg-stores-page,.mcg-storefront-page{padding-bottom:82px!important}
+}
