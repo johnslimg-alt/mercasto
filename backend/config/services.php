@@ -93,6 +93,12 @@ return [
         'webhook_secret' => env('CLIP_WEBHOOK_SECRET'),
         'checkout_url' => env('CLIP_CHECKOUT_URL', 'https://api.payclip.com/v2/checkout'),
         'verification_url' => env('CLIP_VERIFICATION_URL', 'https://api.payclip.com/v2/checkout'),
+        // Processing-fee fraction applied to provider-backed cash (for example
+        // 0.036 for 3.6%). No Clip rate is configured anywhere in this repo and
+        // no merchant contract rate is stored, so the default is 0: fees stay
+        // 0.00 and net_amount equals the charged amount until an operator sets
+        // CLIP_FEE_RATE from the signed Clip merchant contract.
+        'fee_rate' => env('CLIP_FEE_RATE', 0),
     ],
 
 

@@ -437,11 +437,47 @@ class ClipWebhookTest extends TestCase
 
         $response = $this->postJson('/api/webhooks/clip', $payload);
 
-        $response->assertOk()->assertJson(['status' => 'received']);
+        // A refund cannot be authenticated by reading a checkout back from
+        // Clip, so an unsigned refund notification fails closed.
+        $response->assertStatus(401)->assertJson(['status' => 'signature_required']);
         $this->assertDatabaseHas('payments', [
             'clip_payment_request_id' => self::PAYMENT_REQUEST_ID,
             'status' => 'pending',
         ]);
+        $this->assertDatabaseCount('user_notifications', 0);
+        $this->assertDatabaseCount('payment_refunds', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_signed_refund_notification_records_the_refund_without_fulfilling(): void
+    {
+        $user = User::factory()->create();
+        $this->createPendingPayment($user);
+        Http::fake();
+
+        $payload = $this->completedWebhookPayload([
+            'refund_id' => 'rf_signed_test',
+            'resource' => 'REFUND',
+            'resource_status' => 'REFUNDED',
+            'amount' => 19.00,
+        ]);
+
+        $body = (string) json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $response = $this->call('POST', '/api/webhooks/clip', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_ACCEPT' => 'application/json',
+            'HTTP_X_CLIP_SIGNATURE' => 'sha256=' . hash_hmac('sha256', $body, 'test-webhook-secret'),
+        ], $body);
+
+        // The checkout is still not fulfilled: a pending payment has no
+        // captured money to refund, so nothing is applied and nothing is
+        // fulfilled.
+        $response->assertOk()->assertJson(['status' => 'refund_without_capture']);
+        $this->assertDatabaseHas('payments', [
+            'clip_payment_request_id' => self::PAYMENT_REQUEST_ID,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseCount('payment_refunds', 0);
         $this->assertDatabaseCount('user_notifications', 0);
         Http::assertNothingSent();
     }
