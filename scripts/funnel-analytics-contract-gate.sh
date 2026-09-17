@@ -9,6 +9,11 @@ ANALYTICS="src/utils/analytics.js"
 META="src/utils/metaCapiBridge.js"
 TIKTOK="src/utils/tiktokPixel.js"
 APP="src/App.jsx"
+# Live auth surface. The AppProviders/AuthContext subtree is unreachable (no
+# importers repo-wide, no useAuth consumers) and is slated for removal, so the
+# anti-duplication contract is asserted against the module the live app actually
+# uses — otherwise deleting that subtree would hollow this gate.
+LIVE_AUTH_STATE="src/app/useAuthSessionState.js"
 OBSERVER="backend/app/Observers/UserMetaRegistrationObserver.php"
 AUTH="backend/app/Http/Controllers/Api/AuthController.php"
 TEST="tests/funnel-analytics-contract.test.mjs"
@@ -17,9 +22,28 @@ DOC="docs/analytics/funnel-contract.md"
 
 echo "== Unified funnel analytics contract gate =="
 
-for file in "$CONTRACT" "$ANALYTICS" "$META" "$TIKTOK" "$APP" "$OBSERVER" "$AUTH" "$TEST" "$CHANNEL_TEST" "$DOC"; do
-  test -f "$file"
+# A missing asserted file must be a loud failure. `grep` exits 2 on a missing
+# file and an `if` reads that as "no match", which silently hollows every
+# negative guard below into a no-op.
+for file in "$CONTRACT" "$ANALYTICS" "$META" "$TIKTOK" "$APP" "$LIVE_AUTH_STATE" "$OBSERVER" "$AUTH" "$TEST" "$CHANNEL_TEST" "$DOC"; do
+  test -f "$file" || { echo "Missing asserted file: $file" >&2; exit 1; }
 done
+
+# Fail-closed negative guards: only exit status 1 (no match) satisfies the
+# contract. A missing file, an unreadable file or any other grep error (>= 2)
+# fails the gate instead of passing it.
+must_not_contain() { # <file> <fixed-string> <message>
+  test -f "$1" || { echo "Missing asserted file: $1" >&2; exit 1; }
+  local status=0
+  grep -qF -- "$2" "$1" || status=$?
+  case "$status" in
+    0) echo "$3" >&2; exit 1 ;;
+    1) return 0 ;;
+    *) echo "grep failed (status $status) while checking $1" >&2; exit 1 ;;
+  esac
+}
+
+grep -qF "export function useAuthSessionState" "$LIVE_AUTH_STATE"
 
 grep -qF "FUNNEL_ANALYTICS_VERSION = '2026-08-04'" "$CONTRACT"
 grep -qF "LISTING_PUBLISHED: 'listing_published'" "$CONTRACT"
@@ -40,23 +64,31 @@ grep -qF "api/auth/*/callback" "$OBSERVER"
 grep -qF "registration_event_id" "$AUTH"
 grep -qF "assertJsonPath('is_new_user', true)" "$CHANNEL_TEST"
 
-if grep -qF "events.messageStarted(channel)" "$APP"; then
-  echo "Contact analytics must pass an object, never a raw channel string." >&2
-  exit 1
-fi
+must_not_contain "$APP" \
+  "events.messageStarted(channel)" \
+  "Contact analytics must pass an object, never a raw channel string."
 
-if grep -qF 'event: `${channel}_click`' "$APP"; then
-  echo "External contact must emit one canonical contact_opened event." >&2
-  exit 1
-fi
+must_not_contain "$APP" \
+  'event: `${channel}_click`' \
+  "External contact must emit one canonical contact_opened event."
 
-if grep -qF "sendMappedEvent(EVENT_MAP.sign_up" "$META"; then
-  echo "Registration must flow through first-party trackEvent exactly once." >&2
-  exit 1
-fi
+must_not_contain "$META" \
+  "sendMappedEvent(EVENT_MAP.sign_up" \
+  "Registration must flow through first-party trackEvent exactly once."
 
-if grep -qF "events.registered({ event_id: metaEventId })" src/contexts/AuthContext.jsx; then
-  echo "Email registration is already tracked by the patched fetch and must not be duplicated." >&2
+# Email registration is emitted exactly once, by the registration fetch
+# interceptor in metaCapiBridge.js (see docs/analytics/funnel-contract.md).
+# Neither the live auth state module nor App.jsx may add a second emitter for it.
+must_not_contain "$LIVE_AUTH_STATE" \
+  "events.registered" \
+  "The live auth session state must not emit registration events; email sign_up comes from the registration fetch interceptor."
+
+# The email-emitter matcher is shared with the unit contract through
+# scripts/funnel-emitter-contract.mjs. A bare regex here matched only
+# `method: 'email'`, so the equally valid double-quoted and backtick spellings
+# escaped the gate entirely. The module normalizes quote style and whitespace and
+# parses the call's argument list; it exits 2 (fail closed) on unreadable input.
+if ! node scripts/funnel-emitter-contract.mjs "$APP"; then
   exit 1
 fi
 
