@@ -64,3 +64,10 @@ If PostgreSQL, backend health, or public smoke fails after activation:
 5. retain the read-only aggregate evidence and do not perform index cleanup.
 
 Leaving the extension installed while the preload setting is reverted is not a data-loss event, but the profile view must not be queried until preload is restored.
+## Incident evidence — 2026-09-17
+
+The scheduled health watch reported one tracked statement / one call touching the known-unmanaged `category_names_backup_20260704` backup artifact. All operational metrics were otherwise healthy: connection saturation 1%, zero lock waiters, zero long or idle-in-transaction sessions, and zero dead-tuple/autovacuum threshold violations.
+
+Repository, active job, and container-command scans found no application consumer for the backup table. `pg_stat_statements` attributed the single entry to the database role used by Mercasto but cannot identify the originating process after the fact. The table and its seven rows were not modified or deleted.
+
+After recording the queryid/call-count evidence, only that one `pg_stat_statements` entry was reset. The strict unmanaged-table guard remains enabled; a repeated access must be treated as evidence of a live consumer and investigated rather than automatically reset. The immediate `postgres-observability-health.sh` and full `server-operator.sh verify_quick` checks passed after the targeted reset.
