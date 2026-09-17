@@ -228,3 +228,19 @@
   .mcg-edit-ad-page,.mcg-profile-edit-page{padding-bottom:82px!important}
   .mcg-profile-edit-toast{top:70px}
 }
+
+/* Golden seller acquisition + referral growth surfaces. */
+.mcg-seller-acquisition-page,.mcg-referral-page{background:var(--mcg-soft)!important;color:var(--mcg-ink)}
+.mcg-seller-acquisition-page .bg-white,.mcg-referral-page .bg-white{background:var(--mcg-card)!important}
+.mcg-seller-acquisition-page .border-slate-100,.mcg-seller-acquisition-page .border-slate-200,.mcg-seller-acquisition-page .border-slate-800,
+.mcg-referral-page .border-slate-100,.mcg-referral-page .border-slate-200,.mcg-referral-page .border-slate-300,.mcg-referral-page .border-slate-800{border-color:var(--mcg-line)!important}
+.mcg-referral-page{min-height:calc(100vh - 70px);padding-bottom:32px}
+.dark .mcg-seller-acquisition-page .dark\:bg-slate-900,.dark .mcg-seller-acquisition-page .dark\:bg-slate-950,
+.dark .mcg-referral-page .dark\:bg-slate-900,.dark .mcg-referral-page .dark\:bg-slate-950{background:var(--mcg-card)!important}
+@media(max-width:1179px){
+  .mcg-seller-acquisition-page,.mcg-referral-page{padding-bottom:96px!important}
+}
+@media(max-width:767px){
+  .mcg-seller-acquisition-page,.mcg-referral-page{padding-bottom:82px!important}
+  .mcg-seller-acquisition-page>section:first-child{padding-top:48px}
+}

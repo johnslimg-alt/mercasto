@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDateTime } from '../../utils/localeFormat';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function ReferralScreen({ t = {}, lang = 'es' }) {
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -12,6 +15,47 @@ export default function ReferralScreen({ t = {}, lang = 'es' }) {
   const [applyStatus, setApplyStatus] = useState(null);
   const [applyLoading, setApplyLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-referral-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-referral-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
+
+  const renderGoldenShell = content => (
+    <>
+      <MercastoGoldenHeader
+        publish={() => navigate('/post')}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={t.all_mexico || ''}
+        selectedState=""
+        t={t}
+      />
+      <div data-testid="golden-referral-shell" className="mcg-referral-page">
+        {content}
+        <MercastoGoldenBottomNav
+          active="none"
+          publish={() => navigate('/post')}
+          onNotifications={() => navigate('/notificaciones')}
+          onAccount={() => navigate('/profile')}
+          unreadCount={0}
+          t={t}
+        />
+      </div>
+    </>
+  );
 
   const loadData = () => {
     const token = localStorage.getItem('auth_token');
@@ -75,7 +119,7 @@ export default function ReferralScreen({ t = {}, lang = 'es' }) {
     }
   };
 
-  if (error) return (
+  if (error) return renderGoldenShell(
     <div className="max-w-2xl mx-auto p-4 sm:p-6 pt-8 sm:pt-10 text-slate-900 dark:text-white">
       <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/30 dark:bg-red-950/30 dark:text-red-200">
         {error}
@@ -83,7 +127,7 @@ export default function ReferralScreen({ t = {}, lang = 'es' }) {
     </div>
   );
 
-  if (!data) return (
+  if (!data) return renderGoldenShell(
     <div className="flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
     </div>
@@ -91,8 +135,8 @@ export default function ReferralScreen({ t = {}, lang = 'es' }) {
 
   const referrals = Array.isArray(data.referrals) ? data.referrals : [];
 
-  return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6 pt-8 sm:pt-10 text-slate-900 dark:text-white">
+  return renderGoldenShell(
+    <div data-testid="golden-referral-main" className="max-w-2xl mx-auto p-4 sm:p-6 pt-8 sm:pt-10 text-slate-900 dark:text-white">
       <h1 className="text-2xl font-bold mb-2">{t.referral_title}</h1>
       <p className="text-slate-500 dark:text-slate-300 mb-6">
         {t.referral_desc}
