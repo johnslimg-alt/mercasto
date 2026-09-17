@@ -562,3 +562,42 @@ for (const viewport of [
     expect(unnamed, `unnamed business company controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
   });
 }
+
+test('authenticated dashboard uses the shared Golden shell on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await mockApi(page);
+  await installSession(page, 'es');
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.getByTestId('golden-dashboard-main')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+
+    const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    await page.getByTestId('golden-theme-toggle').click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
+    await page.getByTestId('golden-theme-toggle').click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(before);
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    if (viewport.name === 'mobile') {
+      const nav = page.getByTestId('golden-bottom-nav');
+      await expect(nav).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+      await expect(page.getByTestId('golden-mobile-account-tab')).toHaveClass(/active/);
+      for (const control of await nav.locator(':scope > a, :scope > button').all()) {
+        const box = await control.boundingBox();
+        expect(box?.width).toBeGreaterThanOrEqual(48);
+        expect(box?.height).toBeGreaterThanOrEqual(48);
+      }
+    }
+  }
+});

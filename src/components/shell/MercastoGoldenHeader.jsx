@@ -123,11 +123,11 @@ export function MercastoGoldenBottomNav({
       <a href="/" className={active === 'home' ? 'active' : ''}><Icon name="home"/><span>{t.home || ''}</span></a>
       <a href="/listings" className={active === 'search' ? 'active' : ''}><Icon name="search"/><span>{t.search_btn || ''}</span></a>
       <button type="button" onClick={publish} className="publish"><i><Icon name="plus"/></i><b>{t.publish_btn || ''}</b></button>
-      <button type="button" data-testid="golden-mobile-notifications-tab" className="mcg-bottom-action" aria-label={t.notifications || ''} onClick={onNotifications}>
+      <button type="button" data-testid="golden-mobile-notifications-tab" className={`mcg-bottom-action ${active === 'notifications' ? 'active' : ''}`} aria-label={t.notifications || ''} onClick={onNotifications}>
         <Icon name="bell"/><span>{t.notifications || ''}</span>
         {unreadCount > 0 && <i data-testid="golden-mobile-notifications-unread" className="mcg-unread-dot" aria-hidden="true"/>}
       </button>
-      <button type="button" data-testid="golden-mobile-account-tab" className="mcg-bottom-action" onClick={onAccount}>
+      <button type="button" data-testid="golden-mobile-account-tab" className={`mcg-bottom-action ${active === 'account' ? 'active' : ''}`} onClick={onAccount}>
         <Icon name="user"/><span>{t.my_account || ''}</span>
       </button>
     </nav>
