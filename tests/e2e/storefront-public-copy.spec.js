@@ -70,7 +70,7 @@ for (const lang of SUPPORTED_LANGUAGES) {
     await expectDocumentLanguage(page, lang);
 
     await expect(page.getByRole('heading', { level: 1, name: company.name, exact: false })).toBeVisible();
-    await expect(page.getByRole('main').getByText(t.all_mexico, { exact: true })).toBeVisible();
+    await expect(page.getByTestId('golden-storefront-main').getByText(t.all_mexico, { exact: true })).toBeVisible();
     await expect(page.getByText(t.rfc_verified, { exact: true })).toBeVisible();
     await expect(page.getByText(t.business_profile_tag, { exact: true })).toBeVisible();
     await expect(page.getByText(t.website, { exact: true })).toBeVisible();
@@ -91,7 +91,7 @@ for (const lang of ['es', 'zh', 'ar', 'ru']) {
     await page.goto('/?store=77', { waitUntil: 'domcontentloaded' });
     await expectDocumentLanguage(page, lang);
     await expect(page.getByText(t.business_profile_tag, { exact: true })).toBeVisible();
-    await expect(page.getByRole('main').getByText(t.all_mexico, { exact: true })).toBeVisible();
+    await expect(page.getByTestId('golden-storefront-main').getByText(t.all_mexico, { exact: true })).toBeVisible();
     await expectNoOverflow(page);
   });
 }
@@ -228,3 +228,34 @@ for (const viewport of [
     await expect(qrOpener).toBeFocused();
   });
 }
+
+test('storefront uses the shared Golden shell on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await setLanguage(page, 'es');
+  await mockApi(page);
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/?store=77', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.getByTestId('golden-storefront-main')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+
+    const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    await page.getByTestId('golden-theme-toggle').click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
+    await page.getByTestId('golden-theme-toggle').click();
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    if (viewport.name === 'mobile') {
+      await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+    }
+  }
+});
