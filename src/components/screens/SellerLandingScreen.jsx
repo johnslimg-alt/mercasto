@@ -16,6 +16,9 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { trackPageView, trackEvent } from '../../utils/analytics';
+import { getTranslations } from '../../utils/translations';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 
 const TRANSLATIONS = {
   es: {
@@ -585,10 +588,25 @@ const TRANSLATIONS = {
 
 export default function SellerLandingScreen({ lang = 'es' }) {
   const navigate = useNavigate();
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const [activeFaq, setActiveFaq] = useState(null);
 
   // Fallback to Spanish if language not found
   const t = TRANSLATIONS[lang] || TRANSLATIONS.es;
+  const goldenT = getTranslations(lang);
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-seller-acquisition-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-seller-acquisition-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
 
   useEffect(() => {
     // Dynamic SEO title
@@ -643,7 +661,20 @@ export default function SellerLandingScreen({ lang = 'es' }) {
   ];
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-white transition-colors duration-300">
+    <>
+      <MercastoGoldenHeader
+        publish={() => handleStart()}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={goldenT.all_mexico || ''}
+        selectedState=""
+        t={goldenT}
+      />
+    <div data-testid="golden-seller-acquisition-main" className="mcg-seller-acquisition-page bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-white transition-colors duration-300">
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-12 md:pt-32 md:pb-16 flex flex-col items-center text-center px-4 max-w-5xl mx-auto">
         {/* Glow Effects */}
@@ -868,6 +899,15 @@ export default function SellerLandingScreen({ lang = 'es' }) {
           <ArrowRight size={18} className="ml-1" />
         </button>
       </section>
+      <MercastoGoldenBottomNav
+        active="none"
+        publish={() => handleStart()}
+        onNotifications={() => navigate('/notificaciones')}
+        onAccount={() => navigate('/profile')}
+        unreadCount={0}
+        t={goldenT}
+      />
     </div>
+    </>
   );
 }
