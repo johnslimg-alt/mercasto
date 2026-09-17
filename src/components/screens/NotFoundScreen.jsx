@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, ArrowLeft, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import GoldenPublicPageShell from '../shell/GoldenPublicPageShell';
 
 export default function NotFoundScreen() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function NotFoundScreen() {
   }, [t]);
 
   return (
+    <GoldenPublicPageShell testId="golden-not-found-main" className="mcg-not-found-page">
     <div data-testid="not-found-screen" className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-16">
       {/* Illustration */}
       <div className="relative mb-8 select-none">
@@ -108,5 +110,6 @@ export default function NotFoundScreen() {
         <button onClick={() => navigate('/privacidad')} className="hover:text-slate-400 transition-colors underline underline-offset-2">{t('footer.privacy')}</button>
       </p>
     </div>
+    </GoldenPublicPageShell>
   );
 }
