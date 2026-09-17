@@ -1,0 +1,134 @@
+name: DSH Free Model Candidate Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/dsh-glm-hosted-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.head_ref == 'ops/dsh-openrouter-probe-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          for n in 1 2 3 4 5; do
+            ssh-keyscan -T 5 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Probe free models through DSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          S=/root/.dsh/settings.yaml
+          SAVE=/tmp/dsh-settings-before-free-probe.yaml
+          cp -a "$S" "$SAVE"
+
+          cat >/tmp/free-probe.patch.yml <<'YAML'
+          - id: llm-pi-ai
+            config:
+              providers:
+                openrouter:
+                  displayName: OpenRouter
+                  apiKeyEnv: OPENROUTER_API_KEY
+                  api: openai-completions
+                  baseURL: https://openrouter.ai/api/v1
+                  models:
+                    - id: nex-agi/nex-n2.5-pro:free
+                      name: Nex N2.5 Pro Free
+                      contextWindow: 262144
+                      maxTokens: 65536
+                      input: [text]
+                    - id: cohere/north-mini-code:free
+                      name: North Mini Code Free
+                      contextWindow: 256000
+                      maxTokens: 64000
+                      input: [text]
+                    - id: openrouter/free
+                      name: OpenRouter Free Router
+                      contextWindow: 200000
+                      maxTokens: 32768
+                      input: [text]
+          YAML
+
+          restore() {
+            cp -a "$SAVE" "$S"
+            rm -f "$SAVE" /tmp/free-probe.patch.yml /tmp/free-probe.out
+          }
+          trap restore EXIT
+
+          set_default() {
+            python3 - "$S" "$1" <<'PY'
+          import os,re,sys,tempfile
+          from pathlib import Path
+          p=Path(sys.argv[1]); model=sys.argv[2]
+          text=p.read_text()
+          block=f"agent-default-model:\n  provider: openrouter\n  model: {model}\n"
+          lines=text.splitlines(keepends=True); start=None
+          for i,line in enumerate(lines):
+              if re.match(r"^agent-default-model:\s*(?:#.*)?$",line.rstrip("\n")):
+                  start=i; break
+          if start is None:
+              new=text.rstrip()+"\n\n"+block
+          else:
+              end=len(lines)
+              for i in range(start+1,len(lines)):
+                  if re.match(r"^[A-Za-z0-9_.-]+:\s*",lines[i]):
+                      end=i; break
+              new="".join(lines[:start])+block+"".join(lines[end:])
+          fd,tmp=tempfile.mkstemp(dir=str(p.parent),prefix=".probe.",text=True)
+          with os.fdopen(fd,"w") as h:
+              h.write(new); h.flush(); os.fsync(h.fileno())
+          os.chmod(tmp,p.stat().st_mode & 0o777); os.replace(tmp,p)
+          PY
+          }
+
+          models=(
+            'nex-agi/nex-n2.5-pro:free'
+            'cohere/north-mini-code:free'
+            'openrouter/free'
+          )
+          successes=0
+          for model in "${models[@]}"; do
+            echo "=== CANDIDATE $model ==="
+            set_default "$model"
+            set +e
+            timeout 90s npx --yes @deepseek-ai/dsh@0.1.5-rc.1 --profile headless --patch /tmp/free-probe.patch.yml 'Reply with exactly: FREE_PROBE_OK' >/tmp/free-probe.out 2>&1
+            rc=$?
+            set -e
+            sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g' /tmp/free-probe.out | tail -30
+            if [ "$rc" -eq 0 ] && grep -q FREE_PROBE_OK /tmp/free-probe.out; then
+              echo "CANDIDATE_OK $model"
+              successes=$((successes+1))
+            else
+              echo "CANDIDATE_FAIL $model rc=$rc"
+            fi
+          done
+          echo "FREE_CANDIDATE_SUCCESSES=$successes"
+          test "$successes" -gt 0
+          restore
+          trap - EXIT
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/key
