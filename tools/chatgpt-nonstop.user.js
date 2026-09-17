@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Non-Stop Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.1
+// @version      9.0.0-alpha.2-nonstop.2
 // @description  Perpetual Play + truthful Export. External protocol activators. No controller-side reasoning.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -33,7 +33,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.1';
+const VER = '9.0.0-alpha.2-nonstop.2';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -153,13 +153,16 @@ function finalLine(text) {
   return lines.length ? lines[lines.length - 1] : '';
 }
 function terminal(text) {
-  const line = finalLine(text);
-  if (line === G.proceed || line === A.proceed) return { type: 'proceed', raw: line };
-  if (line === G.human || line === A.human) return { type: 'human', raw: line };
-  if (line === G.halt || line === A.halt) return { type: 'halt', raw: line };
-  const relay = line.match(/^\[\[AOA::RELAY:([^\]\r\n]{1,80})\]\]$/);
-  if (relay) return { type: 'relay', raw: line, model: relay[1].trim() };
-  return { type: 'bad', raw: line || '(empty)' };
+  const lines = String(text || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  const tail = lines.slice(-12).reverse();
+  for (const line of tail) {
+    if (line === G.proceed || line === A.proceed) return { type: 'proceed', raw: line };
+    if (line === G.human || line === A.human) return { type: 'human', raw: line };
+    if (line === G.halt || line === A.halt) return { type: 'halt', raw: line };
+    const relay = line.match(/^\[\[AOA::RELAY:([^\]\r\n]{1,80})\]\]$/);
+    if (relay) return { type: 'relay', raw: line, model: relay[1].trim() };
+  }
+  return { type: 'bad', raw: lines.length ? lines[lines.length - 1] : '(empty)' };
 }
 function log(type, data = {}) {
   S.events.push({ at: new Date().toISOString(), type, data });
