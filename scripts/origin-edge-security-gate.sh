@@ -48,6 +48,8 @@ grep -qF 'limit_conn mercasto_conn_per_ip 10;' "$NGINX"
 grep -qF 'client_header_timeout 15s;' "$NGINX"
 grep -qF 'client_body_timeout 120s;' "$NGINX"
 grep -qF 'reset_timedout_connection on;' "$NGINX"
+grep -qF 'listen 80 default_server;' "$NGINX"
+test "$(grep -cF 'listen 80 default_server;' "$NGINX")" = '1'
 
 server_tokens_line="$(grep -n '^server_tokens off;' "$NGINX" | cut -d: -f1)"
 first_server_line="$(grep -n '^server {' "$NGINX" | head -1 | cut -d: -f1)"

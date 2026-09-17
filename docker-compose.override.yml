@@ -28,6 +28,15 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      # LLM Council owns council.flyaicrm.com on the shared edge. Keep its
+      # vhost outside the Mercasto checkout, but mount it explicitly so container
+      # recreation cannot silently drop the hostname or leave untracked config drift.
+      - type: bind
+        source: /etc/mercasto-edge/council.conf
+        target: /etc/nginx/conf.d/council.conf
+        read_only: true
+        bind:
+          create_host_path: false
 
   mercasto-scheduler:
     depends_on:
