@@ -19,7 +19,9 @@ jobs:
       (
         github.event.comment.body == 'RUN:dsh_rotation_preflight:MERCASTO' ||
         github.event.comment.body == 'RUN:dsh_rotation_install_zai:MERCASTO' ||
-        github.event.comment.body == 'RUN:dsh_rotation_install_zai-coding:MERCASTO'
+        github.event.comment.body == 'RUN:dsh_rotation_install_zai-coding:MERCASTO' ||
+        github.event.comment.body == 'RUN:dsh_rotation_credential_scan:MERCASTO' ||
+        github.event.comment.body == 'RUN:dsh_rotation_install_auto:MERCASTO'
       )
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -40,6 +42,12 @@ jobs:
               ;;
             RUN:dsh_rotation_install_zai-coding:MERCASTO)
               echo "mode=install_zai-coding" >> "$GITHUB_OUTPUT"
+              ;;
+            RUN:dsh_rotation_credential_scan:MERCASTO)
+              echo "mode=credential_scan" >> "$GITHUB_OUTPUT"
+              ;;
+            RUN:dsh_rotation_install_auto:MERCASTO)
+              echo "mode=install_auto" >> "$GITHUB_OUTPUT"
               ;;
             *)
               exit 64
@@ -148,12 +156,151 @@ jobs:
             exit 0
           fi
 
+          credential_keys() {
+            python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+
+          keys = set()
+
+          cred = Path("/root/.dsh/.credentials.yaml")
+          if cred.exists():
+              in_refs = False
+              for line in cred.read_text(encoding="utf-8", errors="ignore").splitlines():
+                  if re.match(r"^refs:\s*$", line):
+                      in_refs = True
+                      continue
+                  if in_refs and re.match(r"^[^\s].*:\s*", line):
+                      in_refs = False
+                  if in_refs:
+                      m = re.match(r"^\s{2}([A-Za-z_][A-Za-z0-9_]*):", line)
+                      if m:
+                          keys.add(m.group(1))
+
+          for env_path in (Path("/root/.dsh/.env"), Path("/root/.env")):
+              if not env_path.exists():
+                  continue
+              for line in env_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+                  m = re.match(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=", line)
+                  if m:
+                      keys.add(m.group(1))
+
+          keys.update(os.environ.keys())
+          for key in sorted(keys):
+              print(key)
+          PY
+          }
+
+          if [ "$MODE" = "credential_scan" ]; then
+            echo "=== CANDIDATE CREDENTIAL REFS ==="
+            credential_keys | grep -Ei 'OPENROUTER|ZAI|Z_AI|ZHIPU|GLM|BIGMODEL' || true
+            echo "=== SANITIZED PROVIDER REFERENCES ==="
+            grep -RHIinE 'openrouter|api\.z\.ai|open\.bigmodel\.cn|z-ai/glm|glm-5\.3'               /root/.dsh/settings.yaml /root/.dsh/profiles/web /root/.dsh/.env /root/.env 2>/dev/null               | sed -E 's/([A-Za-z_][A-Za-z0-9_]*(API_KEY|TOKEN|SECRET|PASSWORD))[[:space:]]*[:=].*/\1=<redacted>/Ig'               | sed -E 's/(sk-[A-Za-z0-9_-]{12,})/<redacted>/g'               | head -200 || true
+            echo "DSH_ROTATION_CREDENTIAL_SCAN_OK"
+            exit 0
+          fi
+
+          AUTO_ROUTE_KIND=""
+          AUTO_CREDENTIAL_REF=""
+          AUTO_ROUTE_BLOCK=""
+
+          if [ "$MODE" = "install_auto" ]; then
+            mapfile -t ALL_KEYS < <(credential_keys)
+
+            has_key() {
+              local wanted="$1"
+              local k
+              for k in "${ALL_KEYS[@]}"; do
+                [ "$k" = "$wanted" ] && return 0
+              done
+              return 1
+            }
+
+            for candidate in OPENROUTER_API_KEY OPEN_ROUTER_API_KEY; do
+              if has_key "$candidate"; then
+                AUTO_CREDENTIAL_REF="$candidate"
+                AUTO_ROUTE_KIND="openrouter"
+                break
+              fi
+            done
+
+            if [ -z "$AUTO_ROUTE_KIND" ]; then
+              for candidate in ZAI_API_KEY Z_AI_API_KEY ZAI_CODING_API_KEY ZHIPU_API_KEY ZHIPUAI_API_KEY GLM_API_KEY BIGMODEL_API_KEY; do
+                if has_key "$candidate"; then
+                  AUTO_CREDENTIAL_REF="$candidate"
+                  AUTO_ROUTE_KIND="zai"
+                  break
+                fi
+              done
+            fi
+
+            if [ -z "$AUTO_ROUTE_KIND" ]; then
+              echo "No existing OpenRouter or Z.AI/GLM credential reference was found." >&2
+              echo "Candidate names present:"
+              credential_keys | grep -Ei 'OPENROUTER|ZAI|Z_AI|ZHIPU|GLM|BIGMODEL' || true
+              exit 30
+            fi
+
+            if grep -q '^llm-pi-ai:' "$SETTINGS"; then
+              echo "Existing llm-pi-ai section found; refusing text-level merge to avoid damaging user routes." >&2
+              exit 31
+            fi
+
+            if [ "$AUTO_ROUTE_KIND" = "openrouter" ]; then
+              GLM_PROVIDER=openrouter-glm-free
+              GLM_MODEL='z-ai/glm-5.3-flash:free'
+              AUTO_ROUTE_BLOCK="$(cat <<EOF
+          llm-pi-ai:
+            providers:
+              openrouter-glm-free:
+                displayName: OpenRouter GLM 5.3 Flash Free
+                apiKeyEnv: $AUTO_CREDENTIAL_REF
+                api: openai-completions
+                baseURL: https://openrouter.ai/api/v1
+                models:
+                  - id: z-ai/glm-5.3-flash:free
+                    name: GLM 5.3 Flash Free
+                    contextWindow: 1048576
+          EOF
+          )"
+            else
+              GLM_PROVIDER=zai-coding
+              GLM_MODEL=glm-5.3-flash
+              AUTO_ROUTE_BLOCK="$(cat <<EOF
+          llm-pi-ai:
+            providers:
+              zai-coding:
+                displayName: Z.AI Coding Plan
+                apiKeyEnv: $AUTO_CREDENTIAL_REF
+                api: openai-completions
+                baseURL: https://api.z.ai/api/coding/paas/v4
+                compat:
+                  supportsDeveloperRole: false
+                  maxTokensField: max_tokens
+                models:
+                  - id: glm-5.3-flash
+                    name: GLM 5.3 Flash
+                    contextWindow: 1048576
+          EOF
+          )"
+            fi
+
+            echo "auto_route_kind=$AUTO_ROUTE_KIND"
+            echo "auto_credential_ref=$AUTO_CREDENTIAL_REF"
+            echo "auto_provider=$GLM_PROVIDER"
+            echo "auto_model=$GLM_MODEL"
+          fi
+
           case "$MODE" in
             install_zai)
               GLM_PROVIDER=zai
               ;;
             install_zai-coding)
               GLM_PROVIDER=zai-coding
+              ;;
+            install_auto)
+              : "${GLM_PROVIDER:?auto provider missing}"
+              : "${GLM_MODEL:?auto model missing}"
               ;;
             *)
               echo "unsupported mode=$MODE" >&2
@@ -170,12 +317,16 @@ jobs:
           chmod 0600 "$BACKUP_DIR/settings.yaml.pre-install.$STAMP"
           tar -C /root -czf "$BACKUP_DIR/web-profile.pre-install.$STAMP.tgz" .dsh/profiles/web
 
+          if [ "$MODE" = "install_auto" ]; then
+            printf '\n%s\n' "$AUTO_ROUTE_BLOCK" >> "$SETTINGS"
+          fi
+
           cat >/etc/dsh-model-rotation.env <<EOF
           DSH_HOME=/root/.dsh
           DEEPSEEK_PROVIDER=deepseek-official
           DEEPSEEK_MODEL=deepseek-flash
           GLM_PROVIDER=$GLM_PROVIDER
-          GLM_MODEL=glm-5.3-flash
+          GLM_MODEL=$GLM_MODEL
           EOF
           chmod 0600 /etc/dsh-model-rotation.env
 
@@ -483,7 +634,7 @@ jobs:
           systemctl is-active deepseek-harness.service
           ss -lntp | grep -E ':(3080|3081)\b'
           curl -sSI --max-time 20 https://harness.flyaicrm.com/ | head -12
-          echo "DSH_ROTATION_INSTALL_OK provider=$GLM_PROVIDER"
+          echo "DSH_ROTATION_INSTALL_OK provider=$GLM_PROVIDER model=$GLM_MODEL route_kind=${AUTO_ROUTE_KIND:-manual}"
           REMOTE
 
       - name: Cleanup SSH key
