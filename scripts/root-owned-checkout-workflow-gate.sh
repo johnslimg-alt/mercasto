@@ -11,6 +11,7 @@ workflows=(
   .github/workflows/env-readiness.yml
   .github/workflows/backup-freshness.yml
   .github/workflows/sms-readiness.yml
+  .github/workflows/production-live-gates.yml
 )
 
 for workflow in "${workflows[@]}"; do
@@ -26,5 +27,10 @@ for workflow in "${workflows[@]}"; do
 done
 
 grep -qF -- "- 'src/utils/helpCenterCopy.js'" .github/workflows/sms-readiness.yml
+
+live_workflow=.github/workflows/production-live-gates.yml
+grep -qF 'dirty="$(sudo -n git status --porcelain=v1 --untracked-files=all)"' "$live_workflow"
+grep -qF 'sudo -n git checkout -B main origin/main' "$live_workflow"
+grep -qF 'Production checkout is dirty; refusing to overwrite local changes.' "$live_workflow"
 
 echo "root-owned production checkout workflow gate OK"
