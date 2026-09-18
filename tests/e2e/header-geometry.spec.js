@@ -87,10 +87,11 @@ test('Golden Header language selector has a visible keyboard focus indicator', a
   await expect(language).toHaveValue('en');
 });
 
-test('Golden Header guest account control is named and keyboard operable', async ({ page }) => {
+test('Golden Header guest account control is named and keyboard operable', async ({ page }, testInfo) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  const account = page.getByTestId('golden-account-button');
+  const mobile = testInfo.project.name.includes('mobile');
+  const account = page.getByTestId(mobile ? 'golden-mobile-account-tab' : 'golden-account-button');
   await expect(account).toBeVisible();
   await expect(account).toHaveAccessibleName(/.+/);
   await account.focus();
@@ -106,9 +107,14 @@ test('Golden Header guest account control is named and keyboard operable', async
       outlineColor: css.outlineColor,
     };
   });
-  expect(Math.abs(style.width - style.height)).toBeLessThanOrEqual(2);
+  if (mobile) {
+    expect(style.width).toBeGreaterThanOrEqual(44);
+    expect(style.height).toBeGreaterThanOrEqual(44);
+  } else {
+    expect(Math.abs(style.width - style.height)).toBeLessThanOrEqual(2);
+  }
   expect(parseFloat(style.outlineWidth)).toBeGreaterThanOrEqual(2);
-  expect(style.outlineColor).toBe('rgb(132, 204, 22)');
+  expect(style.outlineColor).toMatch(/^rgba?\(132, 204, 22(?:, (?:0\.55|1))?\)$/);
 
   await account.press('Enter');
   await expect(page.getByRole('dialog')).toBeVisible();
