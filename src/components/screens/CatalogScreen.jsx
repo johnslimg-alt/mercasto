@@ -1,11 +1,15 @@
 import React from 'react';
-import { Bell, Info, Loader2, Settings2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Info, Loader2, Search, Settings2 } from 'lucide-react';
 import SidebarFilters from '../common/SidebarFilters';
 import SplitViewContainer from '../common/SplitViewContainer';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
 import BottomSheet from '../ui/BottomSheet';
 import { normalizeSavedSearchSelection } from '../../utils/savedSearchSelection';
 import { getAdDetailCopy } from '../../utils/adDetailCopy';
 import { isCatalogReference } from '../../utils/catalogInventory';
+import { useUI } from '../../contexts/UIContext';
+import './catalog-golden.css';
 
 const SavedSearchesPanel = React.lazy(() => import('../common/SavedSearchesPanel'));
 
@@ -42,10 +46,15 @@ export default function CatalogScreen({
   setSearchLocationInput,
   setSearchQuery,
   setSelectedState,
+  setAuthMode,
+  setShowAuthModal,
   t,
   token,
   user,
+  unreadCount = 0,
 }) {
+  const navigate = useNavigate();
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
   const [filterViewport, setFilterViewport] = React.useState(() => {
     if (typeof window === 'undefined') return 'desktop';
@@ -70,6 +79,11 @@ export default function CatalogScreen({
     [safeServerAds],
   );
   const detailCopy = React.useMemo(() => getAdDetailCopy(lang), [lang]);
+
+  React.useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-catalog-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-catalog-active');
+  }, []);
 
   React.useEffect(() => {
     const updateFilterViewport = () => {
@@ -201,6 +215,62 @@ export default function CatalogScreen({
     },
   }), [activeCat, conditionFilter, dynamicFilters, maxPrice, minPrice, searchQuery, selectedState]);
 
+  const handleCatalogHeaderLocation = React.useCallback((label, state) => {
+    const city = label && label !== state ? label : '';
+    setSelectedState(state || '');
+    setSearchLocation?.(null);
+    setSearchLocationInput?.(label || '');
+    setDynamicFilters(prev => ({
+      ...(prev || {}),
+      location_state: state || '',
+      location_city: city,
+    }));
+    executeSearch?.(searchQuery || '', label || '', activeCat, {
+      pathname: '/listings',
+      state: state || '',
+      city,
+      minPrice,
+      maxPrice,
+      condition: conditionFilter,
+      dynamicFilters: {
+        ...(dynamicFilters || {}),
+        location_state: state || '',
+        location_city: city,
+      },
+      source: 'catalog_header_location',
+    });
+  }, [activeCat, conditionFilter, dynamicFilters, executeSearch, maxPrice, minPrice, searchQuery, setDynamicFilters, setSearchLocation, setSearchLocationInput, setSelectedState]);
+
+  const submitCatalogSearch = React.useCallback(() => {
+    executeSearch?.(searchQuery || '', searchLocationInput || '', activeCat, {
+      pathname: '/listings',
+      state: selectedState || '',
+      minPrice,
+      maxPrice,
+      condition: conditionFilter,
+      dynamicFilters,
+      source: 'catalog_primary_search',
+    });
+  }, [activeCat, conditionFilter, dynamicFilters, executeSearch, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
+
+  const openCatalogAccount = React.useCallback(() => {
+    if (user) {
+      navigate('/profile');
+      return;
+    }
+    setAuthMode?.('login');
+    setShowAuthModal?.(true);
+  }, [navigate, setAuthMode, setShowAuthModal, user]);
+
+  const openCatalogNotifications = React.useCallback(() => {
+    if (user) {
+      navigate('/notificaciones');
+      return;
+    }
+    setAuthMode?.('login');
+    setShowAuthModal?.(true);
+  }, [navigate, setAuthMode, setShowAuthModal, user]);
+
   const filterProps = {
     activeCat,
     minPrice,
@@ -216,14 +286,50 @@ export default function CatalogScreen({
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-11rem)]" data-catalog-screen>
+    <>
+      <MercastoGoldenHeader
+        publish={() => navigate('/post')}
+        onLocationApply={handleCatalogHeaderLocation}
+        onAccount={openCatalogAccount}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={searchLocationInput || selectedState || t.all_mexico || ''}
+        selectedState={selectedState}
+        t={t}
+      />
+      <div className="mcg-catalog-page relative min-h-[calc(100vh-11rem)]" data-catalog-screen>
       {catalogToast && (
         <div className="fixed left-1/2 top-24 z-[120] -translate-x-1/2 rounded-2xl border border-lime-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-xl shadow-slate-900/10">
           {catalogToast}
         </div>
       )}
 
-      <div className="mx-auto flex min-h-[calc(100vh-11rem)] max-w-[1440px] flex-col gap-5 px-4 py-6 pb-28 md:pb-8 lg:px-6 lg:py-8 xl:flex-row xl:gap-6">
+      <div className="mcg-catalog-shell">
+        <div className="mcg-catalog-searchbar">
+          <div className="mcg-catalog-searchbox">
+            <Search size={18} aria-hidden="true" />
+            <input
+              data-testid="catalog-primary-search"
+              value={searchQuery}
+              onChange={event => setSearchQuery(event.target.value)}
+              onKeyDown={event => event.key === 'Enter' && submitCatalogSearch()}
+              placeholder={t.search_placeholder || ''}
+              aria-label={t.search_btn || ''}
+            />
+            <button type="button" data-testid="catalog-primary-search-submit" onClick={submitCatalogSearch}>
+              {t.search_btn || ''}
+            </button>
+          </div>
+          <div className="mcg-catalog-search-meta">
+            <span>{searchLocationInput || selectedState || t.all_mexico || ''}</span>
+            <span aria-hidden="true">·</span>
+            <span>{safeServerAds.length} {t.results || t.search_results}</span>
+          </div>
+        </div>
+
+        <div className="flex min-h-[calc(100vh-11rem)] flex-col gap-5 xl:flex-row xl:gap-6">
         <div className="mb-2 flex min-h-12 items-center justify-between gap-3 sm:justify-end xl:hidden">
           {/* Phone h1. The results toolbar hides its own title below sm (48px toggle
               contract), so the sub-sm viewport takes its single visible h1 from here;
@@ -375,6 +481,16 @@ export default function CatalogScreen({
           />
         </div>
       </div>
+      </div>
     </div>
+    <MercastoGoldenBottomNav
+      active="search"
+      publish={() => navigate('/post')}
+      onNotifications={openCatalogNotifications}
+      onAccount={openCatalogAccount}
+      unreadCount={unreadCount}
+      t={t}
+    />
+    </>
   );
 }

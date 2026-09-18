@@ -4157,9 +4157,12 @@ function App() {
       setSearchLocationInput={setSearchLocationInput}
       setSearchQuery={setSearchQuery}
       setSelectedState={setSelectedState}
+      setAuthMode={setAuthMode}
+      setShowAuthModal={setShowAuthModal}
       t={t}
       token={localStorage.getItem('auth_token')}
       user={user}
+      unreadCount={unreadCount}
     />
   );
 

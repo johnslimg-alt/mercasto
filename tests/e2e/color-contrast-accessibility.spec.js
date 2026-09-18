@@ -338,10 +338,11 @@ async function assertTheme(page, dark) {
 }
 
 async function settle(page) {
-  // The approved Golden Home owns its own shell on "/"; every other route keeps
-  // the legacy application shell. Wait for the shell that is actually visible.
-  const onGoldenHome = new URL(page.url()).pathname === '/';
-  const shell = onGoldenHome ? page.getByTestId('golden-header') : page.locator('.site-header');
+  // Home and catalog own the shared Golden shell; other routes keep the
+  // legacy application shell. Wait for the shell that is actually visible.
+  const pathname = new URL(page.url()).pathname;
+  const onGoldenShell = pathname === '/' || pathname === '/listings';
+  const shell = onGoldenShell ? page.getByTestId('golden-header') : page.locator('.site-header');
   await expect(shell).toBeVisible({ timeout: 20_000 });
   // Desktop Golden Home has its own footer without legacy <ul> markup, while
   // tablet/mobile keep the global footer. A visible footer is the hydration gate.

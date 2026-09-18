@@ -1,6 +1,6 @@
 :root{--mcg-green:#84cc16;--mcg-green-dark:#4d7c0f;--mcg-ink:#111827;--mcg-muted:#64748b;--mcg-line:#e2e8f0;--mcg-soft:#f1f5f9;--mcg-card:#fff}
 .dark{--mcg-ink:#f8fafc;--mcg-muted:#cbd5e1;--mcg-line:#64748b;--mcg-soft:#1f2937;--mcg-card:#111827}
-.mc-golden-home-active .site-header,.mc-golden-home-active .mobile-tabbar{display:none!important}
+.mc-golden-shell-active .site-header,.mc-golden-shell-active .mobile-tabbar{display:none!important}
 @media(min-width:1180px){.mc-golden-home-active .app-global-footer{display:none!important}}
 .mc-golden-home-active{background:#fff}.dark .mc-golden-home-active{background:#05161c}
 .mcg-root{position:relative;min-height:100vh;background:#fff;color:var(--mcg-ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -115,4 +115,15 @@
  .mcg-real-map{height:330px;min-height:330px}
  .mcg-functional-ad-row{grid-template-columns:repeat(2,minmax(0,1fr))}
  .mcg-faq-grid{grid-template-columns:1fr}
+}
+
+/* Shared Golden shell touch geometry for catalogue/tablet surfaces. */
+@media(max-width:1179px){
+  .mcg-header .mcg-location,.mcg-header .mcg-lang{min-height:48px}
+  .mcg-header .mcg-theme,.mcg-header .mcg-hicon{min-width:48px;min-height:48px}
+  .mcg-location-popover select,.mcg-location-popover>button{min-height:48px}
+}
+
+@media(max-width:767px){
+  .mcg-location-popover{position:fixed;left:10px;right:10px;top:64px;width:auto;max-width:none}
 }

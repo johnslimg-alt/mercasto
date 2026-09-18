@@ -107,7 +107,7 @@ test('auth modal fits short mobile viewports, locks the page, and keeps 48px tar
     await page.evaluate(() => window.scrollTo(0, 600));
     const backgroundScrollY = await page.evaluate(() => window.scrollY);
 
-    await page.getByTestId('mobile-account-button').click();
+    await page.getByTestId('golden-mobile-account-tab').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
 

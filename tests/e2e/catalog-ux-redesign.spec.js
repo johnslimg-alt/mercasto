@@ -64,11 +64,34 @@ async function mockApi(page) {
   });
 }
 
+test('catalog uses the shared Golden shell and primary search', async ({ page }, testInfo) => {
+  await installSession(page);
+  await mockApi(page);
+  const mobile = testInfo.project.name.includes('mobile');
+  await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+  await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('golden-header')).toBeVisible();
+  await expect(page.locator('.site-header')).toBeHidden();
+  await expect(page.getByTestId('catalog-primary-search')).toBeVisible();
+
+  if (mobile) {
+    const goldenTabs = page.getByTestId('golden-bottom-nav');
+    await expect(goldenTabs).toBeVisible();
+    await expect(page.locator('.mobile-tabbar')).toBeHidden();
+    await expect(goldenTabs.locator('a[href="/listings"]')).toHaveClass(/active/);
+  }
+
+  await page.getByTestId('catalog-primary-search').fill('laptop');
+  await page.getByTestId('catalog-primary-search-submit').click();
+  await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe('laptop');
+});
+
 test('catalog list mode is a compact horizontal list and persists across reload', async ({ page }) => {
   await installSession(page);
   await mockApi(page);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/listings?category=motor');
+  await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
   await page.getByTestId('catalog-list-view').click();
 
   const card = page.getByTestId('catalog-list-card').first();
@@ -90,19 +113,21 @@ test('catalog keeps permanent sidebar only on wide desktop', async ({ page }, te
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await installSession(page);
   await mockApi(page);
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
+
   for (const width of [1024, 1180, 1279]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto('/listings?category=motor');
     await expect(page.getByTestId('sidebar-filters')).toBeHidden();
     const trigger = page.getByTestId('catalog-mobile-filters');
     await expect(trigger).toBeVisible();
     await trigger.click();
     await expect(page.getByTestId('catalog-tablet-filter-dialog')).toBeVisible();
     await page.getByTestId('catalog-tablet-filter-close').click();
+    await expect(page.getByTestId('catalog-tablet-filter-dialog')).toBeHidden();
   }
 
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/listings?category=motor');
   await expect(page.getByTestId('sidebar-filters')).toBeVisible();
   await expect(page.getByTestId('catalog-mobile-filters')).toBeHidden();
   const sidebarBox = await page.getByTestId('sidebar-filters').boundingBox();
@@ -113,15 +138,17 @@ test('category quick links stay compact and aligned on mobile', async ({ page })
   await installSession(page);
   await mockApi(page);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/negocios');
+  await page.goto('/negocios', { waitUntil: 'domcontentloaded' });
   const links = page.getByTestId('category-quick-link');
   await expect(links.first()).toBeVisible();
-  const count = await links.count();
-  expect(count).toBeGreaterThan(2);
-  for (let index = 0; index < Math.min(count, 6); index += 1) {
-    const box = await links.nth(index).boundingBox();
-    expect(box?.height).toBeLessThanOrEqual(78);
-    expect(box?.height).toBeGreaterThanOrEqual(60);
+  const boxes = await links.evaluateAll((nodes) => nodes.slice(0, 6).map((node) => {
+    const rect = node.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }));
+  expect(boxes.length).toBeGreaterThan(2);
+  for (const box of boxes) {
+    expect(box.height).toBeLessThanOrEqual(78);
+    expect(box.height).toBeGreaterThanOrEqual(60);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
 });
@@ -192,7 +219,7 @@ test('mobile catalog filter sheet keeps 48px touch targets inside the viewport',
 
   for (const viewport of [{ width: 360, height: 640 }, { width: 390, height: 667 }, { width: 430, height: 932 }]) {
     await page.setViewportSize(viewport);
-    await page.goto('/listings?category=motor');
+    await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
     await page.getByTestId('catalog-mobile-filters').click();
 
     // The wide-desktop sidebar stays mounted (hidden) at every width, so every
@@ -248,7 +275,7 @@ test('mobile catalog filter state survives closing and reopening the sheet', asy
   await installSession(page);
   await mockApi(page);
   await page.setViewportSize({ width: 390, height: 667 });
-  await page.goto('/listings?category=motor');
+  await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
 
   const trigger = page.getByTestId('catalog-mobile-filters');
   const sheet = () => page.locator('[role="dialog"]').filter({ has: page.getByTestId('bottom-sheet-close') });
@@ -282,7 +309,7 @@ test('tablet catalog filter drawer keeps 48px touch targets and scrolls', async 
 
   for (const width of [768, 1024]) {
     await page.setViewportSize({ width, height: 1024 });
-    await page.goto('/listings?category=motor');
+    await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
     await page.getByTestId('catalog-mobile-filters').click();
 
     const drawer = page.getByTestId('catalog-tablet-filter-dialog');
@@ -315,7 +342,7 @@ test('desktop catalog sidebar keeps its compact density', async ({ page }, testI
 
   for (const width of [1280, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
-    await page.goto('/listings?category=motor');
+    await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
 
     const sidebar = page.getByTestId('sidebar-filters');
     await expect(sidebar).toBeVisible();
@@ -342,21 +369,22 @@ test('mobile location popover controls reach 48px inside the viewport', async ({
 
   for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 640 }, { width: 390, height: 667 }, { width: 430, height: 932 }]) {
     await page.setViewportSize(viewport);
-    await page.goto('/listings?category=motor');
+    await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
 
-    const opener = page.getByTestId('mobile-location-button');
+    const opener = page.getByTestId('golden-location-button');
     await expect(opener).toBeVisible();
+    await expectMinTouchTarget(opener, `location opener @${viewport.width}`);
     await opener.click();
 
-    const popover = page.locator('.header-popover').filter({ has: page.getByTestId('mobile-location-apply') });
+    const popover = page.locator('.mcg-location-popover');
     await expect(popover).toBeVisible();
-    await expectMinTouchTarget(popover.getByTestId('mobile-location-state'), `popover state @${viewport.width}`);
-    await expectMinTouchTarget(popover.getByTestId('mobile-location-city'), `popover city @${viewport.width}`);
-    await expectMinTouchTarget(popover.getByTestId('mobile-location-apply'), `popover apply @${viewport.width}`);
+    await expectMinTouchTarget(popover.getByTestId('golden-location-state'), `popover state @${viewport.width}`);
+    await expectMinTouchTarget(popover.getByTestId('golden-location-city'), `popover city @${viewport.width}`);
+    await expectMinTouchTarget(popover.getByTestId('golden-location-apply'), `popover apply @${viewport.width}`);
 
     // Long state/city names must not push the popover outside the viewport.
-    await popover.getByTestId('mobile-location-state').selectOption('Veracruz');
-    await popover.getByTestId('mobile-location-city').selectOption('Boca del Río');
+    await popover.getByTestId('golden-location-state').selectOption('Veracruz');
+    await popover.getByTestId('golden-location-city').selectOption('Boca del Río');
     const box = await popover.boundingBox();
     expect(box.x, `popover left @${viewport.width}`).toBeGreaterThanOrEqual(-1);
     expect(box.x + box.width, `popover right @${viewport.width}`).toBeLessThanOrEqual(viewport.width + 1);
@@ -372,18 +400,18 @@ test('tablet location popover controls reach 48px below the xl breakpoint', asyn
   await installSession(page);
   await mockApi(page);
   await page.setViewportSize({ width: 1024, height: 900 });
-  await page.goto('/listings?category=motor');
+  await page.goto('/listings?category=motor', { waitUntil: 'domcontentloaded' });
 
-  const opener = page.getByTestId('desktop-location-button');
+  const opener = page.getByTestId('golden-location-button');
   await expect(opener).toBeVisible();
+  await expectMinTouchTarget(opener, 'tablet location opener');
   await opener.click();
 
-  const popover = page.locator('.header-popover').filter({ has: page.getByTestId('desktop-location-apply') });
+  const popover = page.locator('.mcg-location-popover');
   await expect(popover).toBeVisible();
-  await expectMinTouchTarget(popover.getByTestId('desktop-location-state'), 'tablet popover state');
-  await expectMinTouchTarget(popover.getByTestId('desktop-location-city'), 'tablet popover city');
-  await expectMinTouchTarget(popover.getByTestId('desktop-location-cancel'), 'tablet popover cancel');
-  await expectMinTouchTarget(popover.getByTestId('desktop-location-apply'), 'tablet popover apply');
+  await expectMinTouchTarget(popover.getByTestId('golden-location-state'), 'tablet popover state');
+  await expectMinTouchTarget(popover.getByTestId('golden-location-city'), 'tablet popover city');
+  await expectMinTouchTarget(popover.getByTestId('golden-location-apply'), 'tablet popover apply');
   await noHorizontalOverflow(page);
 });
 

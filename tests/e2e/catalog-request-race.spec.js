@@ -65,7 +65,7 @@ test('catalog ignores a stale slower filter response', async ({ page }, testInfo
   await expect(page.getByText('Old 100', { exact: true })).toHaveCount(0);
 });
 
-test('changing the header subcategory reloads the catalog request', async ({ page }, testInfo) => {
+test('catalog subcategory URL reloads the catalog request', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await page.addInitScript(() => {
     localStorage.setItem('lang', 'en');
@@ -93,9 +93,7 @@ test('changing the header subcategory reloads the catalog request', async ({ pag
   await expect.poll(() => adRequests.some(requestUrl => new URL(requestUrl).searchParams.get('category') === 'motor')).toBe(true);
   adRequests.length = 0;
 
-  const subcategory = page.locator('nav select').filter({ has: page.locator('option[value="SUV"]') }).first();
-  await expect(subcategory).toBeVisible();
-  await subcategory.selectOption('SUV');
+  await page.goto('/listings?category=motor&subcategory=SUV', { waitUntil: 'domcontentloaded' });
   await expect.poll(() => new URL(page.url()).searchParams.get('subcategory')).toBe('SUV');
   await expect.poll(() => adRequests.some(requestUrl => new URL(requestUrl).searchParams.get('subcategory') === 'SUV')).toBe(true);
 });

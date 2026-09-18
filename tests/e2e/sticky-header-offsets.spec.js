@@ -21,7 +21,12 @@ async function acceptCookies(page) {
 
 async function documentStickyMetrics(page) {
   return page.evaluate(() => {
-    const header = document.querySelector('.site-header');
+    const header = [...document.querySelectorAll('[data-testid="golden-header"], .site-header')]
+      .find((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      });
     const headerHeight = header?.getBoundingClientRect().height || 0;
 
     const nearestScrollAncestor = (element) => {
