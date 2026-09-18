@@ -35,12 +35,12 @@ async function mockPublicApi(page) {
   });
 }
 
-test('header search preserves catalog route and restores query through back/forward', async ({ page }, testInfo) => {
+test('catalog search preserves catalog route and restores query through back/forward', async ({ page }) => {
   await installGuest(page);
   await mockPublicApi(page);
 
   await page.goto('/listings?search=corolla');
-  const search = page.getByTestId(testInfo.project.name.includes('mobile') ? 'mobile-search-input' : 'desktop-search-input');
+  const search = page.getByTestId('catalog-primary-search');
   await expect(search).toHaveValue('corolla');
   await expect(page).toHaveURL(/\/listings\?search=corolla/);
 

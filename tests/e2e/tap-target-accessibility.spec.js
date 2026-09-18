@@ -57,9 +57,14 @@ async function prepare(page) {
 }
 
 async function settle(page) {
-  const onGoldenHome = new URL(page.url()).pathname === '/';
+  const pathname = new URL(page.url()).pathname;
+  const onGoldenShell = pathname === '/' || pathname === '/listings';
   await expect(
-    onGoldenHome ? page.getByTestId('golden-mobile-search-input') : page.getByTestId('mobile-header-search'),
+    pathname === '/'
+      ? page.getByTestId('golden-mobile-search-input')
+      : onGoldenShell
+        ? page.getByTestId('catalog-primary-search')
+        : page.getByTestId('mobile-header-search'),
   ).toBeVisible();
   // Trigger lazy sections, then come back to the top so measurements are taken
   // from the same scroll position the audit tool uses.

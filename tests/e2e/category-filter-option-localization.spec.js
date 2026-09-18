@@ -72,7 +72,7 @@ for (const lang of languages) {
 
 
 for (const lang of languages) {
-  test(`header subcategory placeholder localizes in ${lang}`, async ({ page }) => {
+  test(`legacy header subcategory placeholder keeps its localized contract in ${lang}`, async ({ page }) => {
     await page.addInitScript(savedLang => {
       localStorage.setItem('lang', savedLang);
       localStorage.setItem('mercasto_language', savedLang);
@@ -80,8 +80,11 @@ for (const lang of languages) {
     await mockCatalogApi(page);
     await page.goto('/?category=motor');
 
-    const subcategory = page.locator('select:visible').filter({ has: page.locator('option[value="SUV"]') }).first();
-    await expect(subcategory).toBeVisible();
+    // Golden Home intentionally hides the legacy AppHeader, but that shared
+    // header still serves the remaining public routes. Keep its localization
+    // contract covered without requiring the hidden shell to be visible here.
+    const subcategory = page.locator('.site-header select').filter({ has: page.locator('option[value="SUV"]') }).first();
+    await expect(subcategory).toHaveCount(1);
     await expect(subcategory.locator('option[value=""]')).toHaveText(shellTranslations[lang].all_subcategories);
   });
 }
