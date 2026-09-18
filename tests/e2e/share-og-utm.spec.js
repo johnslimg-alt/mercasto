@@ -10,8 +10,6 @@ import { QR_CODE_OPTIONS, buildShareTargets } from '../../src/utils/shareLinks.j
 
 const AD_ID = 6336;
 
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
-
 const detailAd = {
   id: AD_ID,
   user_id: 77,
@@ -32,6 +30,14 @@ async function mockDetailApi(page, requests) {
   await page.addInitScript(() => {
     localStorage.setItem('cookiesAccepted', 'true');
     Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    let copiedText = '';
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async value => { copiedText = String(value); },
+        readText: async () => copiedText,
+      },
+    });
   });
   await page.route('**/api/**', async route => {
     const request = route.request();
