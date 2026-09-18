@@ -155,3 +155,39 @@ for (const lang of ['es', 'en']) {
     });
   }
 }
+
+test('seller profile uses the shared Golden shell on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await setLanguage(page, 'es');
+  await mockApi(page);
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/vendedor/77', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+    await expect(page.getByTestId('golden-seller-main')).toBeVisible();
+    await expectNoOverflow(page);
+
+    const toggle = page.getByTestId('golden-theme-toggle');
+    const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    await toggle.click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
+    await toggle.click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(before);
+
+    if (viewport.name === 'mobile') {
+      const nav = page.getByTestId('golden-bottom-nav');
+      await expect(nav).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+      for (const control of await nav.locator(':scope > a, :scope > button').all()) {
+        const box = await control.boundingBox();
+        expect(box.width).toBeGreaterThanOrEqual(48);
+        expect(box.height).toBeGreaterThanOrEqual(48);
+      }
+    }
+  }
+});
