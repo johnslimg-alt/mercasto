@@ -7,6 +7,7 @@ import { RECOMMENDATION_COPY, RECOMMENDATION_LANGUAGES } from '../src/utils/reco
 const recommendations = fs.readFileSync('src/components/common/RecommendationsWidget.jsx', 'utf8');
 const sidebar = fs.readFileSync('src/components/common/SidebarFilters.jsx', 'utf8');
 const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
+const goldenHome = fs.readFileSync('src/components/home/MercastoGoldenHome.jsx', 'utf8');
 const detail = fs.readFileSync('src/components/screens/AdDetailScreen.jsx', 'utf8');
 const verticalHero = fs.readFileSync('src/components/verticals/VerticalHero.jsx', 'utf8');
 const categoryLanding = fs.readFileSync('src/components/screens/verticals/CategoryLanding.jsx', 'utf8');
@@ -44,7 +45,8 @@ test('recommendations use active locale for copy, title and currency', () => {
   assert.match(recommendations, /getRecommendationCopy\(lang\)/);
   assert.match(recommendations, /localeFor\(lang\)/);
   assert.match(recommendations, /localizedText\(ad\.title, lang\)/);
-  assert.match(home, /<RecommendationsWidget[\s\S]*?lang=\{lang\}[\s\S]*?t=\{t\}[\s\S]*?\/>/);
+  assert.match(goldenHome, /localizedText\(ad\?\.title,lang\)/);
+  assert.match(goldenHome, /formatMXN\(price,lang,\{minimumFractionDigits:0,maximumFractionDigits:0\}\)/);
   assert.match(detail, /<RecommendationsWidget[\s\S]*?lang=\{lang\}[\s\S]*?t=\{t\}[\s\S]*?\/>/);
 });
 

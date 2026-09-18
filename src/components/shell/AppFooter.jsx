@@ -21,7 +21,7 @@ export default function AppFooter({
   user,
 }) {
   return (
-      <footer className="mt-10 bg-[#0F172A] text-slate-300 pb-24 md:pb-0">
+      <footer className="app-global-footer mt-10 bg-[#0F172A] text-slate-300 pb-24 md:pb-0">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div>

@@ -13,6 +13,7 @@ const productsLanding = fs.readFileSync('src/components/screens/verticals/Produc
 const itemList = fs.readFileSync('src/components/seo/ItemListSchema.jsx', 'utf8');
 const faqSchema = fs.readFileSync('src/components/seo/FAQSchema.jsx', 'utf8');
 const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
+const goldenHome = fs.readFileSync('src/components/home/MercastoGoldenHome.jsx', 'utf8');
 const adDetail = fs.readFileSync('src/components/screens/AdDetailScreen.jsx', 'utf8');
 const push = fs.readFileSync('src/components/ui/PushNotificationManager.jsx', 'utf8');
 const toast = fs.readFileSync('src/components/ui/Toast.jsx', 'utf8');
@@ -119,11 +120,9 @@ test('home real-estate map copy covers all active languages without Spanish runt
     const copy = HOME_MAP_COPY[lang];
     assert.ok(copy.loading && copy.propertiesAll && copy.propertiesIn.includes('{state}'), lang);
   }
-  assert.equal(home.includes('Cargando mapa de propiedades...'), false);
-  assert.equal(home.includes('Propiedades en todo México'), false);
-  assert.equal(home.includes("toLocaleString('es-MX')"), false);
-  assert.match(home, /formatHomePropertiesLabel\(lang, selectedState\)/);
-  assert.match(home, /formatNumber\(value, lang\)/);
+  assert.equal(goldenHome.includes("toLocaleString('es-MX')"), false);
+  assert.match(goldenHome, /localizedText\(ad\?\.title,lang\)/);
+  assert.match(goldenHome, /formatMXN\(price,lang,/);
 });
 
 test('owner ad controls and price history follow active locale without changing mutation endpoints', () => {

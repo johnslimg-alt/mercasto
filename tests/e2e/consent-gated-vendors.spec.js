@@ -294,7 +294,7 @@ test.describe('consent gated tracking vendors', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    const settings = page.getByTestId('cookie-settings');
+    const settings = page.getByTestId('golden-cookie-settings');
     await expect(settings).toBeAttached();
 
     // Stored consent keeps vendors off the critical path: first interaction wakes them.

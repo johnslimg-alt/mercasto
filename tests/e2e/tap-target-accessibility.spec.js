@@ -57,7 +57,10 @@ async function prepare(page) {
 }
 
 async function settle(page) {
-  await expect(page.getByTestId('mobile-header-search')).toBeVisible();
+  const onGoldenHome = new URL(page.url()).pathname === '/';
+  await expect(
+    onGoldenHome ? page.getByTestId('golden-mobile-search-input') : page.getByTestId('mobile-header-search'),
+  ).toBeVisible();
   // Trigger lazy sections, then come back to the top so measurements are taken
   // from the same scroll position the audit tool uses.
   await page.evaluate(async () => {
@@ -313,7 +316,7 @@ test.describe('WCAG 2.5.8 target size (AA) on high-traffic mobile routes', () =>
     await page.goto('/');
     await settle(page);
 
-    const footer = page.locator('footer');
+    const footer = page.locator('footer:visible').first();
 
     for (const control of [
       footer.locator('ul li a').first(),
@@ -326,7 +329,9 @@ test.describe('WCAG 2.5.8 target size (AA) on high-traffic mobile routes', () =>
       expect(box.width, `footer control width for "${(await control.innerText()).trim()}"`).toBeGreaterThanOrEqual(MIN_TARGET);
     }
 
-    for (const link of await page.locator('.home-see-all').all()) {
+    const homeSeeAll = page.locator('.mcg-device-head a:visible, .mcg-functional-head > a:visible');
+    expect(await homeSeeAll.count(), 'Golden Home should expose visible see-all controls').toBeGreaterThan(0);
+    for (const link of await homeSeeAll.all()) {
       const box = await link.boundingBox();
       expect(box.height, `home see-all height for "${(await link.innerText()).trim()}"`).toBeGreaterThanOrEqual(MIN_TARGET);
     }

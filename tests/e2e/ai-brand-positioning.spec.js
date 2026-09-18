@@ -19,15 +19,15 @@ for (const [language, tagline, shortTagline] of locales) {
     });
 
     test('uses the compact AI brand surface and preserves metadata', async ({ page }, testInfo) => {
-      await page.goto('/', { waitUntil: 'domcontentloaded' });
-      const logo = page.locator('.header-logo-link');
+      await page.goto('/listings', { waitUntil: 'domcontentloaded' });
+      const logo = page.locator('.site-header .header-logo-link');
       await expect(logo).toBeVisible();
       const mobile = testInfo.project.name.includes('mobile');
       const visibleBrand = logo.getByTestId(mobile ? 'mercasto-ai-short-mobile' : 'mercasto-ai-short-desktop');
       await expect(visibleBrand).toBeVisible();
       await expect(visibleBrand).toHaveText(mobile ? 'AI' : shortTagline);
       await expect(page.getByTestId('global-ai-brand-strip')).toHaveCount(0);
-      await expect(page).toHaveTitle(new RegExp(tagline));
+      await expect(page).toHaveTitle(new RegExp(shortTagline));
       const description = await page.locator('meta[name="description"]').getAttribute('content');
       expect(description).toBeTruthy();
       expect(description).toMatch(/AI|IA|KI|人工知能|인공지능|الذكاء الاصطناعي|בינה מלאכותית/i);

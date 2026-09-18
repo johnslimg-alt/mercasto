@@ -69,6 +69,7 @@ const PricingModal = React.lazy(() => import('./components/modals/PricingModal')
 const CouponModal = React.lazy(() => import('./components/modals/CouponModal'));
 const ProfileModal = React.lazy(() => import('./components/modals/ProfileModal'));
 const AiCommandModal = React.lazy(() => import('./components/admin/AiCommandModal'));
+const AISupportChatbot = React.lazy(() => import('./components/ai/AISupportChatbot'));
 import {
   Search, Home, PlusCircle, Plus, User, Users, Settings, Shield, Menu,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
@@ -930,6 +931,9 @@ function App() {
       maxPrice: nextMaxPrice,
       condition: nextCondition,
       dynamicFilters: nextDynamicFilters,
+      state: filters.state,
+      city: filters.city,
+      pathname: filters.pathname,
     }));
     if (nextSearch && nextSearch.trim()) {
       events.searchPerformed(nextSearch.trim(), nextCategory || '', {
@@ -4092,6 +4096,7 @@ function App() {
       lang={lang}
       renderAdCard={renderAdCard}
       renderSkeletonCard={renderSkeletonCard}
+      searchLocationInput={searchLocationInput}
       selectedState={selectedState}
       serverAds={serverAds}
       setActiveCat={setActiveCat}
@@ -4100,6 +4105,8 @@ function App() {
       setSearchLocationInput={setSearchLocationInput}
       setSearchQuery={setSearchQuery}
       setSelectedState={setSelectedState}
+      setAuthMode={setAuthMode}
+      setShowAuthModal={setShowAuthModal}
       setShowPricingModal={setShowPricingModal}
       t={t}
       getImageUrl={getImageUrl}
@@ -4111,6 +4118,7 @@ function App() {
       serviceAds={serviceAds}
       automotiveAds={automotiveAds}
       user={user}
+      unreadCount={unreadCount}
       viewedAd={viewedAd}
     />
   );
@@ -4414,6 +4422,9 @@ function App() {
       {showCouponModal && <React.Suspense fallback={null}><CouponModal couponInput={couponInput} handleRedeemCoupon={handleRedeemCoupon} setCouponInput={setCouponInput} setShowCouponModal={setShowCouponModal} showCouponModal={showCouponModal} t={t} /></React.Suspense>}
       {qrModalData && <React.Suspense fallback={null}><QRModal qrModalData={qrModalData} setQrModalData={setQrModalData} t={t} /></React.Suspense>}
       {showReportModal && <React.Suspense fallback={null}><ReportModal handleReportAd={handleReportAd} reportForm={reportForm} setReportForm={setReportForm} setShowReportModal={setShowReportModal} showReportModal={showReportModal} t={t} /></React.Suspense>}
+      <React.Suspense fallback={null}>
+        <AISupportChatbot showLauncher={false} />
+      </React.Suspense>
       {showUserReportModal && <React.Suspense fallback={null}><UserReportModal handleUserReportSubmit={handleUserReportSubmit} setShowUserReportModal={setShowUserReportModal} setUserReportForm={setUserReportForm} showUserReportModal={showUserReportModal} t={t} userReportForm={userReportForm} /></React.Suspense>}
       {showAiModal && user?.role === 'admin' && (
         <Suspense fallback={null}>

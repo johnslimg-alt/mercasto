@@ -90,12 +90,12 @@ test('internal chat emits canonical message events without message content or us
 test('category selection analytics is wired to primary discovery surfaces', () => {
   const analytics = read('src/utils/analytics.js');
   const app = read('src/App.jsx');
-  const home = read('src/components/screens/HomeScreen.jsx');
+  const home = read('src/components/home/MercastoGoldenHome.jsx');
 
   assert.match(analytics, /categorySelected: \(category, params = \{\}\) =>/);
   assert.match(analytics, /trackEvent\('category_selected', \{ category, \.\.\.params \}\)/);
   assert.match(app, /events\.categorySelected\(slug, \{ source: 'header_category' \}\)/);
-  assert.match(home, /events\.categorySelected\(cat\.slug, \{ source: 'homepage_category_rail' \}\)/);
+  assert.match(home, /events\.categorySelected\(s,\{source:'homepage_category_rail'\}\)/);
 });
 
 test('homepage analytics uses the active pipeline and excludes catalog/detail states', () => {

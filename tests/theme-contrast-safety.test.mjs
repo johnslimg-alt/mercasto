@@ -5,6 +5,7 @@ import test from 'node:test';
 
 const app = fs.readFileSync('src/App.jsx', 'utf8');
 const uiContext = fs.readFileSync('src/contexts/UIContext.jsx', 'utf8');
+const goldenHome = fs.readFileSync('src/components/home/MercastoGoldenHome.jsx', 'utf8');
 
 function jsxFiles(root) {
   return fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
@@ -75,6 +76,10 @@ test('UIProvider is the only owner of the persisted theme state', () => {
   assert.match(uiContext, /const \[isDarkMode, setIsDarkMode\] = useState/);
   assert.doesNotMatch(app, /const \[isDarkMode, setIsDarkMode\] = useState/);
   assert.doesNotMatch(app, /localStorage\.setItem\(['"]theme['"]/);
+  assert.match(goldenHome, /const \{isDarkMode,toggleDarkMode,setLang\}=useUI\(\)/);
+  assert.doesNotMatch(goldenHome, /localStorage\.setItem\(['"]theme['"]/);
+  assert.doesNotMatch(goldenHome, /document\.documentElement\.classList\.toggle\(['"]dark/);
+  assert.match(goldenHome, /onClick=\{toggleDarkMode\}/);
 });
 
 test('brand-lime surfaces never use white foreground text in the same Tailwind state', () => {

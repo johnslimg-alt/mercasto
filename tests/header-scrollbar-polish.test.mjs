@@ -4,7 +4,8 @@ import test from 'node:test';
 
 const css = fs.readFileSync('src/index.css', 'utf8');
 const header = fs.readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
-const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
+const home = fs.readFileSync('src/components/home/MercastoGoldenHome.jsx', 'utf8');
+const homeCss = fs.readFileSync('src/components/home/mercasto-golden-home.css', 'utf8');
 const map = fs.readFileSync('src/components/common/MapV3.jsx', 'utf8');
 const catalog = fs.readFileSync('src/components/screens/CatalogScreen.jsx', 'utf8');
 const chat = fs.readFileSync('src/components/screens/ChatScreen.jsx', 'utf8');
@@ -37,11 +38,12 @@ test('header uses compact geometry and removes the redundant AI strip', () => {
   assert.match(css, /@media \(max-width: 1023px\)[\s\S]*?\.header-category-bar[\s\S]*?display:\s*none/);
 });
 
-test('home discovery no longer repeats the old stats action toolbar', () => {
+test('approved home keeps distinct responsive discovery layouts', () => {
   assert.equal(home.includes('HERO STATS'), false);
-  assert.ok(home.includes('max-w-[1480px]'));
-  assert.ok(home.includes('data-testid="home-category-rail" className="category-rail rail-fade"'));
-  assert.match(css, /\.rail-fade \{[\s\S]*?mask-image:\s*linear-gradient\(90deg, black 0,/);
-  assert.match(css, /\[dir='rtl'\] \.rail-fade \{[\s\S]*?mask-image:\s*linear-gradient\(270deg, black 0,/);
-  assert.match(css, /\.category-rail \{[\s\S]*?padding-inline:\s*0\.125rem 1\.625rem/);
+  assert.ok(home.includes('mcg-desktop'));
+  assert.ok(home.includes('mcg-cats'));
+  assert.ok(home.includes('mcg-tablet'));
+  assert.ok(home.includes('mcg-mobile'));
+  assert.match(homeCss, /@media\(max-width:1179px\) and \(min-width:768px\)/);
+  assert.match(homeCss, /@media\(max-width:767px\)/);
 });

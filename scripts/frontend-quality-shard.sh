@@ -68,7 +68,7 @@ case "${shard}" in
     ;;
   journey)
     BASE_URL="${base_url}" CI=1 npx playwright test \
-      tests/e2e/header-search.spec.js tests/e2e/protected-route-stability.spec.js \
+      tests/e2e/header-search.spec.js tests/e2e/golden-home-shell.spec.js tests/e2e/protected-route-stability.spec.js \
       tests/e2e/publish-draft-recovery.spec.js tests/e2e/search-autocomplete-race.spec.js \
       tests/e2e/home-categories.spec.js tests/e2e/home-auto-quick-filters.spec.js \
       tests/e2e/catalog-route-performance.spec.js tests/e2e/category-seo-quality.spec.js \
