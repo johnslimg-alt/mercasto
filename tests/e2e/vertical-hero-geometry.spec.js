@@ -75,7 +75,7 @@ test('mobile vertical quick filters stay reachable above the tabbar', async ({ p
       const form = page.getByTestId('vertical-hero-search-form');
       const bar = page.locator('.vertical-quick-filters');
       const rail = bar.locator(':scope > div');
-      const tabbar = page.locator('.mobile-tabbar');
+      const tabbar = page.getByTestId('golden-bottom-nav');
       await expect(form).toBeVisible();
       await expect(bar).toBeVisible();
 
@@ -91,9 +91,9 @@ test('mobile vertical quick filters stay reachable above the tabbar', async ({ p
       await page.evaluate(() => window.scrollTo(0, 900));
       await page.waitForTimeout(50);
       const geometry = await page.evaluate(() => {
-        const header = document.querySelector('.site-header').getBoundingClientRect();
+        const header = document.querySelector('[data-testid="golden-header"]').getBoundingClientRect();
         const filters = document.querySelector('.vertical-quick-filters').getBoundingClientRect();
-        const tabs = document.querySelector('.mobile-tabbar').getBoundingClientRect();
+        const tabs = document.querySelector('[data-testid="golden-bottom-nav"]').getBoundingClientRect();
         const railElement = document.querySelector('.vertical-quick-filters > div');
         return {
           headerBottom: header.bottom,
