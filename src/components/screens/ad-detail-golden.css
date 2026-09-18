@@ -1,0 +1,38 @@
+.mc-golden-detail-active{background:#f8fafc}
+.dark .mc-golden-detail-active{background:#05161c}
+.mcg-detail-root{min-height:calc(100vh - 70px);background:#f8fafc;color:var(--mcg-ink)}
+.dark .mcg-detail-root{background:#05161c}
+.mcg-detail-page{color:var(--mcg-ink)}
+.mcg-detail-toolbar{min-height:48px}
+.mcg-detail-toolbar>button,.mcg-detail-toolbar a{min-height:44px}
+.mcg-detail-layout{align-items:start}
+.mcg-detail-media,.mcg-detail-card,.mcg-detail-contact-card{border-color:var(--mcg-line)!important;background:var(--mcg-card)!important;box-shadow:0 10px 32px rgba(15,23,42,.06)!important}
+.dark .mcg-detail-media,.dark .mcg-detail-card,.dark .mcg-detail-contact-card{box-shadow:0 12px 36px rgba(0,0,0,.22)!important}
+.mcg-detail-card{border-radius:22px!important}
+.mcg-detail-media{border-radius:22px!important}
+.mcg-detail-contact-card{top:18px!important;border-radius:22px!important}
+.mcg-detail-page .text-slate-900{color:var(--mcg-ink)!important}
+.mcg-detail-page .text-slate-700,.mcg-detail-page .text-slate-600,.mcg-detail-page .text-slate-500{color:var(--mcg-muted)!important}
+.mcg-detail-page .bg-slate-50{background:var(--mcg-soft)!important}
+.dark .mcg-detail-page .bg-slate-100,.dark .mcg-detail-page .dark\:bg-slate-900{background:#1f2937!important}
+.mcg-detail-page [data-ad-detail-map-shell]{border-color:var(--mcg-line)!important}
+.mcg-detail-page button:focus-visible,.mcg-detail-page a:focus-visible{outline:2px solid var(--mcg-green);outline-offset:2px}
+@media(max-width:1023px){
+  .mcg-detail-root{min-height:calc(100vh - 72px)}
+  .mcg-detail-page{padding-top:18px}
+  .mcg-detail-sidebar{margin-top:0}
+  .mcg-detail-contact-card{position:static!important}
+}
+@media(max-width:767px){
+  .mcg-detail-root{min-height:calc(100vh - 58px)}
+  .mcg-detail-page{padding:12px 12px 28px}
+  .mcg-detail-toolbar{margin-bottom:12px;gap:8px}
+  .mcg-detail-toolbar>button{min-height:48px}
+  .mcg-detail-layout{gap:16px}
+  .mcg-detail-media{height:300px!important;border-radius:16px!important}
+  .mcg-detail-card{margin-top:16px!important;padding:18px!important;border-radius:16px!important}
+  .mcg-detail-contact-card{padding:18px!important;border-radius:16px!important}
+  .mcg-detail-card h1{font-size:23px!important;line-height:1.12!important}
+  .mcg-detail-card p.text-3xl{font-size:29px!important}
+  .mcg-detail-page .btn-md,.mcg-detail-page .mc-primary-action{min-height:48px}
+}

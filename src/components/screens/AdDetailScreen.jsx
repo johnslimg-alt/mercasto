@@ -10,6 +10,9 @@ import { listingUrl } from '../../utils/seoIndexability';
 import { isCatalogReference } from '../../utils/catalogInventory';
 import { QR_CODE_OPTIONS, buildCanonicalListingUrl, buildShareTargets } from '../../utils/shareLinks';
 import ContactButton from '../common/ContactButton';
+import MercastoGoldenHeader from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
+import './ad-detail-golden.css';
 // buildMapEmbedUrl
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
@@ -327,9 +330,14 @@ export default function AdDetailScreen({
   sliderAutoplay, handleShareAd, handleToggleFavorite, setReportingAd, setShowReportModal,
   handleViewCompany, allAds, setViewedAd, onBack, MediaSlider, renderAdCard, AdSenseBanner,
   currentUser,
-  handleRenewAd
+  handleRenewAd,
+  setAuthMode,
+  setShowAuthModal,
+  searchLocationInput = '',
+  selectedState = ''
 }) {
   const navigate = useNavigate();
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const detailCopy = getAdDetailCopy(lang);
   const [similarAds, setSimilarAds] = useState([]);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -347,6 +355,28 @@ export default function AdDetailScreen({
   });
   const [mapMountRef, mapReady] = useNearViewport('0px');
   const [relatedMountRef, relatedReady] = useNearViewport('300px');
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-detail-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-detail-active');
+  }, []);
+
+  const openGoldenAccount = React.useCallback(() => {
+    if (currentUser?.id) {
+      navigate('/profile');
+      return;
+    }
+    setAuthMode?.('login');
+    setShowAuthModal?.(true);
+  }, [currentUser?.id, navigate, setAuthMode, setShowAuthModal]);
+
+  const applyGoldenLocation = React.useCallback((label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  }, [navigate]);
 
   const adMarker = useMemo(() => {
     if (!ad) return [];
@@ -549,7 +579,21 @@ export default function AdDetailScreen({
 
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
+    <>
+      <MercastoGoldenHeader
+        publish={() => navigate('/post')}
+        onLocationApply={applyGoldenLocation}
+        onAccount={openGoldenAccount}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={searchLocationInput || selectedState || t.all_mexico || ''}
+        selectedState={selectedState}
+        t={t}
+      />
+      <div className="mcg-detail-root" data-testid="golden-detail-main">
+      <div className="mcg-detail-page max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
       {/* JSON-LD Structured Data for SEO/AEO */}
       {!isCatalogFiller && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -570,7 +614,7 @@ export default function AdDetailScreen({
         })}} />
       )}
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="mcg-detail-toolbar flex items-center justify-between mb-6">
         <button onClick={() => (onBack ? onBack() : setViewedAd(null))} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium transition-colors">
           <ChevronLeft size={20} /> {t.back_results || 'Back to results'}
         </button>
@@ -613,15 +657,15 @@ export default function AdDetailScreen({
           </div>
         );
       })()}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="mcg-detail-layout grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           {/* MEDIA SLIDER */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm h-[300px] md:h-[500px]">
+          <div className="mcg-detail-media bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm h-[300px] md:h-[500px]">
             <MediaSlider media={images} autoplay={sliderAutoplay} alt={localizedText(ad.title, lang) || detailCopy.imageAlt} priority />
           </div>
 
           {/* AD DETAILS */}
-          <div className="mt-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
+          <div className="mcg-detail-card mt-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
 {isCatalogFiller && (
   <div className="mb-5 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-slate-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-slate-100" data-catalog-reference>
@@ -728,8 +772,8 @@ export default function AdDetailScreen({
         </div>
 
         {/* SIDEBAR: SELLER CONTACT */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[calc(var(--mc-site-header-offset)+0.75rem)]">
+        <div className="mcg-detail-sidebar lg:col-span-1 space-y-6">
+          <div className="mcg-detail-contact-card bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[calc(var(--mc-site-header-offset)+0.75rem)]">
 {isCatalogFiller ? (
   <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
     <h2 className="text-[16px] font-black text-slate-900 dark:text-white">{detailCopy.sellTitle}</h2>
@@ -810,7 +854,7 @@ export default function AdDetailScreen({
 
                 {/* Desktop Dropdown */}
                 {showShareMenu && (
-                  <div className="hidden md:block absolute right-0 z-30 mt-2 max-h-64 w-56 overflow-y-auto no-scrollbar rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                  <div data-testid="ad-share-desktop-menu" className="hidden md:block absolute right-0 z-30 mt-2 max-h-64 w-56 overflow-y-auto no-scrollbar rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
                     {navigator.share && (
                       <button
                         type="button"
@@ -864,7 +908,7 @@ export default function AdDetailScreen({
                   maxHeight="75vh"
                   zIndex={1001}
                 >
-                  <div className="p-6">
+                  <div data-testid="ad-share-mobile-menu" className="p-6">
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       {shareOptions.map(option => {
                         const colors = {
@@ -1015,6 +1059,8 @@ export default function AdDetailScreen({
           </div>
         </div>
       )}
-    </div>
+      </div>
+      </div>
+    </>
   );
 }
