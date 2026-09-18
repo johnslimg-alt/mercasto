@@ -174,6 +174,7 @@ const MEASURE = ({ routes, brandColors }) => {
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') return false;
     if (el.closest('[hidden]') || el.closest('[inert]')) return false;
+    if (el.closest('#app-splash.app-splash--hide')) return false;
     if (cumulativeOpacity(el) === 0) return false;
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
