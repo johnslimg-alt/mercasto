@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Non-Stop Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.3
+// @version      9.0.0-alpha.2-nonstop.4
 // @updateURL    https://raw.githubusercontent.com/johnslimg-alt/mercasto/refs/heads/tooling/chatgpt-nonstop-loop/tools/chatgpt-nonstop.user.js
 // @downloadURL  https://raw.githubusercontent.com/johnslimg-alt/mercasto/refs/heads/tooling/chatgpt-nonstop-loop/tools/chatgpt-nonstop.user.js
 // @description  Perpetual Play + truthful Export. External protocol activators. No controller-side reasoning.
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.3';
+const VER = '9.0.0-alpha.2-nonstop.4';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
