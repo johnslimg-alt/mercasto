@@ -539,7 +539,7 @@ export default function PostScreen({
         toggleDarkMode={toggleDarkMode}
         lang={lang}
         setLang={setLang}
-        locationLabel={t.all_mexico || ''}
+        locationLabel={t.all_mexico}
         selectedState=""
         t={t}
       />
