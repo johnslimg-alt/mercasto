@@ -8,6 +8,7 @@ import { categorySchema } from '../../../constants/categorySchema';
 import { categoryLandingTranslations } from '../../../constants/categoryLandingTranslations';
 import { getCategoryLandingSubsections } from '../../../utils/categoryLandingSubsections';
 import { getTranslations, normalizeLanguage } from '../../../utils/translations';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 import {
   BadgeCheck, ShieldCheck, Star, Zap, MessageCircle, BarChart3,
   Tv, Headphones, Laptop, Camera, Gamepad2, Printer, Tablet,
@@ -347,6 +348,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
   const heroSubsections = localizedSubsections;
 
   return (
+    <GoldenPublicPageShell testId="golden-category-main" className="mcg-vertical-page mcg-category-page" active="search">
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <VerticalHero
         title={cfg.title}
@@ -480,5 +482,6 @@ export default function CategoryLanding({ category, lang = 'es' }) {
 
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }

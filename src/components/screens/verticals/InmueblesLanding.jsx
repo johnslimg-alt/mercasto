@@ -6,6 +6,7 @@ import MapV3 from '../../common/MapV3';
 import { Building2, Castle, FileCheck2, Home, KeyRound, LandPlot, MapPinned, SearchCheck, Store } from 'lucide-react';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 import { getInmueblesLandingCopy } from '../../../utils/inmueblesLandingCopy';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -58,6 +59,7 @@ export default function InmueblesLanding({ lang = 'es' }) {
   };
 
   return (
+    <GoldenPublicPageShell testId="golden-inmuebles-main" className="mcg-vertical-page mcg-inmuebles-page" active="search">
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
         title={copy.title}
@@ -181,5 +183,6 @@ export default function InmueblesLanding({ lang = 'es' }) {
 
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }

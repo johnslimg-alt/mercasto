@@ -6,6 +6,7 @@ import MapV3 from '../../common/MapV3';
 import { BadgeCheck, Brush, Camera, Car, GraduationCap, Hammer, HeartHandshake, Leaf, PawPrint, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 import { getServiciosLandingCopy } from '../../../utils/serviciosLandingCopy';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -42,6 +43,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
   };
 
   return (
+    <GoldenPublicPageShell testId="golden-servicios-main" className="mcg-vertical-page mcg-servicios-page" active="search">
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
         title={copy.title}
@@ -138,5 +140,6 @@ export default function ServiciosLanding({ lang = 'es' }) {
 
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }

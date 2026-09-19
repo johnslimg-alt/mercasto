@@ -39,12 +39,19 @@ const routes = [
   ['/cookies', 'golden-cookies-main'],
   ['/moderacion', 'golden-moderation-main'],
   ['/reembolsos', 'golden-refunds-main'],
+  ['/motor', 'golden-autos-main'],
+  ['/inmuebles', 'golden-inmuebles-main'],
+  ['/empleos', 'golden-empleos-main'],
+  ['/servicios', 'golden-servicios-main'],
+  ['/productos', 'golden-productos-main'],
+  ['/turismo', 'golden-turismo-main'],
+  ['/electronica', 'golden-category-main'],
   ['/ruta-inexistente-golden', 'golden-not-found-main'],
 ];
 
-test('public utility and legal routes share Golden chrome on desktop and mobile', async ({ page }, testInfo) => {
+test('public utility, legal and vertical routes share Golden chrome on desktop and mobile', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   await installSession(page);
   await mockApi(page);
 
