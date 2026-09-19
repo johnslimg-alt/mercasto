@@ -173,3 +173,25 @@
   .mcg-dashboard-page{padding-bottom:82px!important}
   .mcg-dashboard-page>.p-4{padding-left:14px!important;padding-right:14px!important}
 }
+
+/* Golden communications layer: chat and notifications share marketplace chrome. */
+.mcg-chat-page,.mcg-notifications-page{background:var(--mcg-soft)!important;color:var(--mcg-ink)}
+.mcg-chat-page .bg-white,.mcg-notifications-page .bg-white{background:var(--mcg-card)!important}
+.mcg-chat-page .border-slate-100,.mcg-chat-page .border-slate-200,.mcg-chat-page .border-slate-800,
+.mcg-notifications-page .border-slate-100,.mcg-notifications-page .border-slate-200,.mcg-notifications-page .border-slate-800{border-color:var(--mcg-line)!important}
+.dark .mcg-chat-page .dark\:bg-slate-900,.dark .mcg-chat-page .dark\:bg-slate-950,
+.dark .mcg-notifications-page .dark\:bg-slate-900,.dark .mcg-notifications-page .dark\:bg-slate-950{background:var(--mcg-card)!important}
+@media(max-width:1179px){
+  .mcg-chat-page,.mcg-notifications-page{padding-bottom:96px!important}
+}
+@media(max-width:767px){
+  .mcg-chat-page,.mcg-notifications-page{padding-bottom:82px!important}
+  .mcg-chat-page form{padding-bottom:10px}
+}
+
+@media(max-width:1179px){
+  .mcg-chat-page>.mx-auto.grid,.mcg-chat-page section{min-height:calc(100vh - 72px - 64px - 82px)!important}
+}
+@media(max-width:767px){
+  .mcg-chat-page>.mx-auto.grid,.mcg-chat-page section{min-height:calc(100vh - 58px - 64px - 70px)!important}
+}

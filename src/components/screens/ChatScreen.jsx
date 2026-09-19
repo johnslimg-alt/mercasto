@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateTime } from '../../utils/localeFormat';
 import { events } from '../../utils/analytics';
 import { isOpenAIAdsMeasurementAllowed } from '../../utils/trackingConsent';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 import {
   ArrowLeft,
   CircleAlert,
@@ -51,6 +53,7 @@ function uniqueMessages(messages) {
 
 export default function ChatScreen({ user, lang = 'es', t = {} }) {
   const navigate = useNavigate();
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const [searchParams, setSearchParams] = useSearchParams();
   const token = localStorage.getItem('auth_token');
   const requestedConversationId = Number(searchParams.get('conversation') || 0) || null;
@@ -69,6 +72,19 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
   const [error, setError] = useState('');
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const bottomRef = useRef(null);
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-chat-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-chat-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
 
   const newThreadTarget = useMemo(() => {
     if (!requestedAdId || !requestedSellerId || requestedSellerId === Number(user?.id)) return null;
@@ -281,8 +297,21 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
   const showThread = Boolean(selectedConversationId || newThreadTarget);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 dark:bg-slate-950 md:pb-8">
-      <div className="sticky top-[var(--mc-site-header-offset)] z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+    <>
+      <MercastoGoldenHeader
+        publish={() => navigate('/post')}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={t.all_mexico || ''}
+        selectedState=""
+        t={t}
+      />
+      <div data-testid="golden-chat-main" className="mcg-chat-page min-h-screen bg-slate-50 pb-24 dark:bg-slate-950 md:pb-8">
+      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
         <div className="mx-auto flex min-h-16 max-w-6xl items-center gap-3 px-4 py-3">
           <button
             type="button"
@@ -497,6 +526,15 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
           )}
         </section>
       </div>
+      <MercastoGoldenBottomNav
+        active="none"
+        publish={() => navigate('/post')}
+        onNotifications={() => navigate('/notificaciones')}
+        onAccount={() => navigate('/profile')}
+        unreadCount={0}
+        t={t}
+      />
     </div>
+    </>
   );
 }
