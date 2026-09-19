@@ -180,7 +180,10 @@ async function assertPostFlow(page, lang) {
 }
 async function assertEditFlow(page, lang) {
   const t = translations[lang];
-  await page.goto('/anuncio/9/editar');
+  await page.evaluate(() => {
+    window.history.pushState({}, '', '/anuncio/9/editar');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
   await expect(page.getByRole('heading', { name: t.edit_ad })).toBeVisible();
   await expect(page.getByTestId('edit-ad-title')).toHaveValue('Toyota Corolla QA');
   await expect(page.getByRole('button', { name: t.condition_like_new })).toBeVisible();
