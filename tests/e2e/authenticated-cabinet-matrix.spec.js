@@ -298,7 +298,7 @@ test('mobile my ads bulk toolbar stays above the global tabbar', async ({ page, 
   await ad.locator('button[aria-pressed]').click();
 
   const toolbar = page.getByTestId('my-ads-bulk-toolbar');
-  const tabbar = page.locator('.mobile-tabbar');
+  const tabbar = page.locator('[data-testid="golden-bottom-nav"]:visible, .mobile-tabbar:visible').first();
   await expect(toolbar).toBeVisible();
   await expect(tabbar).toBeVisible();
   const [toolbarBox, tabbarBox] = await Promise.all([toolbar.boundingBox(), tabbar.boundingBox()]);
@@ -496,12 +496,16 @@ test('dashboard toast stays above the mobile tabbar', async ({ page, request }, 
   await page.getByRole('button', { name: 'Limpiar datos' }).click();
 
   const dashToast = page.getByTestId('dashboard-toast');
-  const tabbar = page.locator('.mobile-tabbar');
+  const tabbar = page.locator('[data-testid="golden-bottom-nav"]:visible, .mobile-tabbar:visible').first();
   await expect(dashToast).toBeVisible();
   await expect(tabbar).toBeVisible();
   const result = await page.evaluate(() => {
     const toast = document.querySelector('[data-testid="dashboard-toast"]');
-    const tab = document.querySelector('.mobile-tabbar');
+    const tab = [...document.querySelectorAll('[data-testid="golden-bottom-nav"], .mobile-tabbar')]
+      .find((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
     if (!toast || !tab) return null;
     const a = toast.getBoundingClientRect();
     const b = tab.getBoundingClientRect();
@@ -525,7 +529,7 @@ test('mobile global toast stays clear of the tabbar', async ({ page, request }, 
   await form.locator('button[type="submit"]').click();
 
   const toast = page.getByTestId('app-toast');
-  const tabbar = page.locator('.mobile-tabbar');
+  const tabbar = page.locator('[data-testid="golden-bottom-nav"]:visible, .mobile-tabbar:visible').first();
   await expect(toast).toBeVisible();
   await expect(tabbar).toBeVisible();
   const toastBox = await toast.boundingBox();
@@ -561,7 +565,7 @@ test('edit-ad toast stays above the mobile tabbar', async ({ page, request }, te
 
   await page.goto('/anuncio/' + ad.id + '/editar');
   await expect(page.getByTestId('edit-ad-title')).toBeVisible();
-  const tabbar = page.locator('.mobile-tabbar');
+  const tabbar = page.locator('[data-testid="golden-bottom-nav"]:visible, .mobile-tabbar:visible').first();
   await expect(tabbar).toBeVisible();
   const descriptionResponsePromise = page.waitForResponse((response) => (
     new URL(response.url()).pathname === '/api/ads/generate-description'
@@ -573,7 +577,11 @@ test('edit-ad toast stays above the mobile tabbar', async ({ page, request }, te
   await expect(toast).toBeVisible();
   const result = await page.evaluate(() => {
     const toast = document.querySelector('[data-testid="edit-ad-toast"]');
-    const tab = document.querySelector('.mobile-tabbar');
+    const tab = [...document.querySelectorAll('[data-testid="golden-bottom-nav"], .mobile-tabbar')]
+      .find((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
     if (!toast || !tab) return null;
     const a = toast.getBoundingClientRect();
     const b = tab.getBoundingClientRect();

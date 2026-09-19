@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { localizedText } from '../../utils/localize';
 import { formatDate, formatMXN, formatNumber } from '../../utils/localeFormat';
 import { persistAnalyticsTrackingConsent } from '../../utils/trackingConsent';
@@ -13,6 +13,8 @@ import SellerStatsScreen from './SellerStatsScreen';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import { mockAds, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, CreditCard, TrendingDown, Eye, MousePointer, Calendar, Clock, Award, Target, Package, Bookmark, Filter, MoreVertical, ChevronDown, ChevronUp } from "lucide-react";
 
 const DashboardCharts = React.lazy(() => import('./dashboard/DashboardCharts'));
@@ -225,12 +227,27 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
 };
 
 export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsLoading = false, analyticsLoadError = false, loadUserAnalytics, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, favoriteAdsLoading = false, favoriteAdsLoadError = false, loadFavoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userAdsLoading = false, userAdsLoadError = false, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
+  const navigate = useNavigate();
+  const { toggleDarkMode, setLang } = useUI();
   const [dashToast, setDashToast] = React.useState(null);
   const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
   const [profileVisible, setProfileVisible] = React.useState(() => localStorage.getItem('mercasto_privacy_profile_visible') !== 'false');
   const [trackingConsent, setTrackingConsent] = React.useState(() => localStorage.getItem('mercasto_privacy_tracking_consent') !== 'false');
   const [reviewStates, setReviewStates] = React.useState({}); // {adId: {rating, comment, submitted, loading}}
   
+  React.useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-dashboard-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-dashboard-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
+
   const showDashToast = (msg, type = 'success') => {
     setDashToast({ msg, type });
     setTimeout(() => setDashToast(null), 3000);
@@ -376,7 +393,20 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
   const safeDashboardPage = Math.min(Math.max(1, dashboardPage || 1), totalPages || 1);
 
   return (
-    <div className="dashboard-dark-scope bg-[var(--paper)] min-h-screen pb-6 md:pb-12 w-full">
+    <>
+      <MercastoGoldenHeader
+        publish={() => setCurrentTab('post')}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={t.all_mexico || ''}
+        selectedState=""
+        t={t}
+      />
+      <div data-testid="golden-dashboard-main" className="mcg-dashboard-page dashboard-dark-scope bg-[var(--paper)] min-h-screen pb-[88px] md:pb-12 w-full">
       <div className="p-4 md:p-8 w-full max-w-[1400px] mx-auto">
         
         {/* Header with Account Type Toggle */}
@@ -1374,6 +1404,15 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
       {/* Achievements Modal */}
       <AchievementsModal isOpen={showAchievementsModal} onClose={() => setShowAchievementsModal(false)} lang={lang} />
+      <MercastoGoldenBottomNav
+        active="account"
+        publish={() => setCurrentTab('post')}
+        onNotifications={() => navigate('/notificaciones')}
+        onAccount={() => navigate('/profile')}
+        unreadCount={0}
+        t={t}
+      />
     </div>
+    </>
   );
 }

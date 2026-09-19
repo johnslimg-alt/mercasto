@@ -160,3 +160,16 @@
   .mcg-post-page>[data-testid="publish-mobile-sticky-nav"]{bottom:70px}
 }
 
+/* Golden authenticated dashboard: shared chrome and tokenized surfaces. */
+.mcg-dashboard-page{background:var(--mcg-soft)!important;color:var(--mcg-ink)}
+.mcg-dashboard-page .bg-white{background:var(--mcg-card)!important}
+.mcg-dashboard-page .border-slate-100,.mcg-dashboard-page .border-slate-200,.mcg-dashboard-page .border-slate-300,.mcg-dashboard-page .border-slate-700,.mcg-dashboard-page .border-slate-800{border-color:var(--mcg-line)!important}
+.mcg-dashboard-page .text-slate-900,.mcg-dashboard-page .text-slate-800,.mcg-dashboard-page .text-slate-700{color:var(--mcg-ink)!important}
+.mcg-dashboard-page .text-slate-600,.mcg-dashboard-page .text-slate-500,.mcg-dashboard-page .text-slate-400{color:var(--mcg-muted)!important}
+.dark .mcg-dashboard-page .dark\:bg-slate-800,.dark .mcg-dashboard-page .dark\:bg-slate-900,.dark .mcg-dashboard-page .dark\:bg-slate-950{background:var(--mcg-card)!important}
+.dark .mcg-dashboard-page .bg-slate-50,.dark .mcg-dashboard-page .bg-slate-100,.dark .mcg-dashboard-page .bg-slate-200{background:var(--mcg-soft)!important}
+@media(max-width:1179px){.mcg-dashboard-page{padding-bottom:96px!important}}
+@media(max-width:767px){
+  .mcg-dashboard-page{padding-bottom:82px!important}
+  .mcg-dashboard-page>.p-4{padding-left:14px!important;padding-right:14px!important}
+}
