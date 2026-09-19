@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   PlusCircle, ChevronRight, ChevronLeft, Trash2, Camera, Loader2,
   Sparkles, Video, MapPin, Tag, Zap, Car, Home, Briefcase,
@@ -16,6 +16,8 @@ import MapV3 from '../common/MapV3';
 import SortablePhotoGrid from '../SortablePhotoGrid';
 import { events } from '../../utils/analytics';
 import { isPublishFormEmpty, readPublishDraft, writePublishDraft } from '../../utils/publishDraft';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 
 // Mirrors App.jsx's getSubcategoryOptions: some categories (currently only "turismo") store a
 // stable slug as the subcategory value (matching real listing data + the search filter dropdown),
@@ -134,6 +136,8 @@ export default function PostScreen({
   setUser,
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const saleFacets = useMemo(() => getSaleFacets(t), [t]);
   const preselectedCategory = location.state?.preselectedCategory || '';
   const [recoveredDraft] = useState(() => (
@@ -164,6 +168,19 @@ export default function PostScreen({
   const [gpsLoading, setGpsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [savingContact, setSavingContact] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-post-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-post-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
 
   const [selectedParentCategory, setSelectedParentCategory] = useState(() => {
     const parentMap = {
@@ -513,7 +530,20 @@ export default function PostScreen({
   };
 
   return (
-    <div className="bg-[var(--paper)] min-h-screen w-full flex items-start justify-center py-6 md:py-10 px-4 pb-28 md:pb-10">
+    <>
+      <MercastoGoldenHeader
+        publish={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={t.all_mexico || ''}
+        selectedState=""
+        t={t}
+      />
+      <div data-testid="golden-post-main" className="mcg-post-page bg-[var(--paper)] min-h-screen w-full flex items-start justify-center py-6 md:py-10 px-4 pb-[168px] md:pb-[100px]">
       <div className="w-full max-w-3xl bg-white dark:bg-slate-950 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-10 shadow-sm">
 
         {/* Header */}
@@ -1089,7 +1119,7 @@ export default function PostScreen({
       </div>
 
       {/* Mobile sticky navigation */}
-      <div className="fixed bottom-0 inset-x-0 z-40 flex gap-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 md:hidden">
+      <div data-testid="publish-mobile-sticky-nav" className="fixed bottom-[70px] inset-x-0 z-50 flex gap-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 md:hidden">
         {step > 1 ? (
           <button type="button" onClick={goBack} className="btn-lg border border-slate-200 text-slate-700 hover:bg-slate-50 flex-1 flex items-center justify-center gap-1.5">
             <ChevronLeft size={16} /> {t.back}
@@ -1118,6 +1148,15 @@ export default function PostScreen({
           </button>
         )}
       </div>
+      <MercastoGoldenBottomNav
+        active="none"
+        publish={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onNotifications={() => navigate('/notificaciones')}
+        onAccount={() => navigate('/profile')}
+        unreadCount={0}
+        t={t}
+      />
     </div>
+    </>
   );
 }

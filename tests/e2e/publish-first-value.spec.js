@@ -148,6 +148,7 @@ test('new seller can publish with city and WhatsApp without placing a map pin', 
 
 test('mobile publish controls keep 48px tap targets without horizontal overflow', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile');
+  test.setTimeout(60_000);
   const capture = { profileUpdated: false, adBody: '', metaEvents: [] };
   await installSession(page);
   await mockApi(page, capture);
@@ -181,4 +182,35 @@ test('mobile publish controls keep 48px tap targets without horizontal overflow'
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   }
+});
+
+test('publish flow uses Golden shell and keeps mobile actions above the bottom navigation', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+  const capture = { profileUpdated: false, adBody: '', metaEvents: [] };
+  await installSession(page);
+  await mockApi(page, capture);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/post', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('golden-header')).toBeVisible();
+  await expect(page.locator('.site-header')).toBeHidden();
+  await expect(page.getByTestId('golden-post-main')).toBeVisible();
+  await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+  await expect(page.locator('.mobile-tabbar')).toBeHidden();
+
+  const sticky = page.getByTestId('publish-mobile-sticky-nav');
+  const bottom = page.getByTestId('golden-bottom-nav');
+  await expect(sticky).toBeVisible();
+  const stickyBox = await sticky.boundingBox();
+  const bottomBox = await bottom.boundingBox();
+  expect(stickyBox).not.toBeNull();
+  expect(bottomBox).not.toBeNull();
+  expect(stickyBox.y + stickyBox.height).toBeLessThanOrEqual(bottomBox.y + 1);
+
+  const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+  await page.getByTestId('golden-theme-toggle').click();
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });
