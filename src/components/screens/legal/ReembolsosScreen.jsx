@@ -1,4 +1,6 @@
 import React from 'react';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
+import SEO from '../../SEO';
 
 const Section = ({ id, title, children }) => (
   <section id={id} className="border-t border-slate-200 first:border-t-0 pt-8 first:pt-0 mt-8 first:mt-0">
@@ -8,28 +10,24 @@ const Section = ({ id, title, children }) => (
 );
 
 const PolicyShell = ({ children }) => (
-  <div className="min-h-screen bg-slate-50 text-slate-950">
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <a href="/" className="inline-flex items-center gap-2 font-black text-2xl tracking-tight">
-          <span className="w-9 h-9 rounded-2xl bg-[#84CC16] text-slate-950 grid place-items-center shadow-lg shadow-lime-500/20">M</span>
-          Mercasto
-        </a>
-        <nav className="flex flex-wrap gap-3 text-sm font-bold text-slate-600">
-          <a className="hover:text-[#65A30D]" href="/terminos">Términos</a>
-          <a className="hover:text-[#65A30D]" href="/privacidad">Privacidad</a>
-          <a className="hover:text-[#65A30D]" href="/cookies">Cookies</a>
-          <a className="hover:text-[#65A30D]" href="/contacto">Contacto</a>
-        </nav>
-      </header>
-      {children}
+  <GoldenPublicPageShell testId="golden-refunds-main" className="mcg-legal-page mcg-refunds-page">
+    <div className="min-h-screen bg-slate-50 text-slate-950">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        {children}
+      </div>
     </div>
-  </div>
+  </GoldenPublicPageShell>
 );
 
 export default function ReembolsosScreen() {
   return (
     <PolicyShell>
+      <SEO
+        title="Política de pagos y reembolsos"
+        description="Consulta cómo funcionan los servicios de pago, promociones y revisiones de reembolso en Mercasto México."
+        url="/reembolsos"
+        image="https://mercasto.com/icon-512x512.png"
+      />
       <section>
         <div className="rounded-[2rem] bg-gradient-to-br from-slate-950 to-slate-800 text-white p-7 sm:p-10 shadow-2xl shadow-slate-900/10 mb-8">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300 mb-3">Pagos, promociones y soporte</p>

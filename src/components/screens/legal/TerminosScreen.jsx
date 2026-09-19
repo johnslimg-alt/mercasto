@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Scale, FileText, ExternalLink } from 'lucide-react';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const LAST_UPDATED = '17 de mayo de 2026';
 
@@ -49,6 +50,7 @@ export default function TerminosScreen() {
   }, []);
 
   return (
+    <GoldenPublicPageShell testId="golden-terms-main" className="mcg-legal-page mcg-terms-page">
     <div className="min-h-screen bg-slate-50">
       {/* Sticky breadcrumb */}
       <div className="bg-white border-b border-slate-200 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
@@ -220,6 +222,7 @@ export default function TerminosScreen() {
         </div>
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }
 

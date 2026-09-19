@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Cookie, ExternalLink } from 'lucide-react';
 import { requestOpenCookiePreferences } from '../../../utils/trackingConsent';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const LAST_UPDATED = '17 de mayo de 2026';
 
@@ -79,6 +80,7 @@ export default function CookiesScreen() {
   }, []);
 
   return (
+    <GoldenPublicPageShell testId="golden-cookies-main" className="mcg-legal-page mcg-cookies-page">
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2 text-sm">
@@ -282,6 +284,7 @@ export default function CookiesScreen() {
         </div>
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }
 

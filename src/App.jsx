@@ -35,7 +35,7 @@ import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
   EmpleosLanding, ServiciosLanding, CategoryLanding, ProductosLanding, TurismoLanding, ProfileEditScreen,
-  TerminosScreen, PrivacidadScreen, CookiesScreen, NotFoundScreen, VerificarEmailScreen, StoresScreen,
+  TerminosScreen, PrivacidadScreen, CookiesScreen, ModeracionScreen, ReembolsosScreen, NotFoundScreen, VerificarEmailScreen, StoresScreen,
   NotificationsScreen, ChatScreen, ContactoScreen, AyudaScreen, GeoSourcePage, ReferralScreen,
 } from './app/lazyScreens';
 import AppFooter from './components/shell/AppFooter';
@@ -4387,11 +4387,14 @@ function App() {
               <Route path="/terminos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><TerminosScreen /></React.Suspense>} />
   <Route path="/privacidad" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><PrivacidadScreen /></React.Suspense>} />
   <Route path="/cookies" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CookiesScreen /></React.Suspense>} />
+  <Route path="/moderacion" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ModeracionScreen /></React.Suspense>} />
+  <Route path="/reembolsos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReembolsosScreen /></React.Suspense>} />
   <Route path="/acerca-de" element={<Navigate to="/sobre-mercasto" replace />} />
   <Route path="/tiendas" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><StoresScreen /></React.Suspense>} />
   <Route path="/contacto"  element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ContactoScreen  /></React.Suspense>} />
   <Route path="/como-funciona" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="como-funciona" /></React.Suspense>} />
   <Route path="/seguridad" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="seguridad" /></React.Suspense>} />
+  <Route path="/safety" element={<Navigate to="/seguridad" replace />} />
   <Route path="/ayuda/publicar-anuncio" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="ayuda/publicar-anuncio" /></React.Suspense>} />
   <Route path="/ayuda/comprar-y-contactar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="ayuda/comprar-y-contactar" /></React.Suspense>} />
   <Route path="/tarifas" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="tarifas" /></React.Suspense>} />
