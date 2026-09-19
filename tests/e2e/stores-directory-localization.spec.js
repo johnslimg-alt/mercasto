@@ -93,3 +93,30 @@ for (const lang of ['es', 'zh', 'ar', 'ru']) {
     await expectNoOverflow(page);
   });
 }
+
+test('stores directory uses the shared Golden shell on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  const requests = [];
+  await setLanguage(page, 'es');
+  await mockApi(page, requests);
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/tiendas', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.getByTestId('golden-stores-main')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    if (viewport.name === 'mobile') {
+      await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+    }
+  }
+});
