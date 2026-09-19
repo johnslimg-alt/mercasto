@@ -62,7 +62,8 @@ case "${shard}" in
       tests/e2e/runtime-seo-localization.spec.js tests/e2e/runtime-schema-localization.spec.js \
       tests/e2e/contact-page-localization.spec.js tests/e2e/help-center-localization.spec.js \
       tests/e2e/email-verification-localization.spec.js tests/e2e/not-found-localization.spec.js \
-      tests/e2e/geo-source-localization.spec.js tests/e2e/payment-action-localization.spec.js \
+      tests/e2e/geo-source-localization.spec.js tests/e2e/public-utility-golden-shell.spec.js \
+      tests/e2e/payment-action-localization.spec.js \
       tests/e2e/account-action-localization.spec.js tests/e2e/listing-action-localization.spec.js \
       --project=chromium-desktop --project=chromium-mobile --workers=2 --retries=1 --reporter=list
     ;;

@@ -244,3 +244,14 @@
   .mcg-seller-acquisition-page,.mcg-referral-page{padding-bottom:82px!important}
   .mcg-seller-acquisition-page>section:first-child{padding-top:48px}
 }
+
+/* Golden public utility/content surfaces. */
+.mcg-public-page{min-height:calc(100vh - 70px);background:var(--mcg-soft)!important;color:var(--mcg-ink)}
+.mcg-public-page .bg-white{background:var(--mcg-card)!important}
+.mcg-public-page .bg-slate-50{background:var(--mcg-soft)!important}
+.mcg-public-page .border-slate-100,.mcg-public-page .border-slate-200,.mcg-public-page .border-slate-300,.mcg-public-page .border-slate-800{border-color:var(--mcg-line)!important}
+.mcg-public-page .text-slate-950,.mcg-public-page .text-slate-900,.mcg-public-page .text-slate-800,.mcg-public-page .text-slate-700{color:var(--mcg-ink)!important}
+.mcg-public-page .text-slate-600,.mcg-public-page .text-slate-500,.mcg-public-page .text-slate-400{color:var(--mcg-muted)!important}
+.dark .mcg-public-page .dark\:bg-slate-900,.dark .mcg-public-page .dark\:bg-slate-950{background:var(--mcg-card)!important}
+@media(max-width:1179px){.mcg-public-page{padding-bottom:96px!important}}
+@media(max-width:767px){.mcg-public-page{min-height:calc(100vh - 58px);padding-bottom:82px!important}}
