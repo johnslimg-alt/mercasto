@@ -147,3 +147,16 @@
   .mcg-seller-page>.max-w-4xl{padding-left:14px;padding-right:14px}
   .mcg-seller-page button,.mcg-seller-page a{min-height:24px}
 }
+
+/* Golden publish flow: shared chrome without changing form behavior. */
+.mcg-post-page{background:var(--mcg-soft)!important;color:var(--mcg-ink)}
+.mcg-post-page>.max-w-3xl{background:var(--mcg-card)!important;border-color:var(--mcg-line)!important}
+.mcg-post-page .border-slate-100,.mcg-post-page .border-slate-200,.mcg-post-page .border-slate-300,.mcg-post-page .border-slate-700,.mcg-post-page .border-slate-800{border-color:var(--mcg-line)!important}
+.mcg-post-page .text-slate-900,.mcg-post-page .text-slate-800,.mcg-post-page .text-slate-700{color:var(--mcg-ink)!important}
+.mcg-post-page .text-slate-600,.mcg-post-page .text-slate-500,.mcg-post-page .text-slate-400{color:var(--mcg-muted)!important}
+.dark .mcg-post-page .bg-white,.dark .mcg-post-page .dark\:bg-slate-950{background:var(--mcg-card)!important}
+@media(max-width:767px){
+  .mcg-post-page{padding-bottom:168px!important}
+  .mcg-post-page>[data-testid="publish-mobile-sticky-nav"]{bottom:70px}
+}
+

@@ -661,9 +661,9 @@ function App() {
   const [videoFile, setVideoFile] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [appToast, setAppToast] = useState(null);
-  const showToast = (message, type = 'success') => {
+  const showToast = (message, type = 'success', durationMs = 3500) => {
     setAppToast({ message, type });
-    setTimeout(() => setAppToast(null), 3500);
+    setTimeout(() => setAppToast(null), durationMs);
   };
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [priceTab, setPriceTab] = useState(accountType);
@@ -3401,7 +3401,8 @@ function App() {
         setEditingAd(null);
         if (!isUpdating) {
           clearPublishDraft();
-          showToast(t.listing_action_publish_submitted);
+          // Keep post-publish confirmation visible through the dashboard route transition on slower phones.
+          showToast(t.listing_action_publish_submitted, 'success', 6000);
         }
         setCurrentTab('profile');
         setDashboardTab('my_ads');
