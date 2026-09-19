@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Non-Stop Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.2
+// @version      9.0.0-alpha.2-nonstop.3
 // @description  Perpetual Play + truthful Export. External protocol activators. No controller-side reasoning.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -33,13 +33,17 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.2';
+const VER = '9.0.0-alpha.2-nonstop.3';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
 const WRITE_VERIFY_MS = 1800;
 const SEND_WAIT_MS = 2200;
 const SEND_CONFIRM_MS = 16000;
+const DEFAULT_MAX_ROUNDS = 50;
+const HARD_MAX_ROUNDS = 200;
+const CHECKPOINT_EVERY = 5;
+const STAGNATION_REPEAT_LIMIT = 2;
 
 const G = Object.freeze({
   proceed: '[[GITL::PROCEED]]',
@@ -94,13 +98,18 @@ const PROFILES = [
 ];
 const HOST = PROFILES.find(p => p.host.test(location.hostname)) || PROFILES[2];
 
+const storedMax = Number(GM_getValue('v9.max', DEFAULT_MAX_ROUNDS));
+const initialMax = Number.isFinite(storedMax) && storedMax >= 1 && storedMax <= HARD_MAX_ROUNDS
+  ? Math.floor(storedMax) : DEFAULT_MAX_ROUNDS;
 const S = {
-  mode: 'IDLE', detail: 'Ready', round: 0,
-  max: Math.max(1, Math.min(1000000, Number(GM_getValue('v9.max', 1000000)) || 1000000)),
+  mode: 'IDLE', detail: 'Ready', round: Math.max(0, Number(GM_getValue('v9.nonstop.round', 0)) || 0),
+  max: initialMax,
   sending: false, uncertain: false, lastHandled: '', awaitingFrom: '', stableHash: '', stableSince: 0,
   drift: 0, bootstrapped: false, relay: '', timer: null,
+  haltAudit: false, lastWorkHash: '', repeatCount: 0,
   tab: String(GM_getValue('v9.tab', 'play') || 'play'), events: [], lastError: null
 };
+GM_setValue('v9.max', S.max);
 const ON = {};
 for (const key of Object.keys(ACT)) ON[key] = !!GM_getValue(`v9.act.${key}`, false);
 let custom = String(GM_getValue('v9.custom', '') || '');
@@ -184,6 +193,9 @@ function contractText() {
       'Continue the existing task without restarting or repeating completed work.',
       'Do not stop merely because one step or subtask finished. Keep going until the whole requested task is actually complete.',
       'You own all reasoning, planning, milestones, committees, recovery, and decisions. Ghost is only the mechanical relay.',
+      'HALT is permitted only after a final completion audit against the original user goal and all acceptance criteria. Verify completion with available tools; do not infer success from having written code, a plan, or a patch.',
+      'For software, site, service, or infrastructure work where production is part of the requested outcome, HALT requires implementation complete, relevant tests/build passed, deployment complete, and a live production smoke/health check passed with no known blocking error.',
+      'If a required final state is not verified, use PROCEED when you can keep working; use HUMAN only when a real human decision, credential, approval, or external action is genuinely required.',
       'The FINAL non-whitespace line of every response must be exactly ONE bare control line. Do not add words before or after it.',
       'More work on the current model:', A.proceed,
       'A human decision is genuinely required:', A.human,
@@ -197,6 +209,9 @@ function contractText() {
     'Continue the existing task without restarting or repeating completed work.',
       'Do not stop merely because one step or subtask finished. Keep going until the whole requested task is actually complete.',
     'You own all reasoning, planning, milestones, committees, recovery, and decisions. Ghost is only the mechanical relay.',
+    'HALT is permitted only after a final completion audit against the original user goal and all acceptance criteria. Verify completion with available tools; do not infer success from having written code, a plan, or a patch.',
+    'For software, site, service, or infrastructure work where production is part of the requested outcome, HALT requires implementation complete, relevant tests/build passed, deployment complete, and a live production smoke/health check passed with no known blocking error.',
+    'If a required final state is not verified, use PROCEED when you can keep working; use HUMAN only when a real human decision, credential, approval, or external action is genuinely required.',
     'The FINAL non-whitespace line of every response must be exactly ONE bare control line. Do not add words before or after it.',
     'More work remains:', G.proceed,
     'A human decision is genuinely required:', G.human,
@@ -225,9 +240,25 @@ function bootstrapPrompt(existing = '') {
   return parts.join('\n\n---\n\n');
 }
 function continuationPrompt() {
+  const checkpoint = S.round > 0 && S.round % CHECKPOINT_EVERY === 0;
+  const work = checkpoint
+    ? 'Progress checkpoint: re-read the ORIGINAL user goal and full current state. Identify every remaining acceptance criterion, then perform the highest-impact remaining concrete action. Do not merely restate status or repeat prior work. Before HALT, verify the final state with available tools; if production is part of the requested outcome, verify the live deployed system.'
+    : 'Continue the existing task from the current conversation. Do not restart or repeat completed work. Perform the next concrete action toward the ORIGINAL user goal. Do not stop after a subtask. Before HALT, verify every acceptance criterion and any required live production state.';
   return ON.relay
-    ? 'Continue the existing task from the current conversation. Do not restart or repeat completed work. Keep all active protocols in force. End with exactly one valid Model Relay control line as the final non-whitespace line.'
-    : 'Continue the existing task from the current conversation. Do not restart or repeat completed work. Keep all active protocols in force. End with exactly one valid Ghost control line as the final non-whitespace line.';
+    ? `${work} Keep all active protocols in force. End with exactly one valid Model Relay control line as the final non-whitespace line.`
+    : `${work} Keep all active protocols in force. End with exactly one valid Ghost control line as the final non-whitespace line.`;
+}
+function completionAuditPrompt() {
+  return `FINAL COMPLETION AUDIT. The previous turn proposed HALT, but Ghost requires an independent second pass before stopping. Re-read the ORIGINAL user request and the full conversation. Check every requested deliverable and acceptance criterion against actual current evidence. Use available tools to verify claims. For software/site/service/infrastructure work where production is part of the goal, verify: implementation complete; relevant tests/build passed; deployment completed; live production smoke/health check passed; no known blocking error remains. Do not accept a plan, local patch, unverified deployment claim, or partial subtask as completion. If anything required remains and you can act, continue the work and end PROCEED. If a genuine human decision/credential/approval/external action is required, end HUMAN. Only if the entire original goal is verified complete, give concise completion evidence and end HALT.\n\n${contractText()}`;
+}
+function stagnationPrompt() {
+  return `STAGNATION RECOVERY. Your latest work repeated the previous round. Re-read the ORIGINAL goal and current evidence. Do not repeat status, plans, or already-completed actions. Choose a different concrete verification or implementation step that materially advances the task. If the goal is already truly complete, run the final completion audit before HALT. If an unavoidable human action is required, request HUMAN.\n\n${contractText()}`;
+}
+function workHash(text) {
+  const body = String(text || '')
+    .replace(/\[\[(?:GITL|AOA)::[^\]\r\n]+\]\]/g, '')
+    .replace(/\s+/g, ' ').trim();
+  return hash(body);
 }
 function regroundPrompt() {
   return `You strayed from the active control protocol. Re-read the existing conversation, reground in the current task, and continue without restarting or repeating completed work. Do not explain the protocol error. Your response must end with exactly one valid bare terminal control line as the final non-whitespace line.\n\n${contractText()}`;
@@ -321,7 +352,7 @@ async function sendOnce(text, reason) {
   if (!confirmed.ok) {
     S.uncertain = true; fail('PLAY-SEND-UNCERTAIN', 'Send was attempted but host acceptance could not be confirmed. Ghost will not resend.'); return false;
   }
-  S.round += 1; S.awaitingFrom = beforeAssistantHash; S.stableHash = ''; S.stableSince = 0;
+  S.round += 1; GM_setValue('v9.nonstop.round', S.round); S.awaitingFrom = beforeAssistantHash; S.stableHash = ''; S.stableSince = 0;
   S.detail = `Sent once · ${confirmed.why}`; log('send-confirmed', { round: S.round, why: confirmed.why }); render(); return true;
 }
 
@@ -330,17 +361,47 @@ async function handleTerminal(text, parsed) {
   if (!text || fp === S.lastHandled || S.mode !== 'RUNNING' || S.sending) return;
   S.lastHandled = fp;
   if (parsed.type === 'halt') {
-    S.drift = 0; complete('Task complete'); notify('Ghost complete', 'The AI returned HALT.'); return;
+    S.drift = 0;
+    if (!S.haltAudit) {
+      const sent = await sendOnce(completionAuditPrompt(), 'final completion audit');
+      if (sent) { S.haltAudit = true; S.detail = 'HALT proposed · independent completion audit running'; render(); }
+      return;
+    }
+    S.haltAudit = false;
+    complete('Task complete · final audit passed');
+    notify('Ghost complete', 'HALT confirmed by the final completion audit.');
+    return;
   }
   if (parsed.type === 'human') {
-    S.drift = 0; pause('Human decision requested by the AI.'); notify('Ghost paused', 'The AI requested a human decision.'); return;
+    S.drift = 0; S.haltAudit = false;
+    pause('Human decision requested by the AI.');
+    notify('Ghost paused', 'The AI requested a human decision.');
+    return;
   }
   if (parsed.type === 'relay') {
-    S.drift = 0; S.relay = parsed.model; pause(`Model Relay requested: ${parsed.model}.`); notify('Model Relay requested', parsed.model); return;
+    S.drift = 0; S.relay = parsed.model;
+    pause(`Model Relay requested: ${parsed.model}.`);
+    notify('Model Relay requested', parsed.model);
+    return;
   }
   if (parsed.type === 'proceed') {
-    S.drift = 0; if (S.round >= S.max) { S.max = 1000000; GM_setValue('v9.max', S.max); }
-    await sendOnce(continuationPrompt(), 'continue');
+    S.drift = 0; S.haltAudit = false;
+    const wh = workHash(text);
+    if (wh && wh === S.lastWorkHash) S.repeatCount += 1;
+    else { S.lastWorkHash = wh; S.repeatCount = 0; }
+
+    if (S.repeatCount >= STAGNATION_REPEAT_LIMIT) {
+      pause(`Stagnation guard: the same work repeated ${S.repeatCount + 1} rounds.`);
+      notify('Ghost paused', 'Repeated output detected. Human review is safer than burning more rounds.');
+      return;
+    }
+    if (S.round >= S.max) {
+      pause(`Safety round limit reached (${S.max}). Review progress before resuming.`);
+      notify('Ghost safety stop', `Reached the configured ${S.max}-round limit.`);
+      return;
+    }
+    if (S.repeatCount === 1) await sendOnce(stagnationPrompt(), 'stagnation recovery');
+    else await sendOnce(continuationPrompt(), 'continue');
   }
 }
 async function handleDrift(tail) {
@@ -375,12 +436,13 @@ async function tick() {
   if (quiet >= DRIFT_QUIET_MS) { S.lastHandled = fp; await handleDrift(parsed.raw); }
 }
 
-async function play() {
+async function play(resuming = false) {
   if (S.mode === 'RUNNING') return;
+  if (!resuming && (S.mode === 'IDLE' || S.mode === 'COMPLETE')) { S.round = 0; GM_setValue('v9.nonstop.round', 0); }
   if (S.uncertain) { S.detail = 'Prior Send is uncertain. Inspect the chat or use Page Reload before resuming.'; render(); return; }
   const input = composer();
   if (!input) { fail('PLAY-INPUT', 'Current chat composer was not found.', { host: HOST.id }); return; }
-  S.mode = 'RUNNING'; GM_setValue('v9.nonstop.active', true); S.detail = 'Starting non-stop loop...'; S.lastHandled = ''; S.stableHash = ''; S.stableSince = 0; S.drift = 0; S.relay = ''; render();
+  S.mode = 'RUNNING'; GM_setValue('v9.nonstop.active', true); S.detail = 'Starting non-stop loop...'; S.lastHandled = ''; S.stableHash = ''; S.stableSince = 0; S.drift = 0; S.relay = ''; S.haltAudit = false; S.lastWorkHash = ''; S.repeatCount = 0; render();
   const draft = nodeText(input); const latest = assistantText(); const parsed = terminal(latest);
   if (draft.trim()) {
     S.bootstrapped = true; if (!await sendOnce(bootstrapPrompt(draft), 'initial task')) return;
@@ -398,10 +460,10 @@ async function play() {
 }
 function pause(detail) { S.mode = 'PAUSED'; GM_setValue('v9.nonstop.active', false); S.detail = detail; clearInterval(S.timer); S.timer = null; render(); }
 function stop() {
-  S.mode = 'IDLE'; GM_setValue('v9.nonstop.active', false); S.detail = 'Stopped'; S.sending = false; S.uncertain = false; S.lastHandled = ''; S.awaitingFrom = ''; S.stableHash = ''; S.stableSince = 0; S.drift = 0;
+  S.mode = 'IDLE'; GM_setValue('v9.nonstop.active', false); GM_setValue('v9.nonstop.round', 0); S.round = 0; S.detail = 'Stopped'; S.sending = false; S.uncertain = false; S.lastHandled = ''; S.awaitingFrom = ''; S.stableHash = ''; S.stableSince = 0; S.drift = 0; S.haltAudit = false; S.lastWorkHash = ''; S.repeatCount = 0;
   clearInterval(S.timer); S.timer = null; log('stop'); render();
 }
-function complete(detail) { S.mode = 'COMPLETE'; GM_setValue('v9.nonstop.active', false); S.detail = detail; clearInterval(S.timer); S.timer = null; render(); }
+function complete(detail) { S.mode = 'COMPLETE'; GM_setValue('v9.nonstop.active', false); GM_setValue('v9.nonstop.round', 0); S.detail = detail; clearInterval(S.timer); S.timer = null; render(); }
 
 function domTurns() {
   const rows = [];
@@ -491,7 +553,7 @@ async function doExport(kind) {
 function report() {
   return {
     product: 'Ghost in the Loop', version: VER, platform: HOST.id, state: S.mode, round: S.round, maxRounds: S.max,
-    sending: S.sending, uncertain: S.uncertain, driftCount: S.drift,
+    sending: S.sending, uncertain: S.uncertain, driftCount: S.drift, haltAudit: S.haltAudit, repeatCount: S.repeatCount,
     capabilities: { input: !!composer(), send: !!localSendButton(), stop: generating(), assistant: !!assistantText() },
     lastError: S.lastError, relayRequested: S.relay || null, events: S.events.slice(-20), when: new Date().toISOString()
   };
@@ -514,8 +576,8 @@ function render() {
     <div class="status"><b>${esc(S.mode)}</b> · round ${S.round} · NON-STOP<br>${esc(S.detail)}</div>
     <div class="pane ${S.tab==='play'?'show':''}" data-pane="play">
       <div class="row"><button class="on" data-a="play">▶ Non-stop</button><button class="stop" data-a="stop">■ Stop</button><button data-a="reload">↻ Page</button></div>
-      <div class="row" style="margin-top:5px"><input data-max type="number" min="1" max="1000000" value="${S.max}"><button data-a="report">Copy report</button></div>
-      <div class="tiny">Core only: final control line → one Send → repeat. No automatic resend after an uncertain Send.</div>
+      <div class="row" style="margin-top:5px"><input data-max type="number" min="1" max="${HARD_MAX_ROUNDS}" value="${S.max}"><button data-a="report">Copy report</button></div>
+      <div class="tiny">Safety: max ${S.max} rounds (hard cap ${HARD_MAX_ROUNDS}); HALT requires a second-pass completion audit; repeated output triggers recovery then pause.</div>
     </div>
     <div class="pane ${S.tab==='aoa'?'show':''}" data-pane="aoa">
       <div class="grid">${Object.entries(ACT).map(([k,v])=>`<label><input type="checkbox" data-act="${k}" ${ON[k]?'checked':''}>${esc(v[0])}</label>`).join('')}</div>
@@ -534,7 +596,7 @@ function render() {
   panel.querySelector('[data-a="copy"]')?.addEventListener('click', () => doExport('copy'));
   panel.querySelector('[data-a="md"]')?.addEventListener('click', () => doExport('md'));
   panel.querySelector('[data-a="json"]')?.addEventListener('click', () => doExport('json'));
-  panel.querySelector('[data-max]')?.addEventListener('change', e => { S.max = Math.max(1, Math.min(1000000, Number(e.target.value) || 1000000)); GM_setValue('v9.max', S.max); render(); });
+  panel.querySelector('[data-max]')?.addEventListener('change', e => { S.max = Math.max(1, Math.min(HARD_MAX_ROUNDS, Number(e.target.value) || DEFAULT_MAX_ROUNDS)); GM_setValue('v9.max', S.max); render(); });
   panel.querySelectorAll('[data-act]').forEach(box => box.addEventListener('change', () => { ON[box.dataset.act] = box.checked; GM_setValue(`v9.act.${box.dataset.act}`, box.checked); S.detail = `${ACT[box.dataset.act][0]} ${box.checked?'enabled':'disabled'} for the next injected prompt.`; render(); }));
   panel.querySelector('[data-custom]')?.addEventListener('change', e => { custom = String(e.target.value || '').trim(); GM_setValue('v9.custom', custom); S.detail = custom ? 'Custom AoA path saved.' : 'Custom AoA path cleared.'; render(); });
 }
@@ -544,7 +606,7 @@ async function resumeNonStop() {
   S.detail = 'Restoring non-stop loop...'; render();
   for (let i = 0; i < 180; i++) {
     if (composer() && !generating()) {
-      try { await play(); } catch (error) { fail('AUTO-RESUME', String(error?.message || error)); }
+      try { await play(true); } catch (error) { fail('AUTO-RESUME', String(error?.message || error)); }
       return;
     }
     await sleep(1000);
