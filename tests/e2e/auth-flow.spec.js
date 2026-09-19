@@ -259,3 +259,47 @@ test.describe('Authentication E2E Flow', () => {
     await expect(page.locator('body')).toContainText(/E2E Login User|Cuenta|Perfil/i);
   });
 });
+
+
+test('login and register entry routes use the shared Golden shell on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.addInitScript(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('cookiesAccepted', 'true');
+  });
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/auth/providers')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ google: false, apple: false, sms: false }),
+      });
+    }
+    return route.fulfill({ status: 401, contentType: 'application/json', body: '{}' });
+  });
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+    for (const route of ['/login', '/register']) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('golden-header')).toBeVisible();
+      await expect(page.getByTestId('golden-auth-entry-main')).toBeVisible();
+      await expect(page.locator('.site-header')).toBeHidden();
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(1);
+
+      if (viewport.name === 'mobile') {
+        await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+        await expect(page.getByTestId('golden-mobile-account-tab')).toHaveClass(/active/);
+        await expect(page.locator('.mobile-tabbar')).toBeHidden();
+      }
+    }
+  }
+});
