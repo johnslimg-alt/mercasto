@@ -9,6 +9,8 @@ import { canonicalizeFilterOptionSelection, filterOptionDisplayLabel, filterOpti
 import { localizedText } from '../../utils/localize';
 import { subcategoriesMap } from '../../constants/locationsAndCategories';
 import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -54,6 +56,7 @@ const autofillSubcategoryOptions = (category, lang) => {
 export default function EditAdScreen({ t, lang }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const fileInputRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
@@ -87,6 +90,47 @@ export default function EditAdScreen({ t, lang }) {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   };
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-edit-ad-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-edit-ad-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
+
+  const renderGoldenShell = (content) => (
+    <>
+      <MercastoGoldenHeader
+        publish={() => navigate('/post')}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={t.all_mexico || ''}
+        selectedState=""
+        t={t}
+      />
+      <div data-testid="golden-edit-ad-shell" className="mcg-edit-ad-page min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
+        {content}
+        <MercastoGoldenBottomNav
+          active="none"
+          publish={() => navigate('/post')}
+          onNotifications={() => navigate('/notificaciones')}
+          onAccount={() => navigate('/profile')}
+          unreadCount={0}
+          t={t}
+        />
+      </div>
+    </>
+  );
 
   useEffect(() => {
     if (!token) { navigate('/'); return undefined; }
@@ -299,11 +343,13 @@ export default function EditAdScreen({ t, lang }) {
     finally { setSaving(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950"><Loader2 className="w-8 h-8 animate-spin text-lime-500" /></div>;
-  if (error && !ad) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 text-center">
+  if (loading) return renderGoldenShell(
+    <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-lime-500" /></div>
+  );
+  if (error && !ad) return renderGoldenShell(
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8 text-center">
       <AlertTriangle className="w-12 h-12 text-red-400" />
-      <p className="text-slate-600">{error}</p>
+      <p className="text-slate-600 dark:text-slate-300">{error}</p>
       <button onClick={() => navigate(-1)} className="btn bg-slate-100 hover:bg-slate-200 text-slate-700">{t.back}</button>
     </div>
   );
@@ -316,8 +362,8 @@ export default function EditAdScreen({ t, lang }) {
     { value: 'Para piezas', label: t.condition_for_parts },
   ];
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-8 pb-24 text-slate-900 dark:text-white">
+  return renderGoldenShell(
+    <div data-testid="golden-edit-ad-main" className="max-w-2xl mx-auto px-4 py-8 pb-24 text-slate-900 dark:text-white">
       {toast && (
         <div
           data-testid="edit-ad-toast"
