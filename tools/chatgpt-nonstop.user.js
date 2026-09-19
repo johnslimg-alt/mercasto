@@ -2,8 +2,8 @@
 // @name         ChatGPT Non-Stop Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
 // @version      9.0.0-alpha.2-nonstop.3
-// @updateURL    https://raw.githubusercontent.com/johnslimg-alt/mercasto/tooling/chatgpt-nonstop-loop/tools/chatgpt-nonstop.user.js
-// @downloadURL  https://raw.githubusercontent.com/johnslimg-alt/mercasto/tooling/chatgpt-nonstop-loop/tools/chatgpt-nonstop.user.js
+// @updateURL    https://raw.githubusercontent.com/johnslimg-alt/mercasto/refs/heads/tooling/chatgpt-nonstop-loop/tools/chatgpt-nonstop.user.js
+// @downloadURL  https://raw.githubusercontent.com/johnslimg-alt/mercasto/refs/heads/tooling/chatgpt-nonstop-loop/tools/chatgpt-nonstop.user.js
 // @description  Perpetual Play + truthful Export. External protocol activators. No controller-side reasoning.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
