@@ -95,11 +95,26 @@ jobs:
     timeout-minutes: 20
     if: ${{ github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
-      - name: Verify production checkout exists
+      - name: Restore clean production checkout
         run: |
           set -euo pipefail
           test -d /var/www/mercasto
-          test -f /var/www/mercasto/scripts/server-operator.sh
+          cd /var/www/mercasto
+
+          dirty="$(sudo -n git status --porcelain --untracked-files=all)"
+          if [ -n "$dirty" ]; then
+            echo "::error::Production checkout is dirty; refusing to overwrite local changes."
+            printf '%s\n' "$dirty" | sed -n '1,80p'
+            exit 2
+          fi
+
+          sudo -n git fetch origin main --prune
+          sudo -n git checkout -B main origin/main
+          sudo -n git reset --hard origin/main
+
+          test "$(sudo -n git branch --show-current)" = main
+          test "$(sudo -n git rev-parse HEAD)" = "$(sudo -n git rev-parse origin/main)"
+          test -f scripts/server-operator.sh
 
       - name: Run read-only verify_quick gate
         run: |
