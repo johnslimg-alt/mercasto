@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCode, User, Loader2, Globe, MessageCircle, Clock, Building2, Camera } from 'lucide-react';
 import { formatDate } from '../../utils/localeFormat';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
+import { useUI } from '../../contexts/UIContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -30,9 +33,24 @@ export default function StorefrontScreen({
   setViewedCompany, renderAdCard, renderSkeletonCard, handleReviewSubmit, reviewForm, setReviewForm,
   user, handleViewCompany
 }) {
+  const navigate = useNavigate();
+  const { isDarkMode, toggleDarkMode, setLang } = useUI();
   const [businessProfile, setBusinessProfile] = useState(null);
   const [bannerUploading, setBannerUploading] = useState(false);
   const bannerInputRef = useRef(null);
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-storefront-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-storefront-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -100,8 +118,21 @@ export default function StorefrontScreen({
   const isOwner = user && user.id === company.id;
 
   return (
-  <div className="storefront-dark-scope bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
-    <div className="sticky top-[var(--mc-site-header-offset)] bg-white/90 backdrop-blur-xl z-40 border-b border-slate-200 px-4 py-3 flex items-center shadow-sm h-[60px]">
+  <>
+    <MercastoGoldenHeader
+      publish={() => navigate('/post')}
+      onLocationApply={applyGoldenLocation}
+      onAccount={() => navigate('/profile')}
+      isDarkMode={isDarkMode}
+      toggleDarkMode={toggleDarkMode}
+      lang={lang}
+      setLang={setLang}
+      locationLabel={t.all_mexico || ''}
+      selectedState=""
+      t={t}
+    />
+  <div data-testid="golden-storefront-main" className="mcg-storefront-page storefront-dark-scope bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
+    <div className="sticky top-0 bg-white/90 backdrop-blur-xl z-40 border-b border-slate-200 px-4 py-3 flex items-center shadow-sm h-[60px]">
        <button onClick={() => { setViewedCompany(null); window.history.replaceState({}, '', '/'); }} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
          <ChevronLeft className="w-4 h-4" /> {t.back}
        </button>
@@ -287,6 +318,15 @@ export default function StorefrontScreen({
         </div>
       </div>
     </div>
+    <MercastoGoldenBottomNav
+      active="none"
+      publish={() => navigate('/post')}
+      onNotifications={() => navigate('/notificaciones')}
+      onAccount={() => navigate('/profile')}
+      unreadCount={0}
+      t={t}
+    />
   </div>
+  </>
   );
 }
