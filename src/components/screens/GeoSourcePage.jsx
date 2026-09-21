@@ -9,6 +9,7 @@ import {
   getGeoSourcePage,
   getGeoSourceShellCopy,
 } from '../../content/geoSourcePages';
+import GoldenPublicPageShell from '../shell/GoldenPublicPageShell';
 
 const SITE_URL = 'https://mercasto.com';
 
@@ -93,7 +94,7 @@ function formatUpdatedDate(lang) {
   }).format(new Date(`${GEO_SOURCE_UPDATED_ISO}T00:00:00Z`));
 }
 
-export default function GeoSourcePage({ slug }) {
+export default function GeoSourcePage({ slug, shellProps = {} }) {
   const { lang, loadedLangVersion } = useUI();
   void loadedLangVersion;
   const page = getGeoSourcePage(slug, lang);
@@ -104,6 +105,7 @@ export default function GeoSourcePage({ slug }) {
   }
 
   return (
+    <GoldenPublicPageShell {...shellProps} testId="golden-geo-source-main" className="mcg-geo-source-page">
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <SEO
         title={page.title}
@@ -186,5 +188,6 @@ export default function GeoSourcePage({ slug }) {
         </section>
       </section>
     </div>
+    </GoldenPublicPageShell>
   );
 }

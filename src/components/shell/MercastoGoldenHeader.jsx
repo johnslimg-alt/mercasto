@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { Suspense } from 'react';
+import { Link } from 'react-router-dom';
 import '../home/mercasto-golden-home.css';
 import { MEXICO_STATES_CITIES } from '../../constants/locationData';
+import MercastoLogo from './MercastoLogo';
+
+const SearchSuggestions = React.lazy(() => import('../common/SearchSuggestions'));
 
 const icons = {
   pin: <><path d="M12 21s6.2-5.2 6.2-11A6.2 6.2 0 0 0 5.8 10C5.8 15.8 12 21 12 21Z"/><circle cx="12" cy="10" r="2.2"/></>,
@@ -26,6 +30,10 @@ export default function MercastoGoldenHeader({
   publish,
   onLocationApply,
   onAccount,
+  onNotifications,
+  unreadCount = 0,
+  showAiBrand = false,
+  search = null,
   isDarkMode,
   toggleDarkMode,
   lang,
@@ -47,8 +55,11 @@ export default function MercastoGoldenHeader({
   const locationAria = `${t.change_location || ''}: ${locationLabel}`;
 
   return (
-    <header className="mcg-header" data-testid="golden-header">
-      <a href="/" className="mcg-brand header-logo-link"><span>M</span>Mercasto</a>
+    <>
+    <header className={`mcg-header ${search ? 'mcg-header-with-search' : ''}`} data-testid="golden-header">
+      <Link to="/" className="mcg-brand header-logo-link">
+        {showAiBrand ? <MercastoLogo className="h-9" tagline={t.ai_brand_short || ''} /> : <><span>M</span>Mercasto</>}
+      </Link>
       <div className="mcg-location-wrap">
         <button
           className="mcg-location"
@@ -81,13 +92,35 @@ export default function MercastoGoldenHeader({
           </div>
         )}
       </div>
+      {search && (
+        <div data-testid="desktop-header-row" className="mcg-public-search-desktop">
+          <div className="mcg-public-search-wrap">
+            <form data-testid="desktop-header-search" onSubmit={search.onSubmit} className="mcg-public-search-form">
+              <Icon name="search" size={17}/>
+              <input
+                data-testid="golden-desktop-search-input"
+                aria-label={t.search_placeholder || ''}
+                value={search.value || ''}
+                onChange={event => search.onChange?.(event.target.value)}
+                onFocus={search.onFocus}
+                onKeyDown={search.onKeyDown}
+                placeholder={t.search_placeholder || ''}
+              />
+              <button type="submit" data-testid="golden-desktop-search-submit">{t.search_btn || ''}</button>
+            </form>
+            <Suspense fallback={null}>
+              <SearchSuggestions show={search.showSuggestions} suggestions={search.suggestions} query={search.value || ''} recentSearches={search.recentSearches} onSelect={search.onSelect} onClearRecent={search.onClearRecent} highlightedIndex={search.highlightedIndex} />
+            </Suspense>
+          </div>
+        </div>
+      )}
       <nav>
-        <a href="/listings">{t.buy || ''}</a>
+        <Link to="/listings">{t.buy || ''}</Link>
         <button onClick={publish}>{t.sell_fast || ''}</button>
-        <a href="/listings">{t.categories || ''}</a>
-        <a href="/listings">{t.map || ''}</a>
-        <a href="/sobre-mercasto">{t.footer_about || ''}</a>
-        <a href="/ayuda">{t.help || ''}</a>
+        <Link to="/listings">{t.categories || ''}</Link>
+        <Link to="/listings">{t.map || ''}</Link>
+        <Link to="/sobre-mercasto">{t.footer_about || ''}</Link>
+        <Link to="/ayuda">{t.help || ''}</Link>
       </nav>
       <label className="mcg-lang" aria-label={t.language || ''}>
         <Icon name="globe" size={16}/>
@@ -102,11 +135,44 @@ export default function MercastoGoldenHeader({
         aria-label={isDarkMode ? (t.light_mode || '') : (t.dark_mode || '')}
         aria-pressed={isDarkMode}
       ><span/></button>
-      <a href="/profile?tab=favorites" className="mcg-hicon" aria-label={t.favorites || ''}><Icon name="heart"/></a>
-      <a href="/mensajes" className="mcg-hicon" aria-label={t.messages || ''}><Icon name="chat"/></a>
-      <a href="/notificaciones" data-testid="golden-notifications-link" className="mcg-hicon" aria-label={t.notifications || ''}><Icon name="bell"/></a>
+      <Link to="/profile?tab=favorites" className="mcg-hicon" aria-label={t.favorites || ''}><Icon name="heart"/></Link>
+      <Link to="/mensajes" className="mcg-hicon" aria-label={t.messages || ''}><Icon name="chat"/></Link>
+      {onNotifications ? (
+        <button type="button" data-testid="golden-notifications-link" className="mcg-hicon mcg-notification-button" aria-label={t.notifications || ''} onClick={onNotifications}>
+          <Icon name="bell"/>
+          {unreadCount > 0 && <i data-testid="golden-notifications-unread" className="mcg-unread-dot mcg-unread-dot--header" aria-hidden="true"/>}
+        </button>
+      ) : (
+        <Link to="/notificaciones" data-testid="golden-notifications-link" className="mcg-hicon" aria-label={t.notifications || ''}>
+          <Icon name="bell"/>
+          {unreadCount > 0 && <i data-testid="golden-notifications-unread" className="mcg-unread-dot mcg-unread-dot--header" aria-hidden="true"/>}
+        </Link>
+      )}
       <button type="button" data-testid="golden-account-button" className="mcg-hicon" aria-label={t.my_account || t.login || ''} onClick={onAccount}><Icon name="menu"/></button>
     </header>
+    {search && (
+      <div className="mcg-public-search-mobile-row">
+        <div className="mcg-public-search-wrap">
+          <form data-testid="mobile-header-search" onSubmit={search.onSubmit} className="mcg-public-search-form">
+            <Icon name="search" size={17}/>
+            <input
+              data-testid="golden-mobile-search-input"
+              aria-label={t.search_placeholder_short || t.search_placeholder || ''}
+              value={search.value || ''}
+              onChange={event => search.onChange?.(event.target.value)}
+              onFocus={search.onFocus}
+              onKeyDown={search.onKeyDown}
+              placeholder={t.search_placeholder_short || t.search_placeholder || ''}
+            />
+            <button type="submit" data-testid="golden-mobile-search-submit" aria-label={t.search_btn || ''}><Icon name="search" size={16}/></button>
+          </form>
+          <Suspense fallback={null}>
+            <SearchSuggestions show={search.showSuggestions} suggestions={search.suggestions} query={search.value || ''} recentSearches={search.recentSearches} onSelect={search.onSelect} onClearRecent={search.onClearRecent} highlightedIndex={search.highlightedIndex} />
+          </Suspense>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -121,8 +187,8 @@ export function MercastoGoldenBottomNav({
 }) {
   return (
     <nav className="mcg-bottom-nav" data-testid="golden-bottom-nav">
-      <a href="/" className={active === 'home' ? 'active' : ''}><Icon name="home"/><span>{t.home || ''}</span></a>
-      <a href="/listings" className={active === 'search' ? 'active' : ''}><Icon name="search"/><span>{t.search_btn || ''}</span></a>
+      <Link to="/" className={active === 'home' ? 'active' : ''}><Icon name="home"/><span>{t.home || ''}</span></Link>
+      <Link to="/listings" className={active === 'search' ? 'active' : ''}><Icon name="search"/><span>{t.search_btn || ''}</span></Link>
       <button type="button" onClick={publish} className="publish"><i><Icon name="plus"/></i><b>{t.publish_btn || ''}</b></button>
       <button type="button" data-testid="golden-mobile-notifications-tab" className={`mcg-bottom-action ${active === 'notifications' ? 'active' : ''}`} aria-label={t.notifications || ''} onClick={onNotifications}>
         <Icon name="bell"/><span>{t.notifications || ''}</span>

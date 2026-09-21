@@ -18,9 +18,12 @@ for (const [language, tagline, shortTagline] of locales) {
       }, language);
     });
 
-    test('uses the compact AI brand surface and preserves metadata', async ({ page }, testInfo) => {
+    test('uses the compact Golden brand surface and preserves metadata', async ({ page }, testInfo) => {
       await page.goto('/ayuda', { waitUntil: 'domcontentloaded' });
-      const logo = page.locator('.site-header .header-logo-link');
+      const goldenHeader = page.getByTestId('golden-header');
+      await expect(goldenHeader).toBeVisible();
+      await expect(page.locator('.site-header')).toBeHidden();
+      const logo = goldenHeader.locator('.header-logo-link');
       await expect(logo).toBeVisible();
       const mobile = testInfo.project.name.includes('mobile');
       const visibleBrand = logo.getByTestId(mobile ? 'mercasto-ai-short-mobile' : 'mercasto-ai-short-desktop');
