@@ -306,7 +306,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
         toggleDarkMode={toggleDarkMode}
         lang={lang}
         setLang={setLang}
-        locationLabel={t.all_mexico || ''}
+        locationLabel={t.all_mexico}
         selectedState=""
         t={t}
       />
