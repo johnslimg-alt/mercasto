@@ -11,6 +11,7 @@ workflows=(
   .github/workflows/env-readiness.yml
   .github/workflows/backup-freshness.yml
   .github/workflows/sms-readiness.yml
+  .github/workflows/production-live-gates.yml
 )
 
 for workflow in "${workflows[@]}"; do
@@ -26,5 +27,7 @@ for workflow in "${workflows[@]}"; do
 done
 
 grep -qF -- "- 'src/utils/helpCenterCopy.js'" .github/workflows/sms-readiness.yml
+grep -qF 'dirty="$(sudo -n git status --porcelain --untracked-files=all)"' .github/workflows/production-live-gates.yml
+grep -qF 'sudo -n git checkout -B main origin/main' .github/workflows/production-live-gates.yml
 
 echo "root-owned production checkout workflow gate OK"
