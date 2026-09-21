@@ -1,79 +1,28 @@
 import { test, expect } from '@playwright/test';
 
-test('header autocomplete ignores a stale slower response', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium-desktop');
+async function installGoldenSearchState(page, lang = 'es') {
+  await page.addInitScript((savedLang) => {
+    localStorage.setItem('lang', savedLang);
+    localStorage.setItem('mercasto_language', savedLang);
+    localStorage.setItem('i18nextLng', savedLang);
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+  }, lang);
 
-  await page.route('**/api/search/suggestions?**', async (route) => {
+  await page.route('**/api/**', async (route) => {
     const url = new URL(route.request().url());
-    const query = url.searchParams.get('q');
-    if (query === 'iphone') {
-      await new Promise(resolve => setTimeout(resolve, 900));
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(['iPhone viejo']) });
-      return;
-    }
-    if (query === 'ipad') {
-      await new Promise(resolve => setTimeout(resolve, 50));
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(['iPad nuevo']) });
-      return;
-    }
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-  });
-
-  await page.goto('/ayuda', { waitUntil: 'domcontentloaded' });
-  await page.getByTestId('desktop-search-input').waitFor({ state: 'visible' });
-  const input = page.getByTestId('desktop-search-input');
-  await input.fill('iphone');
-  await page.waitForTimeout(320);
-  await input.fill('ipad');
-
-  await expect(page.getByRole('button', { name: /iPad nuevo/i })).toBeVisible();
-  await page.waitForTimeout(800);
-  await expect(page.getByRole('button', { name: /iPad nuevo/i })).toBeVisible();
-  await expect(page.getByRole('button', { name: /iPhone viejo/i })).toHaveCount(0);
-});
-
-
-const AUTOCOMPLETE_COPY = {
-  en: { recent: 'Recent searches', suggestions: 'Suggestions', clear: 'Clear history', didYouMean: 'Did you mean:' },
-  ru: { recent: 'История поиска', suggestions: 'Рекомендации', clear: 'Очистить историю', didYouMean: 'Возможно, вы имели в виду:' },
-  ar: { recent: 'عمليات البحث الأخيرة', suggestions: 'المقترحات', clear: 'مسح السجل', didYouMean: 'هل تقصد:' },
-};
-
-for (const [lang, copy] of Object.entries(AUTOCOMPLETE_COPY)) {
-  test(`header autocomplete copy is localized in ${lang}`, async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'chromium-desktop');
-
-    await page.addInitScript(({ savedLang }) => {
-      localStorage.setItem('lang', savedLang);
-      localStorage.setItem('mercasto_language', savedLang);
-      localStorage.setItem('mercasto_recent_searches', JSON.stringify(['Toyota Corolla']));
-      localStorage.setItem('cookiesAccepted', 'true');
-    }, { savedLang: lang });
-
-    await page.route('**/api/search/suggestions?**', async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(['ipad']) });
+    const json = (value) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(value),
     });
-
-    await page.goto('/ayuda', { waitUntil: 'domcontentloaded' });
-    const input = page.getByTestId('desktop-search-input');
-    await input.waitFor({ state: 'visible' });
-    await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe(lang);
-    await expect.poll(() => page.evaluate(() => document.documentElement.dir)).toBe(lang === 'ar' ? 'rtl' : 'ltr');
-    const desktopHeader = page.getByTestId('desktop-header-row');
-    await input.focus();
-    await expect(desktopHeader.getByText(copy.recent, { exact: true })).toBeVisible();
-    await expect(desktopHeader.getByRole('button', { name: copy.clear })).toBeVisible();
-
-    await input.fill('ipd');
-    await expect(desktopHeader.getByText(copy.suggestions, { exact: true })).toBeVisible();
-    await expect(desktopHeader.getByRole('button', { name: new RegExp(`${copy.didYouMean}\\s+ipad`, 'i') })).toBeVisible();
-  });
-}
-
-
-async function mockSingleSuggestion(page, suggestion = 'iPad Pro') {
-  await page.route('**/api/search/suggestions?**', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([suggestion]) });
+    if (url.pathname.endsWith('/ads')) return json({ data: [], total: 0, current_page: 1, last_page: 1 });
+    if (url.pathname.endsWith('/categories') || url.pathname.endsWith('/category-attributes') || url.pathname.endsWith('/favorites')) return json([]);
+    if (url.pathname.endsWith('/banners')) return json({ banners: [] });
+    if (url.pathname.endsWith('/auth/providers')) return json({ google: false, apple: false, sms: false });
+    return json({});
   });
 }
 
@@ -81,49 +30,78 @@ async function expectSearchParam(page, expected) {
   await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe(expected);
 }
 
-test('desktop autocomplete chooses the highlighted suggestion with Enter', async ({ page }, testInfo) => {
+test('Golden catalog search is isolated from stale legacy suggestion responses', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
-  await mockSingleSuggestion(page);
-  await page.goto('/ayuda', { waitUntil: 'domcontentloaded' });
+  let suggestionRequests = 0;
 
-  const input = page.getByTestId('desktop-search-input');
-  await input.fill('ipd');
-  await expect(page.getByTestId('desktop-header-row').getByRole('button', { name: /iPad Pro/i })).toBeVisible();
-  await input.press('ArrowDown');
+  await page.route('**/api/search/suggestions?**', async (route) => {
+    suggestionRequests += 1;
+    const query = new URL(route.request().url()).searchParams.get('q');
+    await new Promise(resolve => setTimeout(resolve, query === 'iphone' ? 900 : 50));
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([query === 'iphone' ? 'iPhone viejo' : 'iPad nuevo']),
+    });
+  });
+  await installGoldenSearchState(page);
+
+  await page.goto('/listings', { waitUntil: 'domcontentloaded' });
+  const input = page.getByTestId('catalog-primary-search');
+  await expect(input).toBeVisible();
+  await input.fill('iphone');
+  await page.waitForTimeout(320);
+  await input.fill('ipad');
+  await input.press('Enter');
+
+  await expectSearchParam(page, 'ipad');
+  await expect(input).toHaveValue('ipad');
+  expect(suggestionRequests).toBe(0);
+  await expect(page.getByRole('button', { name: /iPhone viejo|iPad nuevo/i })).toHaveCount(0);
+});
+
+const SEARCH_COPY = {
+  en: { placeholder: 'Search on mercasto.com', dir: 'ltr' },
+  ru: { placeholder: 'Поиск на mercasto.com', dir: 'ltr' },
+  ar: { placeholder: 'ابحث في mercasto.com', dir: 'rtl' },
+};
+
+for (const [lang, copy] of Object.entries(SEARCH_COPY)) {
+  test(`Golden catalog search copy is localized in ${lang}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await installGoldenSearchState(page, lang);
+
+    await page.goto('/listings', { waitUntil: 'domcontentloaded' });
+    const input = page.getByTestId('catalog-primary-search');
+    await expect(input).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe(lang);
+    await expect.poll(() => page.evaluate(() => document.documentElement.dir)).toBe(copy.dir);
+    await expect(input).toHaveAttribute('placeholder', copy.placeholder);
+  });
+}
+
+test('desktop Golden catalog search submits the current value with Enter', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await installGoldenSearchState(page);
+  await page.goto('/listings', { waitUntil: 'domcontentloaded' });
+
+  const input = page.getByTestId('catalog-primary-search');
+  await input.fill('iPad Pro');
   await input.press('Enter');
 
   await expectSearchParam(page, 'iPad Pro');
   await expect(input).toHaveValue('iPad Pro');
 });
 
-test('mobile autocomplete chooses the highlighted suggestion with Enter', async ({ page }, testInfo) => {
+test('mobile Golden catalog search submits the current value with Enter', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await page.setViewportSize({ width: 390, height: 844 });
-  await mockSingleSuggestion(page);
-  await page.goto('/ayuda', { waitUntil: 'domcontentloaded' });
+  await installGoldenSearchState(page);
+  await page.goto('/listings', { waitUntil: 'domcontentloaded' });
 
-  const input = page.getByTestId('mobile-search-input');
-  await input.fill('ipd');
-  await expect(page.getByTestId('mobile-header-search').locator('..').getByRole('button', { name: /iPad Pro/i })).toBeVisible();
-  await input.press('ArrowDown');
-  await input.press('Enter');
-
-  await expectSearchParam(page, 'iPad Pro');
-  await expect(input).toHaveValue('iPad Pro');
-});
-
-test('autocomplete chooses a highlighted recent search with Enter', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium-desktop');
-  await page.addInitScript(() => {
-    localStorage.setItem('mercasto_recent_searches', JSON.stringify(['Toyota Corolla']));
-    localStorage.setItem('cookiesAccepted', 'true');
-  });
-  await page.goto('/ayuda', { waitUntil: 'domcontentloaded' });
-
-  const input = page.getByTestId('desktop-search-input');
-  await input.focus();
-  await expect(page.getByTestId('desktop-header-row').getByRole('button', { name: /Toyota Corolla/i })).toBeVisible();
-  await input.press('ArrowDown');
+  const input = page.getByTestId('catalog-primary-search');
+  await expect(input).toBeVisible();
+  await input.fill('Toyota Corolla');
   await input.press('Enter');
 
   await expectSearchParam(page, 'Toyota Corolla');

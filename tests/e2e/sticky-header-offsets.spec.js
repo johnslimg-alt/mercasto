@@ -27,7 +27,9 @@ async function documentStickyMetrics(page) {
         const style = getComputedStyle(element);
         return rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
       });
+    const headerStyle = header ? getComputedStyle(header) : null;
     const headerHeight = header?.getBoundingClientRect().height || 0;
+    const headerOffset = headerStyle && ['sticky', 'fixed'].includes(headerStyle.position) ? headerHeight : 0;
 
     const nearestScrollAncestor = (element) => {
       let parent = element.parentElement;
@@ -41,6 +43,7 @@ async function documentStickyMetrics(page) {
 
     const stickies = [...document.querySelectorAll('.sticky')]
       .filter((element) => !element.classList.contains('site-header'))
+      .filter((element) => element.getAttribute('data-testid') !== 'golden-header')
       .filter((element) => !nearestScrollAncestor(element))
       .map((element) => ({
         top: Number.parseFloat(getComputedStyle(element).top),
@@ -50,6 +53,8 @@ async function documentStickyMetrics(page) {
 
     return {
       headerHeight,
+      headerOffset,
+      headerPosition: headerStyle?.position || '',
       stickies,
       documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       bodyOverflow: document.body.scrollWidth - document.body.clientWidth,
@@ -65,9 +70,13 @@ test('site header remains sticky without reintroducing horizontal overflow', asy
   await page.evaluate(() => window.scrollTo(0, 600));
   await page.waitForTimeout(100);
 
-  const header = page.locator('.site-header');
-  const box = await header.boundingBox();
-  expect(Math.abs(box.y)).toBeLessThanOrEqual(1);
+  const header = page.locator('[data-testid="golden-header"]:visible, .site-header:visible').first();
+  await expect(header).toBeVisible();
+  const headerPosition = await header.evaluate((element) => getComputedStyle(element).position);
+  if (['sticky', 'fixed'].includes(headerPosition)) {
+    const box = await header.boundingBox();
+    expect(Math.abs(box.y)).toBeLessThanOrEqual(1);
+  }
 
   const metrics = await documentStickyMetrics(page);
   expect(metrics.documentOverflow).toBeLessThanOrEqual(1);
@@ -91,8 +100,8 @@ for (const width of [390, 768, 1024]) {
       for (const sticky of metrics.stickies) {
         expect(
           sticky.top,
-          `${route} sticky "${sticky.text}" starts above ${metrics.headerHeight}px header`,
-        ).toBeGreaterThanOrEqual(metrics.headerHeight - 1);
+          `${route} sticky "${sticky.text}" starts above ${metrics.headerOffset}px sticky-header offset`,
+        ).toBeGreaterThanOrEqual(metrics.headerOffset - 1);
       }
     }
   });

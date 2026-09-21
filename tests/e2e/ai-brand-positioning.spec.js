@@ -18,14 +18,14 @@ for (const [language, tagline, shortTagline] of locales) {
       }, language);
     });
 
-    test('uses the compact AI brand surface and preserves metadata', async ({ page }, testInfo) => {
+    test('uses the compact Golden brand surface and preserves metadata', async ({ page }) => {
       await page.goto('/ayuda', { waitUntil: 'domcontentloaded' });
-      const logo = page.locator('.site-header .header-logo-link');
-      await expect(logo).toBeVisible();
-      const mobile = testInfo.project.name.includes('mobile');
-      const visibleBrand = logo.getByTestId(mobile ? 'mercasto-ai-short-mobile' : 'mercasto-ai-short-desktop');
-      await expect(visibleBrand).toBeVisible();
-      await expect(visibleBrand).toHaveText(mobile ? 'AI' : shortTagline);
+      const goldenHeader = page.getByTestId('golden-header');
+      await expect(goldenHeader).toBeVisible();
+      await expect(page.locator('.site-header')).toBeHidden();
+      await expect(goldenHeader.locator('.header-logo-link')).toContainText('Mercasto');
+      await expect(goldenHeader.getByTestId('mercasto-ai-short-desktop')).toHaveCount(0);
+      await expect(goldenHeader.getByTestId('mercasto-ai-short-mobile')).toHaveCount(0);
       await expect(page.getByTestId('global-ai-brand-strip')).toHaveCount(0);
 
       await page.goto('/listings', { waitUntil: 'domcontentloaded' });
