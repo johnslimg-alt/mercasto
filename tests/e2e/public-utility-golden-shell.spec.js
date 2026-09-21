@@ -94,14 +94,14 @@ test('guest auth stays on the utility route and search remains available', async
 
   await expect(page.getByTestId('golden-desktop-search-input')).toBeVisible();
   await page.getByTestId('golden-account-button').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible();
   await expect(page).toHaveURL(/\/ayuda$/);
   await page.getByTestId('auth-modal-close').click();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByTestId('golden-mobile-search-input')).toBeVisible();
   await page.getByTestId('golden-mobile-notifications-tab').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible();
   await expect(page).toHaveURL(/\/ayuda$/);
 });
 
