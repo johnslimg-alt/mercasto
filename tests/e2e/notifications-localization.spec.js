@@ -113,7 +113,7 @@ for (const lang of ['es', 'en']) {
         return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
       });
 
-      await page.goto('/notificaciones');
+      await page.goto('/notificaciones', { waitUntil: 'domcontentloaded' });
       const t = translations[lang];
       await expect(page.getByTestId('notifications-load-error')).toContainText(t.notifications_load_error);
       await expect(page.getByTestId('notifications-empty')).toHaveCount(0);
@@ -128,3 +128,30 @@ for (const lang of ['es', 'en']) {
     });
   }
 }
+
+test('notifications use the shared Golden shell with active mobile notifications state', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await mockAuthenticatedNotifications(page);
+  await installSession(page, 'es');
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/notificaciones', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.getByTestId('golden-notifications-main')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    if (viewport.name === 'mobile') {
+      await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+      await expect(page.getByTestId('golden-mobile-notifications-tab')).toHaveClass(/active/);
+    }
+  }
+});

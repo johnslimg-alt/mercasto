@@ -83,7 +83,7 @@ async function verifyChat(page, lang, viewport) {
   await page.setViewportSize(viewport);
   await mockChatApi(page);
   await installSession(page, lang);
-  await page.goto('/mensajes?conversation=41');
+  await page.goto('/mensajes?conversation=41', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: t.messages })).toBeVisible();
   await expect(page.getByRole('button', { name: t.back }).first()).toBeVisible();
@@ -122,3 +122,42 @@ for (const lang of LANGUAGES) {
     await verifyChat(page, lang, { width: 390, height: 844 });
   });
 }
+
+test('chat uses the shared Golden shell and keeps the composer clear of mobile navigation', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await mockChatApi(page);
+  await installSession(page, 'es');
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/mensajes?conversation=41', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.getByTestId('golden-chat-main')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+
+    const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    await page.getByTestId('golden-theme-toggle').click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
+    await page.getByTestId('golden-theme-toggle').click();
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    if (viewport.name === 'mobile') {
+      const nav = page.getByTestId('golden-bottom-nav');
+      const composer = page.getByLabel(translations.es.write_message);
+      await expect(nav).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+      await expect(composer).toBeVisible();
+      const navBox = await nav.boundingBox();
+      const composerBox = await composer.boundingBox();
+      expect(navBox).not.toBeNull();
+      expect(composerBox).not.toBeNull();
+      expect(composerBox.y + composerBox.height).toBeLessThanOrEqual(navBox.y + 1);
+    }
+  }
+});

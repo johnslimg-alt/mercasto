@@ -89,22 +89,19 @@ async function assertDashboardStatuses(page, lang) {
 
 async function assertHeaderControls(page, lang, mobile) {
   const t = translations[lang];
-  const themeButton = mobile
-    ? page.locator('button.mobile-theme-icon')
-    : page.locator('button.desktop-header-control[aria-pressed][aria-label]').first();
-  if (mobile) {
-    await expect(themeButton).toBeVisible();
-    expect([t.light_mode, t.dark_mode]).toContain(await themeButton.getAttribute('aria-label'));
-    await expect(page.getByRole('button', { name: t.open_account_menu })).toBeVisible();
-  }
-  await expect(page.getByRole('combobox', { name: t.language }).first()).toBeVisible();
+  const themeButton = page.getByTestId('golden-theme-toggle');
+  await expect(themeButton).toBeVisible();
+  expect([t.light_mode, t.dark_mode]).toContain(await themeButton.getAttribute('aria-label'));
+  await expect(page.getByTestId('golden-language-select')).toHaveAccessibleName(t.language);
 
-  if (!mobile) {
-    const bell = page.getByRole('button', { name: t.notifications }).filter({ visible: true }).first();
-    await expect(bell).toBeVisible();
-    await bell.click();
-    await expect(page.getByText(`${t.notifications_price_drop_prefix} Toyota Corolla`, { exact: true })).toBeVisible();
-    await expect(page.getByText(t.notifications_view_all, { exact: true })).toBeVisible();
+  if (mobile) {
+    await expect(page.getByTestId('golden-mobile-account-tab')).toHaveAccessibleName(t.my_account);
+    await expect(page.getByTestId('golden-mobile-notifications-tab')).toHaveAccessibleName(t.notifications);
+  } else {
+    await expect(page.getByTestId('golden-account-button')).toHaveAccessibleName(t.my_account);
+    const notificationsLink = page.getByTestId('golden-notifications-link');
+    await expect(notificationsLink).toHaveAccessibleName(t.notifications);
+    await expect(notificationsLink).toHaveAttribute('href', '/notificaciones');
   }
 }
 
