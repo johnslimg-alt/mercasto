@@ -128,7 +128,7 @@ function firstMotorLabel(lang) {
 }
 async function assertPostFlow(page, lang) {
   const t = translations[lang];
-  await page.goto('/post');
+  await page.goto('/post', { waitUntil: 'domcontentloaded' });
   await expect(page.getByText(t.post_title, { exact: true })).toBeVisible();
   await expect(page.getByTestId('publish-step-2')).toHaveText(t.post_step_details);
   await expect(page.getByTestId('publish-step-3')).toHaveText(t.post_step_contact);
@@ -180,10 +180,7 @@ async function assertPostFlow(page, lang) {
 }
 async function assertEditFlow(page, lang) {
   const t = translations[lang];
-  await page.evaluate(() => {
-    window.history.pushState({}, '', '/anuncio/9/editar');
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  });
+  await page.goto('/anuncio/9/editar', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: t.edit_ad })).toBeVisible();
   await expect(page.getByTestId('edit-ad-title')).toHaveValue('Toyota Corolla QA');
   await expect(page.getByRole('button', { name: t.condition_like_new })).toBeVisible();
@@ -248,7 +245,7 @@ async function verifyPublishEditControlNames(page, viewport) {
     }
   };
   const t = translations.es;
-  await page.goto('/post');
+  await page.goto('/post', { waitUntil: 'domcontentloaded' });
   await scan('post-category');
   await page.getByRole('main').getByRole('button', { name: 'Products-es' }).click();
   await page.getByRole('main').getByRole('button', { name: 'Cars-es' }).click();
@@ -262,7 +259,7 @@ async function verifyPublishEditControlNames(page, viewport) {
   await page.getByTestId('publish-description').fill('QA description');
   await page.getByRole('button', { name: t.next_btn }).filter({ visible: true }).click();
   await scan('post-contact');
-  await page.goto('/anuncio/9/editar');
+  await page.goto('/anuncio/9/editar', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('edit-ad-title')).toBeVisible();
   await scan('edit-ad');
   expect(unnamed, `unnamed publish/edit controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
@@ -341,4 +338,36 @@ test('edit preserves a legacy subcategory and mirrors it into the required attri
 
   await page.getByRole('combobox', { name: translations.es.category, exact: true }).selectOption('motor');
   await expect(page.getByTestId('edit-ad-subcategory')).toHaveValue('');
+});
+
+test('edit listing uses the shared Golden shell on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await mockApi(page);
+  await installSession(page, 'es');
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/anuncio/9/editar', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.getByTestId('golden-edit-ad-shell')).toBeVisible();
+    await expect(page.getByTestId('golden-edit-ad-main')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+
+    const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    await page.getByTestId('golden-theme-toggle').click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
+    await page.getByTestId('golden-theme-toggle').click();
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    if (viewport.name === 'mobile') {
+      await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+    }
+  }
 });

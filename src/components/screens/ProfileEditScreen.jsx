@@ -5,6 +5,7 @@ import BusinessProfileEditor from '../profile/BusinessProfileEditor';
 import { useUI } from '../../contexts/UIContext';
 import { getTranslations } from '../../utils/translations';
 import { formatDateTime } from '../../utils/localeFormat';
+import MercastoGoldenHeader, { MercastoGoldenBottomNav } from '../shell/MercastoGoldenHeader';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -42,7 +43,7 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
   const fileInputRef = useRef(null);
   const deleteDialogRef = useRef(null);
   const deleteOpenerRef = useRef(null);
-  const { lang } = useUI();
+  const { lang, isDarkMode, toggleDarkMode, setLang } = useUI();
   const t = getTranslations(lang);
 
   const [profile, setProfile] = useState(null);
@@ -71,6 +72,47 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
+
+  useEffect(() => {
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-profile-edit-active');
+    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-profile-edit-active');
+  }, []);
+
+  const applyGoldenLocation = (label, state) => {
+    const params = new URLSearchParams();
+    if (label) params.set('location', label);
+    if (state) params.set('state', state);
+    const query = params.toString();
+    navigate(query ? `/listings?${query}` : '/listings');
+  };
+
+  const renderGoldenShell = (content) => (
+    <>
+      <MercastoGoldenHeader
+        publish={() => navigate('/post')}
+        onLocationApply={applyGoldenLocation}
+        onAccount={() => navigate('/profile')}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        lang={lang}
+        setLang={setLang}
+        locationLabel={t.all_mexico}
+        selectedState=""
+        t={t}
+      />
+      <div data-testid="golden-profile-edit-shell" className="mcg-profile-edit-page min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
+        {content}
+        <MercastoGoldenBottomNav
+          active="account"
+          publish={() => navigate('/post')}
+          onNotifications={() => navigate('/notificaciones')}
+          onAccount={() => navigate('/profile')}
+          unreadCount={0}
+          t={t}
+        />
+      </div>
+    </>
+  );
 
   useEffect(() => {
     const token = getToken();
@@ -351,21 +393,21 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
   };
 
   if (loading) {
-    return <div className="profile-dark-scope min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin" /></div>;
+    return renderGoldenShell(<div className="profile-dark-scope min-h-[60vh] flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin" /></div>);
   }
 
   const isOAuth = profile?.is_oauth_only;
 
-  return (
-    <div className="profile-dark-scope min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
+  return renderGoldenShell(
+    <div data-testid="golden-profile-edit-main" className="profile-dark-scope min-h-screen text-slate-900 dark:text-white">
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === 'error' ? 'bg-red-500' : 'bg-lime-500'}`}>
+        <div className={`mcg-profile-edit-toast fixed right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === 'error' ? 'bg-red-500' : 'bg-lime-500'}`}>
           {toast.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
           {toast.msg}
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-[var(--mc-site-header-offset)] z-30">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
           <button type="button" aria-label={t.back} onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300"><ChevronLeft size={20} /></button>
           <h1 className="font-semibold text-slate-900 dark:text-white">{t.edit_profile}</h1>
