@@ -91,7 +91,7 @@ async function verifyProfileEdit(page, lang, viewport) {
   await page.setViewportSize(viewport);
   await mockProfileApi(page);
   await installSession(page, lang);
-  await page.goto('/perfil/editar');
+  await page.goto('/perfil/editar', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: t.edit_profile })).toBeVisible();
   await expect(page.getByRole('button', { name: t.back })).toBeVisible();
@@ -185,7 +185,7 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await mockProfileApi(page);
     await installSession(page, 'es');
-    await page.goto('/perfil/editar');
+    await page.goto('/perfil/editar', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: translations.es.edit_profile })).toBeVisible();
     const unnamed = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.flatMap(node => {
       const tag = node.tagName.toLowerCase();
@@ -213,3 +213,36 @@ for (const viewport of [
     expect(unnamed, `unnamed profile controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
   });
 }
+
+test('profile edit uses the shared Golden shell with account active on mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await mockProfileApi(page);
+  await installSession(page, 'es');
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/perfil/editar', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.getByTestId('golden-profile-edit-shell')).toBeVisible();
+    await expect(page.getByTestId('golden-profile-edit-main')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+
+    const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    await page.getByTestId('golden-theme-toggle').click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
+    await page.getByTestId('golden-theme-toggle').click();
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    if (viewport.name === 'mobile') {
+      await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+      await expect(page.getByTestId('golden-mobile-account-tab')).toHaveClass(/active/);
+    }
+  }
+});
