@@ -7,7 +7,7 @@ import GoldenPublicPageShell from '../shell/GoldenPublicPageShell';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-export default function VerificarEmailScreen() {
+export default function VerificarEmailScreen({ shellProps = {} }) {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'error'
   const [message, setMessage] = useState('');
@@ -57,7 +57,7 @@ export default function VerificarEmailScreen() {
   }, [email, i18n, token]);
 
   return (
-    <GoldenPublicPageShell testId="golden-email-verification-main" className="mcg-email-verification-page">
+    <GoldenPublicPageShell {...shellProps} testId="golden-email-verification-main" className="mcg-email-verification-page">
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 max-w-md w-full text-center space-y-5">
         {/* Logo area */}

@@ -42,7 +42,7 @@ function FAQItem({ faq, isOpen, onToggle }) {
   );
 }
 
-export default function AyudaScreen() {
+export default function AyudaScreen({ shellProps = {} }) {
   const navigate = useNavigate();
   const { lang, loadedLangVersion } = useUI();
   void loadedLangVersion;
@@ -92,9 +92,9 @@ export default function AyudaScreen() {
   };
 
   return (
-    <GoldenPublicPageShell testId="golden-help-main" className="mcg-help-page">
+    <GoldenPublicPageShell {...shellProps} testId="golden-help-main" className="mcg-help-page">
     <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white border-b border-slate-200 sticky mcg-public-sticky z-10 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-2 text-sm">
           <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors">
             <ChevronLeft className="w-4 h-4" /> {t.back}

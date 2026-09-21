@@ -4,7 +4,7 @@ import { Home, ArrowLeft, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import GoldenPublicPageShell from '../shell/GoldenPublicPageShell';
 
-export default function NotFoundScreen() {
+export default function NotFoundScreen({ shellProps = {} }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -32,7 +32,7 @@ export default function NotFoundScreen() {
   }, [t]);
 
   return (
-    <GoldenPublicPageShell testId="golden-not-found-main" className="mcg-not-found-page">
+    <GoldenPublicPageShell {...shellProps} testId="golden-not-found-main" className="mcg-not-found-page">
     <div data-testid="not-found-screen" className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-16">
       {/* Illustration */}
       <div className="relative mb-8 select-none">

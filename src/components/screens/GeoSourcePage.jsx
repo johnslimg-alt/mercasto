@@ -94,7 +94,7 @@ function formatUpdatedDate(lang) {
   }).format(new Date(`${GEO_SOURCE_UPDATED_ISO}T00:00:00Z`));
 }
 
-export default function GeoSourcePage({ slug }) {
+export default function GeoSourcePage({ slug, shellProps = {} }) {
   const { lang, loadedLangVersion } = useUI();
   void loadedLangVersion;
   const page = getGeoSourcePage(slug, lang);
@@ -105,7 +105,7 @@ export default function GeoSourcePage({ slug }) {
   }
 
   return (
-    <GoldenPublicPageShell testId="golden-geo-source-main" className="mcg-geo-source-page">
+    <GoldenPublicPageShell {...shellProps} testId="golden-geo-source-main" className="mcg-geo-source-page">
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <SEO
         title={page.title}

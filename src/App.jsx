@@ -4181,6 +4181,66 @@ function App() {
   );
   const renderHomeRoute = () => (hasCatalogIntent ? renderCatalogScreen() : renderHomeScreen());
 
+  const publicShellProps = {
+    unreadCount,
+    locationLabel: searchLocationInput || selectedState || t.all_mexico || '',
+    selectedState: selectedState || '',
+    onAccount: () => {
+      if (user) navigate('/profile');
+      else {
+        setAuthMode('login');
+        setShowAuthModal(true);
+      }
+    },
+    onNotifications: () => {
+      if (user) navigate('/notificaciones');
+      else {
+        setAuthMode('login');
+        setShowAuthModal(true);
+      }
+    },
+    onLocationApply: (label, state) => {
+      const nextState = state || '';
+      const nextCity = label && label !== nextState ? label : '';
+      const nextLabel = nextCity && nextState ? `${nextCity}, ${nextState}` : (label || nextState);
+      setSearchLocation(null);
+      setSearchLocationInput(nextLabel);
+      setSelectedState(nextState);
+      setLocState(nextState);
+      setLocCity(nextCity);
+      setDebouncedLocInput(nextLabel);
+      executeSearch('', nextLabel, undefined, {
+        pathname: '/listings',
+        state: nextState,
+        city: nextCity,
+        source: 'public_location',
+      });
+    },
+    search: {
+      value: searchQuery,
+      onChange: (value) => {
+        setSearchQuery(value);
+        setViewedAd(null);
+        setViewedCompany(null);
+        fetchSuggestions(value);
+        setShowSuggestions(true);
+        setHighlightedIndex(-1);
+      },
+      onFocus: () => setShowSuggestions(true),
+      onKeyDown: handleSearchInputKeyDown,
+      onSubmit: submitHeaderSearch,
+      showSuggestions,
+      suggestions,
+      recentSearches,
+      highlightedIndex,
+      onSelect: handleSuggestionSelect,
+      onClearRecent: () => {
+        localStorage.removeItem('mercasto_recent_searches');
+        setRecentSearches([]);
+      },
+    },
+  };
+
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} listingQualityPreflight={listingQualityPreflight} clearListingQualityPreflight={setListingQualityPreflight} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} user={user} setUser={setUser} />;
 
@@ -4353,7 +4413,7 @@ function App() {
               <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen smsEnabled={availableProviders.sms} /></React.Suspense></RequireAuth>} />
               <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
               <Route path="/ads/:id" element={deepLinkAdMissing ? (
-                <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense>
+                <React.Suspense fallback={null}><NotFoundScreen shellProps={publicShellProps} /></React.Suspense>
               ) : deepLinkAdLoadError ? (
                 <div data-testid="deep-link-ad-load-error" role="alert" className="flex h-screen flex-col items-center justify-center gap-4 p-10 text-center">
                   <p className="text-slate-500 dark:text-slate-300">{t.route_load_error || t.connection_error}</p>
@@ -4363,7 +4423,7 @@ function App() {
                 </div>
               ) : <div data-testid="deep-link-ad-loading" role="status" className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
               <Route path="/anuncio/:id" element={deepLinkAdMissing ? (
-                <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense>
+                <React.Suspense fallback={null}><NotFoundScreen shellProps={publicShellProps} /></React.Suspense>
               ) : deepLinkAdLoadError ? (
                 <div data-testid="deep-link-ad-load-error" role="alert" className="flex h-screen flex-col items-center justify-center gap-4 p-10 text-center">
                   <p className="text-slate-500 dark:text-slate-300">{t.route_load_error || t.connection_error}</p>
@@ -4389,18 +4449,18 @@ function App() {
   <Route path="/cookies" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CookiesScreen /></React.Suspense>} />
   <Route path="/acerca-de" element={<Navigate to="/sobre-mercasto" replace />} />
   <Route path="/tiendas" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><StoresScreen /></React.Suspense>} />
-  <Route path="/contacto"  element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ContactoScreen  /></React.Suspense>} />
-  <Route path="/como-funciona" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="como-funciona" /></React.Suspense>} />
-  <Route path="/seguridad" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="seguridad" /></React.Suspense>} />
-  <Route path="/ayuda/publicar-anuncio" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="ayuda/publicar-anuncio" /></React.Suspense>} />
-  <Route path="/ayuda/comprar-y-contactar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="ayuda/comprar-y-contactar" /></React.Suspense>} />
-  <Route path="/tarifas" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="tarifas" /></React.Suspense>} />
-  <Route path="/sobre-mercasto" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="sobre-mercasto" /></React.Suspense>} />
-  <Route path="/ayuda"     element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AyudaScreen     /></React.Suspense>} />
-  <Route path="/verificar-email" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><VerificarEmailScreen /></React.Suspense>} />
+  <Route path="/contacto"  element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ContactoScreen shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/como-funciona" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="como-funciona" shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/seguridad" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="seguridad" shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/ayuda/publicar-anuncio" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="ayuda/publicar-anuncio" shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/ayuda/comprar-y-contactar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="ayuda/comprar-y-contactar" shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/tarifas" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="tarifas" shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/sobre-mercasto" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="sobre-mercasto" shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/ayuda"     element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AyudaScreen shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/verificar-email" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><VerificarEmailScreen shellProps={publicShellProps} /></React.Suspense>} />
   <Route path="/referidos" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReferralScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
   <Route path="/r/:code" element={<ReferralRedirect />} />
-  <Route path="*" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotFoundScreen /></React.Suspense>} />
+  <Route path="*" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotFoundScreen shellProps={publicShellProps} /></React.Suspense>} />
 
             </Routes>
           )}
