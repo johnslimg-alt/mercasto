@@ -83,7 +83,7 @@ async function verifyChat(page, lang, viewport) {
   await page.setViewportSize(viewport);
   await mockChatApi(page);
   await installSession(page, lang);
-  await page.goto('/mensajes?conversation=41');
+  await page.goto('/mensajes?conversation=41', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: t.messages })).toBeVisible();
   await expect(page.getByRole('button', { name: t.back }).first()).toBeVisible();

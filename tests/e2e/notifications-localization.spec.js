@@ -113,7 +113,7 @@ for (const lang of ['es', 'en']) {
         return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
       });
 
-      await page.goto('/notificaciones');
+      await page.goto('/notificaciones', { waitUntil: 'domcontentloaded' });
       const t = translations[lang];
       await expect(page.getByTestId('notifications-load-error')).toContainText(t.notifications_load_error);
       await expect(page.getByTestId('notifications-empty')).toHaveCount(0);

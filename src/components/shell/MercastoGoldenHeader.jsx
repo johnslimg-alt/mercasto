@@ -104,6 +104,7 @@ export default function MercastoGoldenHeader({
       ><span/></button>
       <a href="/profile?tab=favorites" className="mcg-hicon" aria-label={t.favorites || ''}><Icon name="heart"/></a>
       <a href="/mensajes" className="mcg-hicon" aria-label={t.messages || ''}><Icon name="chat"/></a>
+      <a href="/notificaciones" data-testid="golden-notifications-link" className="mcg-hicon" aria-label={t.notifications || ''}><Icon name="bell"/></a>
       <button type="button" data-testid="golden-account-button" className="mcg-hicon" aria-label={t.my_account || t.login || ''} onClick={onAccount}><Icon name="menu"/></button>
     </header>
   );
