@@ -131,3 +131,35 @@ for (const lang of LANGUAGES) {
     await verifyReferral(page, lang, { width: 390, height: 844 });
   });
 }
+
+
+test('referral route uses the shared Golden shell on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await mockReferralApi(page);
+  await installSession(page, 'es');
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/referidos', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('golden-header')).toBeVisible();
+    await expect(page.getByTestId('golden-referral-shell')).toBeVisible();
+    await expect(page.getByTestId('golden-referral-main')).toBeVisible();
+    await expect(page.locator('.site-header')).toBeHidden();
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    if (viewport.name === 'mobile') {
+      await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+      await expect(page.locator('.mobile-tabbar')).toBeHidden();
+    }
+  }
+
+  const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+  await page.getByTestId('golden-theme-toggle').click();
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
+});
