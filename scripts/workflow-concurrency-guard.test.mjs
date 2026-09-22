@@ -153,8 +153,8 @@ test('MCP TLS issue operator is fixed to one hostname and ACME webroot', () => {
   assert.ok(match, 'mcp_plugin_tls_issue operation must exist');
   const block = match[1];
   assert.match(block, /require_confirm/);
-  assert.match(block, /http:\/\/mcp\.mercasto\.com\/\.well-known\/acme-challenge\/mercasto-mcp-probe/);
-  assert.match(block, /-d mcp\.mercasto\.com/);
+  assert.ok(block.includes('http://mcp.mercasto.com/.well-known/acme-challenge/mercasto-mcp-probe'));
+  assert.ok(block.includes('-d mcp.mercasto.com'));
   assert.match(block, /\/etc\/letsencrypt\/live\/mcp\.mercasto\.com\/fullchain\.pem/);
   assert.doesNotMatch(block, /\$\{?DOMAIN|--dns-|docker system prune|git reset|git clean|php artisan|up -d/);
 });
