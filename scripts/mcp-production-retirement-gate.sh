@@ -9,12 +9,11 @@ LOCAL_LAUNCHER="start_mcp_chatgpt.cjs"
 GUIDE="docs/mcp-agents.md"
 PLUGIN="mcp-plugin/server.mjs"
 PLUGIN_PACKAGE="mcp-plugin/package.json"
-DEPLOY="scripts/deploy-mcp-plugin.sh"
-HTTP_TEMPLATE="ops/mcp-plugin/nginx-http.conf.template"
-HTTPS_TEMPLATE="ops/mcp-plugin/nginx-https.conf.template"
-UNIT="ops/mcp-plugin/mercasto-mcp-plugin.service"
+PLUGIN_DOCKERFILE="mcp-plugin/Dockerfile"
+COMPOSE="docker-compose.yml"
+NGINX="default.conf"
 
-for file in   "$VPS_LAUNCHER"   "$LOCAL_LAUNCHER"   "$GUIDE"   "$PLUGIN"   "$PLUGIN_PACKAGE"   "$DEPLOY"   "$HTTP_TEMPLATE"   "$HTTPS_TEMPLATE"   "$UNIT"
+for file in   "$VPS_LAUNCHER"   "$LOCAL_LAUNCHER"   "$GUIDE"   "$PLUGIN"   "$PLUGIN_PACKAGE"   "$PLUGIN_DOCKERFILE"   "$COMPOSE"   "$NGINX"
 do
   test -f "$file"
 done
@@ -27,15 +26,12 @@ do
   fi
 done
 
-# The old arbitrary-shell service stays retired. Reusing the historical hostname
-# is permitted only for the new bounded read-only status plugin and its deployment
-# documentation/configuration. Any other active/executable use is a regression.
+# The old arbitrary-shell service stays retired. The historical hostname may be
+# reused only by the new bounded read-only plugin and its documentation/config.
 allowed_hostname_paths=(
+  "default.conf"
   "docs/mcp-agents.md"
   "mcp-plugin/server.mjs"
-  "ops/mcp-plugin/nginx-http.conf.template"
-  "ops/mcp-plugin/nginx-https.conf.template"
-  "scripts/deploy-mcp-plugin.sh"
   "scripts/mcp-production-retirement-gate.sh"
 )
 
@@ -69,7 +65,6 @@ if grep -Eq '(^|[;&|[:space:]])(nohup|npx|node|ssh)[[:space:]].*(pinggy|tunnelmo
   exit 1
 fi
 
-# New plugin must use the official MCP v2 stack and remain read-only by contract.
 grep -qF '"@modelcontextprotocol/server": "2.0.0"' "$PLUGIN_PACKAGE"
 grep -qF '"@modelcontextprotocol/express": "2.0.0"' "$PLUGIN_PACKAGE"
 grep -qF '"@modelcontextprotocol/node": "2.0.0"' "$PLUGIN_PACKAGE"
@@ -78,35 +73,53 @@ grep -qF "const PORT = Number.parseInt(process.env.MCP_PORT || '8780', 10);" "$P
 grep -qF 'readOnlyHint: true' "$PLUGIN"
 grep -qF 'destructiveHint: false' "$PLUGIN"
 grep -qF "app.all('/mcp'" "$PLUGIN"
-grep -qF 'DynamicUser=yes' "$UNIT"
-grep -qF 'NoNewPrivileges=yes' "$UNIT"
 
-for tool in server_resources production_status runner_status integration_status; do
+for tool in runtime_resources production_status plugin_status; do
   grep -qF "'$tool'" "$PLUGIN"
 done
 
-# Shell/tunnel primitives must never return in the production plugin implementation.
-if grep -Eiq '(bash-mcp|supergateway|pinggy|tunnelmole|mcp-sse-bridge|shell[[:space:]]*:[[:space:]]*true|child_process.*spawn|\bspawn\(|\bexec\(|docker[[:space:]]+(exec|run|restart|rm|compose)|git[[:space:]]+(push|reset|clean|checkout|switch))' "$PLUGIN"; then
-  echo "Read-only MCP plugin contains a forbidden shell/tunnel/mutation primitive." >&2
+# Public server implementation must not gain command execution, host-control or
+# unrestricted filesystem capabilities.
+if grep -Eiq '(child_process|\bspawn\(|\bexec\(|\bexecFile\(|shell[[:space:]]*:[[:space:]]*true|bash-mcp|supergateway|pinggy|tunnelmole|mcp-sse-bridge|docker[[:space:]]+(exec|run|restart|rm|compose)|git[[:space:]]+(push|reset|clean|checkout|switch)|readFile\(|writeFile\(|readdir\(|unlink\(|rm\(|rename\()' "$PLUGIN"; then
+  echo "Read-only MCP plugin contains a forbidden host-control or filesystem primitive." >&2
+  exit 1
+fi
+grep -qF "fs.statfs('/')" "$PLUGIN"
+
+grep -qF 'USER node' "$PLUGIN_DOCKERFILE"
+grep -qF 'MCP_BIND_HOST=0.0.0.0' "$PLUGIN_DOCKERFILE"
+grep -qF 'EXPOSE 8780' "$PLUGIN_DOCKERFILE"
+
+plugin_block="$(
+  awk '
+    /^  mercasto-mcp-plugin:/ { in_plugin=1; print; next }
+    in_plugin && /^  [A-Za-z0-9_-]+:/ { exit }
+    in_plugin { print }
+  ' "$COMPOSE"
+)"
+printf '%s\n' "$plugin_block" | grep -qF 'read_only: true'
+printf '%s\n' "$plugin_block" | grep -qF 'no-new-privileges:true'
+printf '%s\n' "$plugin_block" | grep -qF 'cap_drop:'
+printf '%s\n' "$plugin_block" | grep -qF -- '- ALL'
+printf '%s\n' "$plugin_block" | grep -qF 'expose:'
+if printf '%s\n' "$plugin_block" | grep -qE '^[[:space:]]+ports:|/var/run/docker.sock|^[[:space:]]+volumes:'; then
+  echo "MCP plugin Compose service must not expose host ports, Docker socket or host volumes." >&2
   exit 1
 fi
 
-# The only child-process call is execFile with a literal systemctl binary and a
-# fixed unit allowlist; no tool input can become a command or unit name.
-grep -qF "execFileAsync(" "$PLUGIN"
-grep -qF "'/usr/bin/systemctl'" "$PLUGIN"
-grep -qF 'SYSTEMD_ALLOWLIST' "$PLUGIN"
-if grep -Eq 'execFileAsync\([^,]*[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*,' "$PLUGIN"; then
-  echo "MCP plugin must not use a variable executable path." >&2
+# Phase 1 is HTTP bootstrap only: ACME + health may use port 80, while MCP itself
+# must not be served without TLS.
+nginx_block="$(
+  sed -n '/# MERCASTO_MCP_PLUGIN_HTTP_BOOTSTRAP_BEGIN/,/# MERCASTO_MCP_PLUGIN_HTTP_BOOTSTRAP_END/p' "$NGINX"
+)"
+printf '%s\n' "$nginx_block" | grep -qF 'server_name mcp.mercasto.com;'
+printf '%s\n' "$nginx_block" | grep -qF 'location ^~ /.well-known/acme-challenge/'
+printf '%s\n' "$nginx_block" | grep -qF 'location = /healthz'
+printf '%s\n' "$nginx_block" | grep -qF 'location = /mcp'
+printf '%s\n' "$nginx_block" | grep -qF 'return 426;'
+if printf '%s\n' "$nginx_block" | grep -qF 'listen 443'; then
+  echo "MCP HTTPS must not be enabled before its dedicated certificate is provisioned." >&2
   exit 1
 fi
-
-# The deploy is bounded to fixed paths, a fixed domain and exact confirmation.
-grep -qF 'CONFIRM:-}" != "MERCASTO"' "$DEPLOY"
-grep -qF 'DOMAIN="mcp.mercasto.com"' "$DEPLOY"
-grep -qF 'MCP_PORT=8780' "$DEPLOY"
-grep -qF 'BRIDGE_PORT=18780' "$DEPLOY"
-grep -qF 'MCP_PLUGIN_DNS_PENDING=1' "$DEPLOY"
-grep -qF 'MCP_PLUGIN_READY=https://$DOMAIN/mcp' "$DEPLOY"
 
 echo "MCP public-shell retirement + read-only plugin gate OK"
