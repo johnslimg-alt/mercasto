@@ -35,7 +35,7 @@ import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
   EmpleosLanding, ServiciosLanding, CategoryLanding, ProductosLanding, TurismoLanding, ProfileEditScreen,
-  TerminosScreen, PrivacidadScreen, CookiesScreen, NotFoundScreen, VerificarEmailScreen, StoresScreen,
+  TerminosScreen, PrivacidadScreen, CookiesScreen, ModeracionScreen, ReembolsosScreen, NotFoundScreen, VerificarEmailScreen, StoresScreen,
   NotificationsScreen, ChatScreen, ContactoScreen, AyudaScreen, GeoSourcePage, ReferralScreen,
 } from './app/lazyScreens';
 import AppFooter from './components/shell/AppFooter';
@@ -4447,6 +4447,8 @@ function App() {
               <Route path="/terminos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><TerminosScreen /></React.Suspense>} />
   <Route path="/privacidad" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><PrivacidadScreen /></React.Suspense>} />
   <Route path="/cookies" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CookiesScreen /></React.Suspense>} />
+  <Route path="/moderacion" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ModeracionScreen /></React.Suspense>} />
+  <Route path="/reembolsos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReembolsosScreen /></React.Suspense>} />
   <Route path="/acerca-de" element={<Navigate to="/sobre-mercasto" replace />} />
   <Route path="/tiendas" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><StoresScreen /></React.Suspense>} />
   <Route path="/contacto"  element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ContactoScreen shellProps={publicShellProps} /></React.Suspense>} />
@@ -4458,6 +4460,7 @@ function App() {
   <Route path="/sobre-mercasto" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="sobre-mercasto" shellProps={publicShellProps} /></React.Suspense>} />
   <Route path="/ayuda"     element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AyudaScreen shellProps={publicShellProps} /></React.Suspense>} />
   <Route path="/verificar-email" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><VerificarEmailScreen shellProps={publicShellProps} /></React.Suspense>} />
+
   <Route path="/referidos" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReferralScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
   <Route path="/r/:code" element={<ReferralRedirect />} />
   <Route path="*" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotFoundScreen shellProps={publicShellProps} /></React.Suspense>} />

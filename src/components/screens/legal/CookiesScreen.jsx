@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Cookie, ExternalLink } from 'lucide-react';
 import { requestOpenCookiePreferences } from '../../../utils/trackingConsent';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const LAST_UPDATED = '17 de mayo de 2026';
 
@@ -79,8 +80,9 @@ export default function CookiesScreen() {
   }, []);
 
   return (
+    <GoldenPublicPageShell testId="golden-cookies-main" className="mcg-legal-page mcg-cookies-page">
     <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
+      <div data-testid="legal-breadcrumb" className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2 text-sm">
           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors">
             <ChevronLeft className="w-4 h-4" /> Volver
@@ -95,7 +97,7 @@ export default function CookiesScreen() {
       <div className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex gap-8">
           <aside className="hidden md:block w-56 flex-shrink-0">
-            <div className="sticky top-[calc(var(--mc-site-header-offset)+5rem)] bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div data-testid="legal-section-nav" className="sticky top-20 bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <Cookie className="w-4 h-4 text-lime-600" />
                 <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Contenido</span>
@@ -282,6 +284,7 @@ export default function CookiesScreen() {
         </div>
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }
 

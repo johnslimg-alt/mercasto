@@ -35,6 +35,8 @@ export const ProfileEditScreen = React.lazy(() => import('../components/screens/
 export const TerminosScreen = React.lazy(() => import('../components/screens/legal/TerminosScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 export const PrivacidadScreen = React.lazy(() => import('../components/screens/legal/PrivacidadScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 export const CookiesScreen = React.lazy(() => import('../components/screens/legal/CookiesScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+export const ModeracionScreen = React.lazy(() => import('../components/screens/legal/ModeracionScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+export const ReembolsosScreen = React.lazy(() => import('../components/screens/legal/ReembolsosScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 export const NotFoundScreen = React.lazy(() => import('../components/screens/NotFoundScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_not_found" /> })));
 export const VerificarEmailScreen = React.lazy(() => import('../components/screens/VerificarEmailScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 export const StoresScreen = React.lazy(() => import('../components/screens/StoresScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));

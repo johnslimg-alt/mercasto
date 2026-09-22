@@ -23,6 +23,14 @@ export const PUBLIC_SEO_ROUTES = Object.freeze({
     title: 'Política de Cookies | Mercasto',
     description: 'Consulta qué cookies y tecnologías similares usa Mercasto, para qué se utilizan y cómo administrar tus preferencias.',
   },
+  '/moderacion': {
+    title: 'Política de moderación | Mercasto',
+    description: 'Conoce las reglas de moderación, contenido prohibido, reportes y apelaciones de Mercasto México.',
+  },
+  '/reembolsos': {
+    title: 'Política de pagos y reembolsos | Mercasto',
+    description: 'Consulta cómo funcionan los servicios de pago, promociones y revisiones de reembolso en Mercasto México.',
+  },
   '/contacto': {
     title: 'Contacto | Mercasto',
     description: 'Consulta los canales oficiales para contactar al equipo de Mercasto sobre soporte, seguridad, moderación o tu cuenta.',

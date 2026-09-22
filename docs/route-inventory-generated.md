@@ -694,6 +694,8 @@ Source: php artisan route:list --except-vendor -v
             ⇂ web
   GET|HEAD  moda ... generated::<auto> › SeoShellController@vertical
             ⇂ web
+  GET|HEAD  moderacion generated::<auto> › SeoShellController@publicPage
+            ⇂ web
   GET|HEAD  motor .. generated::<auto> › SeoShellController@vertical
             ⇂ web
   GET|HEAD  negocios generated::<auto> › SeoShellController@vertical
@@ -705,6 +707,8 @@ Source: php artisan route:list --except-vendor -v
   ANY       privacy generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
   GET|HEAD  productos generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  reembolsos generated::<auto> › SeoShellController@publicPage
             ⇂ web
   GET|HEAD  renta_vehiculos generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
