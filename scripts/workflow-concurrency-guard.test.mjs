@@ -160,3 +160,17 @@ test('MCP TLS issue operator is fixed to one hostname and ACME webroot', () => {
   assert.doesNotMatch(block, /\$\{?DOMAIN|--dns-|docker system prune|git reset|git clean|php artisan|up -d/);
 });
 
+test('MCP TLS issue operator quarantines only a fully stale fixed Certbot archive', () => {
+  const source = readFileSync('scripts/server-operator.sh', 'utf8');
+  const match = source.match(/\n  mcp_plugin_tls_issue\)\n([\s\S]*?)\n    ;;/);
+  assert.ok(match, 'mcp_plugin_tls_issue operation must exist');
+  const block = match[1];
+  assert.match(block, /\/etc\/letsencrypt\/archive\/mcp\.mercasto\.com/);
+  assert.match(block, /\/etc\/letsencrypt\/renewal\/mcp\.mercasto\.com\.conf/);
+  assert.match(block, /\/etc\/letsencrypt\/live\/mcp\.mercasto\.com/);
+  assert.match(block, /\/etc\/letsencrypt\/mercasto-stale/);
+  assert.match(block, /sudo -n mv "\$mcp_archive" "\$stale_target"/);
+  assert.match(block, /Refusing automatic Certbot repair/);
+  assert.doesNotMatch(block, /rm -rf \/etc\/letsencrypt\/archive/);
+});
+
