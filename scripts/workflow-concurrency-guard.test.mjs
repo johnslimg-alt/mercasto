@@ -81,6 +81,7 @@ const serverOperatorCommands = [
   'RUN:maintenance_reboot:MERCASTO',
   'RUN:mcp_status',
   'RUN:mcp_plugin_bootstrap:MERCASTO',
+  'RUN:mcp_plugin_tls_issue:MERCASTO',
 ];
 
 function sortedUnique(values) {
@@ -144,5 +145,17 @@ test('MCP bootstrap operator stays service-scoped and keeps HTTP MCP blocked bef
   assert.match(block, /mcp_http_code/);
   assert.match(block, /!= "426"/);
   assert.doesNotMatch(block, /up -d --build --remove-orphans|php artisan migrate|restart_stack|docker system prune/);
+});
+
+test('MCP TLS issue operator is fixed to one hostname and ACME webroot', () => {
+  const source = readFileSync('scripts/server-operator.sh', 'utf8');
+  const match = source.match(/\n  mcp_plugin_tls_issue\)\n([\s\S]*?)\n    ;;/);
+  assert.ok(match, 'mcp_plugin_tls_issue operation must exist');
+  const block = match[1];
+  assert.match(block, /require_confirm/);
+  assert.match(block, /http:\/\/mcp\.mercasto\.com\/\.well-known\/acme-challenge\/mercasto-mcp-probe/);
+  assert.match(block, /-d mcp\.mercasto\.com/);
+  assert.match(block, /\/etc\/letsencrypt\/live\/mcp\.mercasto\.com\/fullchain\.pem/);
+  assert.doesNotMatch(block, /\$\{?DOMAIN|--dns-|docker system prune|git reset|git clean|php artisan|up -d/);
 });
 
