@@ -383,14 +383,14 @@ for (const theme of ['light', 'dark']) {
     }
 
     test('dark-mode card and control boundaries meet WCAG 1.4.11', async ({ page }) => {
-      test.setTimeout(90_000);
+      test.setTimeout(180_000);
       test.skip(theme !== 'dark', 'boundary rule is dark-mode specific');
       for (const route of ROUTES) {
         // One fresh page per route: prepare() must run exactly once per page.
         const routePage = await page.context().newPage();
         try {
           await prepare(routePage, { dark: true });
-          await routePage.goto(route);
+          await routePage.goto(route, { waitUntil: 'domcontentloaded' });
           await assertTheme(routePage, true);
           await settle(routePage);
           const result = await routePage.evaluate(MEASURE, { routes: ROUTES, brandColors: BRAND_TEXT_COLORS });

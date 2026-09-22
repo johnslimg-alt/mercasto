@@ -30,6 +30,7 @@ export default function MercastoGoldenHeader({
   publish,
   onLocationApply,
   onAccount,
+  accountLabel,
   onNotifications,
   unreadCount = 0,
   showAiBrand = false,
@@ -148,7 +149,7 @@ export default function MercastoGoldenHeader({
           {unreadCount > 0 && <i data-testid="golden-notifications-unread" className="mcg-unread-dot mcg-unread-dot--header" aria-hidden="true"/>}
         </Link>
       )}
-      <button type="button" data-testid="golden-account-button" className="mcg-hicon" aria-label={t.my_account || t.login || ''} onClick={onAccount}><Icon name="menu"/></button>
+      <button type="button" data-testid="golden-account-button" className="mcg-hicon" aria-label={accountLabel || t.my_account || t.open_account_menu || t.login || ''} onClick={onAccount}><Icon name="menu"/></button>
     </header>
     {search && (
       <div className="mcg-public-search-mobile-row">

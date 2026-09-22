@@ -253,6 +253,7 @@
 .mcg-public-page .text-slate-950,.mcg-public-page .text-slate-900,.mcg-public-page .text-slate-800,.mcg-public-page .text-slate-700{color:var(--mcg-ink)!important}
 .mcg-public-page .text-slate-600,.mcg-public-page .text-slate-500,.mcg-public-page .text-slate-400{color:var(--mcg-muted)!important}
 .mcg-public-page .bg-slate-950 .text-slate-400{color:#94a3b8!important}
+.mcg-public-page .mcg-auth-lime-cta{color:#0f172a!important}
 .dark .mcg-public-page .dark\:bg-slate-900,.dark .mcg-public-page .dark\:bg-slate-950{background:var(--mcg-card)!important}
 .mcg-public-page .mcg-public-sticky{top:70px}
 .mcg-header-with-search nav{display:none}

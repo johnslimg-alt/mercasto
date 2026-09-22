@@ -80,7 +80,7 @@ export default function CatalogScreen({
   );
   const detailCopy = React.useMemo(() => getAdDetailCopy(lang), [lang]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     document.body.classList.add('mc-golden-shell-active', 'mc-golden-catalog-active');
     return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-catalog-active');
   }, []);
