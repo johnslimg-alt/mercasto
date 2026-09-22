@@ -26,7 +26,7 @@ const SERVICE_CATS = [
 
 const TRUST_ICONS = [BadgeCheck, ShieldCheck, Wrench];
 
-export default function ServiciosLanding({ lang = 'es' }) {
+export default function ServiciosLanding({ lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'servicios');
   const landingCopy = getServiciosLandingCopy(lang);
@@ -43,7 +43,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
   };
 
   return (
-    <GoldenPublicPageShell testId="golden-servicios-main" className="mcg-vertical-page mcg-servicios-page" active="search">
+    <GoldenPublicPageShell {...shellProps} testId="golden-servicios-main" className="mcg-vertical-page mcg-servicios-page" active="search">
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
         title={copy.title}
@@ -133,7 +133,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
             <p className="text-orange-100">{landingCopy.ctaBody}</p>
           </div>
           <button onClick={() => navigate('/post')}
-            className="shrink-0 px-8 py-3 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition-colors text-[15px]">
+            className="mcg-preserve-white-accent shrink-0 px-8 py-3 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition-colors text-[15px]">
             {landingCopy.ctaButton}
           </button>
         </section>

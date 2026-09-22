@@ -18,7 +18,7 @@ const SUBSECTIONS = [
   { name: 'Libros y Cursos', query: 'formacion', Icon: BookOpen },
 ];
 
-export default function ProductosLanding({ lang = 'es' }) {
+export default function ProductosLanding({ lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'productos');
   const landingCopy = getVerticalLandingCopy(lang, 'productos');
@@ -40,7 +40,7 @@ export default function ProductosLanding({ lang = 'es' }) {
   };
 
   return (
-    <GoldenPublicPageShell testId="golden-productos-main" className="mcg-vertical-page mcg-productos-page" active="search">
+    <GoldenPublicPageShell {...shellProps} testId="golden-productos-main" className="mcg-vertical-page mcg-productos-page" active="search">
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
       <VerticalHero
         title={copy.title}

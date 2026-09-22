@@ -317,3 +317,28 @@
 /* Explicit dark utilities win over vertical accent helpers. */
 .dark .mcg-vertical-page .dark\:bg-slate-800{background:#1e293b!important}
 .dark .mcg-vertical-page .dark\:bg-slate-900,.dark .mcg-vertical-page .dark\:bg-slate-950{background:#0f172a!important}
+
+/* Vertical Golden shell hardening: preserve sticky geometry and intentional light accents. */
+.mc-golden-vertical-active .mcg-header{position:sticky;top:0;z-index:60}
+.mcg-vertical-page .vertical-quick-filters{top:70px!important}
+.dark .mcg-vertical-page .mcg-hero-subsection-label{color:#0f172a!important}
+.dark .mcg-vertical-page .mcg-preserve-white-accent{background:#fff!important}
+@media(max-width:1179px) and (min-width:768px){
+  .mcg-vertical-page .vertical-quick-filters{top:72px!important}
+  .mc-golden-public-active .app-global-footer{padding-bottom:106px!important}
+}
+@media(max-width:767px){
+  .mcg-vertical-page .vertical-quick-filters{top:58px!important}
+}
+@media(max-width:360px){
+  .mc-golden-public-active .mcg-header{padding-left:6px;padding-right:6px;gap:3px}
+  .mc-golden-public-active .mcg-brand{flex:none;gap:0;font-size:0}
+  .mc-golden-public-active .mcg-brand>span{font-size:18px}
+  .mc-golden-public-active .mcg-location-wrap{flex:1;min-width:0}
+  .mc-golden-public-active .mcg-location{width:100%;min-width:0;padding-left:4px;padding-right:4px}
+  .mc-golden-public-active .mcg-location>span{max-width:34px}
+  .mc-golden-public-active .mcg-lang{width:44px;min-width:44px;padding-left:2px;padding-right:2px}
+  .mc-golden-public-active .mcg-theme{width:48px}
+  .mc-golden-public-active .mcg-theme::before{width:48px}
+  .mc-golden-public-active .mcg-theme.dark span{left:17px}
+}

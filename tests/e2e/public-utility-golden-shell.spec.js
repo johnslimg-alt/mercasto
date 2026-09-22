@@ -231,3 +231,58 @@ test('Golden legal sticky controls use Golden offsets and accessible dark contra
   await expect(page.getByText(/se requiere una nueva compra para activar otro periodo/).first()).toBeVisible();
   await expect(page.getByText(/La cancelación evita renovaciones posteriores/)).toHaveCount(0);
 });
+
+test('vertical Golden shell keeps guest auth local and avoids a duplicate header search', async ({ page }) => {
+  await installSession(page);
+  await mockApi(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/motor', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('vertical-hero-search-form')).toBeVisible();
+  await expect(page.getByTestId('golden-desktop-search-input')).toHaveCount(0);
+  await page.getByTestId('golden-account-button').click();
+  await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible();
+  await expect(page).toHaveURL(/\/motor$/);
+  await page.getByTestId('auth-modal-close').click();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId('golden-mobile-search-input')).toHaveCount(0);
+  await page.getByTestId('golden-mobile-notifications-tab').click();
+  await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible();
+  await expect(page).toHaveURL(/\/motor$/);
+});
+
+test('vertical Golden shell preserves live unread notification state', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('auth_token', 'e2e-token');
+    localStorage.setItem('user', JSON.stringify({ id: 7, name: 'E2E User', account_verified: true }));
+  });
+  await mockApi(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/motor', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('golden-notifications-unread')).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId('golden-mobile-notifications-unread')).toBeVisible();
+});
+
+test('active marketplace location survives client navigation into a vertical route', async ({ page }) => {
+  await installSession(page);
+  await mockApi(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/listings?state=Veracruz&location=Veracruz', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('golden-location-button')).toContainText('Veracruz');
+
+  await page.evaluate(() => {
+    window.history.pushState({}, '', '/motor');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+
+  await expect(page).toHaveURL(/\/motor$/);
+  await expect(page.getByTestId('golden-autos-main')).toBeVisible();
+  await expect(page.getByTestId('golden-location-button')).toContainText('Veracruz');
+});

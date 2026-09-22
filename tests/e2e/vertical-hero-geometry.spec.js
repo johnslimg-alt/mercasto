@@ -160,3 +160,136 @@ test('mobile overlapping landing cards do not cover vertical hero controls', asy
     expect(geometry.nextTop).toBeGreaterThanOrEqual(geometry.utilityBottom);
   }
 });
+
+test('vertical Golden header stays pinned directly above sticky quick filters', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+
+  for (const width of [390, 768, 1024]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const route of ['/motor', '/inmuebles', '/empleos']) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await page.evaluate(() => window.scrollTo(0, 900));
+      await page.waitForTimeout(80);
+
+      const geometry = await page.evaluate(() => {
+        const header = document.querySelector('[data-testid="golden-header"]');
+        const filters = document.querySelector('.vertical-quick-filters');
+        const headerRect = header.getBoundingClientRect();
+        const filterRect = filters.getBoundingClientRect();
+        return {
+          headerPosition: getComputedStyle(header).position,
+          headerTop: headerRect.top,
+          headerBottom: headerRect.bottom,
+          filterTop: filterRect.top,
+        };
+      });
+
+      expect(geometry.headerPosition, `${route} header position at ${width}px`).toBe('sticky');
+      expect(Math.abs(geometry.headerTop), `${route} header top at ${width}px`).toBeLessThanOrEqual(1);
+      expect(geometry.filterTop, `${route} filter top at ${width}px`).toBeGreaterThanOrEqual(geometry.headerBottom - 1);
+      expect(geometry.filterTop, `${route} filter gap at ${width}px`).toBeLessThanOrEqual(geometry.headerBottom + 2);
+    }
+  }
+});
+
+test('Golden public header fits a 320px viewport without clipping controls', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/motor', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('golden-theme-toggle')).toBeVisible();
+  await expect(page.getByTestId('golden-location-button')).toBeVisible();
+  await expect(page.getByTestId('golden-language-select')).toBeVisible();
+
+  const geometry = await page.getByTestId('golden-header').evaluate(header => {
+    const viewportWidth = document.documentElement.clientWidth;
+    const visibleChildren = [...header.children]
+      .filter(node => {
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      })
+      .map(node => {
+        const rect = node.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: rect.width };
+      });
+    return {
+      viewportWidth,
+      documentOverflow: document.documentElement.scrollWidth - viewportWidth,
+      visibleChildren,
+    };
+  });
+
+  expect(geometry.documentOverflow).toBeLessThanOrEqual(1);
+  for (const child of geometry.visibleChildren) {
+    expect(child.left).toBeGreaterThanOrEqual(-1);
+    expect(child.right).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+  }
+});
+
+test('tablet footer legal controls remain reachable above the fixed Golden nav', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.setViewportSize({ width: 768, height: 844 });
+  await page.goto('/motor', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(100);
+
+  const legal = page.locator('.app-footer-legal');
+  const tabbar = page.getByTestId('golden-bottom-nav');
+  await expect(legal).toBeVisible();
+  await expect(tabbar).toBeVisible();
+
+  const [legalBox, tabBox] = await Promise.all([legal.boundingBox(), tabbar.boundingBox()]);
+  expect(legalBox.y + legalBox.height).toBeLessThanOrEqual(tabBox.y + 1);
+});
+
+test('dark vertical accents preserve readable light chips and CTA buttons', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.addInitScript(() => {
+    localStorage.setItem('theme', 'dark');
+    localStorage.setItem('cookiesAccepted', 'true');
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.goto('/motor', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('golden-autos-main')).toBeVisible({ timeout: 25_000 });
+  const chip = page.getByTestId('vertical-hero-subsection').first();
+  await expect(chip).toBeVisible();
+  const chipColors = await chip.evaluate(element => {
+    const label = element.querySelector('.mcg-hero-subsection-label');
+    return {
+      labelColor: getComputedStyle(label).color,
+      backgroundImage: getComputedStyle(element).backgroundImage,
+    };
+  });
+  expect(chipColors.labelColor).toBe('rgb(15, 23, 42)');
+  expect(chipColors.backgroundImage).toContain('rgb(255, 255, 255)');
+
+  for (const route of ['/inmuebles', '/empleos', '/servicios', '/electronica']) {
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.mcg-vertical-page')).toBeVisible({ timeout: 25_000 });
+    const control = page.locator('.mcg-preserve-white-accent').first();
+    await expect(control).toBeVisible();
+    const colors = await control.evaluate(element => {
+      const parse = (value) => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+      const luminance = (rgb) => {
+        const channels = rgb.map(value => {
+          const channel = value / 255;
+          return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+        return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+      };
+      const style = getComputedStyle(element);
+      const foreground = parse(style.color);
+      const background = parse(style.backgroundColor);
+      const lighter = Math.max(luminance(foreground), luminance(background));
+      const darker = Math.min(luminance(foreground), luminance(background));
+      return {
+        backgroundColor: style.backgroundColor,
+        contrast: (lighter + 0.05) / (darker + 0.05),
+      };
+    });
+    expect(colors.backgroundColor, `${route} CTA background`).toBe('rgb(255, 255, 255)');
+    expect(colors.contrast, `${route} CTA contrast`).toBeGreaterThanOrEqual(4.5);
+  }
+});

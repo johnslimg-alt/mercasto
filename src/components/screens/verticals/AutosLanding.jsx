@@ -73,7 +73,7 @@ const SUBSECTIONS = [
   { query: 'autopartes', Icon: PackageSearch },
 ];
 
-export default function AutosLanding({ lang = 'es' }) {
+export default function AutosLanding({ lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'motor');
   const landingCopy = getAutosLandingCopy(lang);
@@ -105,7 +105,7 @@ export default function AutosLanding({ lang = 'es' }) {
   };
 
   return (
-    <GoldenPublicPageShell testId="golden-autos-main" className="mcg-vertical-page mcg-autos-page" active="search">
+    <GoldenPublicPageShell {...shellProps} testId="golden-autos-main" className="mcg-vertical-page mcg-autos-page" active="search">
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
         title={copy.title}

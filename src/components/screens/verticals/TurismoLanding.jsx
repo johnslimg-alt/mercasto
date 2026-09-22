@@ -21,7 +21,7 @@ const SUBSECTIONS = [
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-export default function TurismoLanding({ lang = 'es' }) {
+export default function TurismoLanding({ lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'turismo');
   const landingCopy = getVerticalLandingCopy(lang, 'turismo');
@@ -40,7 +40,7 @@ export default function TurismoLanding({ lang = 'es' }) {
   };
 
   return (
-    <GoldenPublicPageShell testId="golden-turismo-main" className="mcg-vertical-page mcg-turismo-page" active="search">
+    <GoldenPublicPageShell {...shellProps} testId="golden-turismo-main" className="mcg-vertical-page mcg-turismo-page" active="search">
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
       <VerticalHero
         title={copy.title}
