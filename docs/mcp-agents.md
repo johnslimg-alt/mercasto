@@ -96,10 +96,10 @@ The safe replacement for the retired Shell MCP is `Mercasto Server Status`.
 
 - Public endpoint: `https://mcp.mercasto.com/mcp`.
 - Transport: Streamable HTTP.
-- Runtime: a dedicated hardened systemd service bound only to `127.0.0.1:8780`, with a narrow local bridge to the shared Nginx edge.
-- Public tools are read-only and return sanitized operational summaries only: coarse server resources, public-production HTTP status, GitHub-runner health, and integration health.
+- Runtime: an isolated non-root Docker Compose service on the private Mercasto network. It exposes port `8780` only to sibling containers and publishes no host port or Docker socket.
+- Public tools are read-only and return sanitized operational summaries only: coarse MCP-runtime resources, public-production HTTP status, and the plugin's immutable security posture.
 - It exposes no arbitrary shell, Docker control, filesystem browsing, deploy, restart, secret, credential, environment-file, process-list, or private application-data tools.
-- The server uses fixed internal allowlists; tool arguments cannot select an executable, systemd unit, port, URL, path, or command.
+- The public container has no command-execution surface and no host filesystem, systemd or Docker access. Tool arguments cannot select a URL, path, executable or command.
 - Mutating production actions continue through the exact GitHub issue-command allowlist and its CI/security gates.
 - Before any future private-data or write-capable MCP tools are added, add proper OAuth authorization and a separate security review. Do not use a static API key as a substitute for per-user authorization.
 - `/.well-known/openai-apps-challenge` is reserved for OpenAI app-domain verification when a challenge value is explicitly configured.
