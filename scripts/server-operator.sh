@@ -243,6 +243,47 @@ case "$OPERATION" in
     run_verify_quick
     ;;
 
+  mcp_plugin_bootstrap)
+    require_confirm
+    print_header "Sync main for bounded MCP bootstrap"
+    if is_production_checkout; then
+      sudo -n git fetch origin main --prune
+      sudo -n git reset --hard origin/main
+      sudo -n git switch -C main origin/main
+      sudo -n git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    else
+      git fetch origin main --prune
+      git reset --hard origin/main
+      git switch -C main origin/main
+      git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    fi
+
+    test -f mcp-plugin/Dockerfile
+    test -f mcp-plugin/server.mjs
+    bash scripts/mcp-production-retirement-gate.sh
+
+    print_header "Validate Compose"
+    "${COMPOSE_PROD[@]}" config >"$SERVER_OPERATOR_TMPDIR/mcp-compose.out"
+
+    print_header "Build and start only the MCP plugin"
+    "${COMPOSE_PROD[@]}" up -d --build --no-deps mercasto-mcp-plugin
+
+    nginx_config_test
+    nginx_reload_upstreams
+
+    print_header "MCP bootstrap smoke"
+    "${COMPOSE_PROD[@]}" ps mercasto-mcp-plugin
+    retry_command curl -fsS --max-time 10 -H 'Host: mcp.mercasto.com' http://127.0.0.1/healthz
+
+    mcp_http_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 -H 'Host: mcp.mercasto.com' http://127.0.0.1/mcp)"
+    if [ "$mcp_http_code" != "426" ]; then
+      echo "Expected HTTP bootstrap /mcp to remain blocked with 426, got $mcp_http_code" >&2
+      exit 68
+    fi
+    echo "mcp_http_bootstrap_code=$mcp_http_code"
+    public_smoke
+    ;;
+
   deploy_main)
     require_confirm
     print_header "Sync main"
