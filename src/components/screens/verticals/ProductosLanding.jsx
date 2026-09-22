@@ -4,6 +4,7 @@ import VerticalHero from '../../verticals/VerticalHero';
 import { Laptop, Home, Shirt, Gamepad2, Baby, Dog, BookOpen } from 'lucide-react';
 import { getVerticalCopy, getVerticalLandingCopy } from '../../../utils/verticalCopy';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -17,7 +18,7 @@ const SUBSECTIONS = [
   { name: 'Libros y Cursos', query: 'formacion', Icon: BookOpen },
 ];
 
-export default function ProductosLanding({ lang = 'es' }) {
+export default function ProductosLanding({ lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'productos');
   const landingCopy = getVerticalLandingCopy(lang, 'productos');
@@ -39,6 +40,7 @@ export default function ProductosLanding({ lang = 'es' }) {
   };
 
   return (
+    <GoldenPublicPageShell {...shellProps} testId="golden-productos-main" className="mcg-vertical-page mcg-productos-page" active="search">
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
       <VerticalHero
         title={copy.title}
@@ -106,5 +108,6 @@ export default function ProductosLanding({ lang = 'es' }) {
         </div>
       </section>
     </div>
+    </GoldenPublicPageShell>
   );
 }

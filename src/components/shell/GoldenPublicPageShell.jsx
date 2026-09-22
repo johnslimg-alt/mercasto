@@ -20,11 +20,16 @@ export default function GoldenPublicPageShell({
   const navigate = useNavigate();
   const { lang, isDarkMode, toggleDarkMode, setLang } = useUI();
   const t = getTranslations(lang);
+  const isVertical = className.split(/\s+/).includes('mcg-vertical-page');
 
   useEffect(() => {
     document.body.classList.add('mc-golden-shell-active', 'mc-golden-public-active');
-    return () => document.body.classList.remove('mc-golden-shell-active', 'mc-golden-public-active');
-  }, []);
+    if (isVertical) document.body.classList.add('mc-golden-vertical-active');
+    return () => {
+      document.body.classList.remove('mc-golden-shell-active', 'mc-golden-public-active');
+      if (isVertical) document.body.classList.remove('mc-golden-vertical-active');
+    };
+  }, [isVertical]);
 
   const applyLocation = (label, state) => {
     if (onLocationApply) {

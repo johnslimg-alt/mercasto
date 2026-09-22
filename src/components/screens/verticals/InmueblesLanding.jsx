@@ -6,6 +6,7 @@ import MapV3 from '../../common/MapV3';
 import { Building2, Castle, FileCheck2, Home, KeyRound, LandPlot, MapPinned, SearchCheck, Store } from 'lucide-react';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 import { getInmueblesLandingCopy } from '../../../utils/inmueblesLandingCopy';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -30,7 +31,7 @@ const SUBSECTIONS = [
   { query: 'renta vacacional', Icon: Castle },
 ];
 
-export default function InmueblesLanding({ lang = 'es' }) {
+export default function InmueblesLanding({ lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'inmuebles');
   const landingCopy = getInmueblesLandingCopy(lang);
@@ -58,6 +59,7 @@ export default function InmueblesLanding({ lang = 'es' }) {
   };
 
   return (
+    <GoldenPublicPageShell {...shellProps} testId="golden-inmuebles-main" className="mcg-vertical-page mcg-inmuebles-page" active="search">
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
         title={copy.title}
@@ -73,7 +75,7 @@ export default function InmueblesLanding({ lang = 'es' }) {
           {localizedOperations.map(op => (
             <button key={op.value}
               onClick={() => setOperacion(prev => prev === op.value ? '' : op.value)}
-              className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-[14px] font-bold border-2 transition-all md:px-6 ${operacion === op.value ? 'bg-white text-emerald-700 border-white' : 'border-white/50 text-white hover:border-white'}`}>
+              className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-[14px] font-bold border-2 transition-all md:px-6 ${operacion === op.value ? 'mcg-preserve-white-accent bg-white text-emerald-700 border-white' : 'border-white/50 text-white hover:border-white'}`}>
               {op.name}
             </button>
           ))}
@@ -174,12 +176,13 @@ export default function InmueblesLanding({ lang = 'es' }) {
             <p className="text-emerald-100">{landingCopy.ctaBody}</p>
           </div>
           <button onClick={() => navigate('/post')}
-            className="shrink-0 px-8 py-3 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-[15px]">
+            className="mcg-preserve-white-accent shrink-0 px-8 py-3 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-[15px]">
             {landingCopy.ctaButton}
           </button>
         </section>
 
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }

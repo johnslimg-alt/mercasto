@@ -1406,6 +1406,17 @@ html.dark .btn-lg.bg-white:hover {
     color: #E2E8F0 !important;
   }
 
+  /* Golden vertical pages intentionally preserve light accent controls in dark mode. */
+  html.dark .mcg-public-page.mcg-vertical-page .mcg-preserve-white-accent {
+    background-color: #FFFFFF !important;
+    background-image: none !important;
+    transition-property: none !important;
+  }
+  html.dark .mcg-public-page.mcg-vertical-page .mcg-preserve-white-accent.text-purple-700 { color: #7E22CE !important; }
+  html.dark .mcg-public-page.mcg-vertical-page .mcg-preserve-white-accent.text-orange-600 { color: #C2410C !important; }
+  html.dark .mcg-public-page.mcg-vertical-page .mcg-preserve-white-accent.text-blue-600 { color: #2563EB !important; }
+  html.dark .mcg-public-page.mcg-vertical-page .mcg-preserve-white-accent.text-emerald-700 { color: #047857 !important; }
+
   html.dark .border-slate-100,
   html.dark .border-slate-200,
   html.dark .border-slate-300 {

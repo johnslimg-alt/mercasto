@@ -6,6 +6,7 @@ import MapV3 from '../../common/MapV3';
 import { BriefcaseBusiness, ChartNoAxesCombined, Clock, GraduationCap, HeartPulse, Hotel, Landmark, Laptop, Megaphone, Palette, UserSearch } from 'lucide-react';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 import { getEmpleosLandingCopy } from '../../../utils/empleosLandingCopy';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -32,7 +33,7 @@ const SUBSECTIONS = [
   { query: 'cursos capacitación', Icon: GraduationCap },
 ];
 
-export default function EmpleosLanding({ lang = 'es' }) {
+export default function EmpleosLanding({ lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'empleos');
   const landingCopy = getEmpleosLandingCopy(lang);
@@ -59,6 +60,7 @@ export default function EmpleosLanding({ lang = 'es' }) {
   };
 
   return (
+    <GoldenPublicPageShell {...shellProps} testId="golden-empleos-main" className="mcg-vertical-page mcg-empleos-page" active="search">
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
         title={copy.title}
@@ -166,12 +168,13 @@ export default function EmpleosLanding({ lang = 'es' }) {
             <p className="text-purple-100">{landingCopy.employerBody}</p>
           </div>
           <button onClick={() => navigate('/post')}
-            className="shrink-0 px-8 py-3 bg-white text-purple-700 font-bold rounded-xl hover:bg-purple-50 transition-colors text-[15px]">
+            className="mcg-preserve-white-accent shrink-0 px-8 py-3 bg-white text-purple-700 font-bold rounded-xl hover:bg-purple-50 transition-colors text-[15px]">
             {landingCopy.employerButton}
           </button>
         </section>
 
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }

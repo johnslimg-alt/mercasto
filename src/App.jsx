@@ -4241,6 +4241,10 @@ function App() {
     },
   };
 
+  // Vertical pages already have their own primary search in VerticalHero.
+  // Reuse the live Golden runtime state without reintroducing a second header search.
+  const verticalShellProps = { ...publicShellProps, search: null };
+
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} listingQualityPreflight={listingQualityPreflight} clearListingQualityPreflight={setListingQualityPreflight} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} user={user} setUser={setUser} />;
 
@@ -4432,15 +4436,15 @@ function App() {
                   </button>
                 </div>
               ) : <div data-testid="deep-link-ad-loading" role="status" className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
-              <Route path="/motor" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding lang={lang} /></React.Suspense>} />
+              <Route path="/motor" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding lang={lang} shellProps={verticalShellProps} /></React.Suspense>} />
               <Route path="/autos" element={<Navigate to="/motor" replace />} />
-              <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding lang={lang} /></React.Suspense>} />
-              <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding lang={lang} /></React.Suspense>} />
-              <Route path="/servicios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ServiciosLanding lang={lang} /></React.Suspense>} />
-              <Route path="/productos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProductosLanding lang={lang} /></React.Suspense>} />
-              <Route path="/turismo" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><TurismoLanding lang={lang} /></React.Suspense>} />
+              <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding lang={lang} shellProps={verticalShellProps} /></React.Suspense>} />
+              <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding lang={lang} shellProps={verticalShellProps} /></React.Suspense>} />
+              <Route path="/servicios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ServiciosLanding lang={lang} shellProps={verticalShellProps} /></React.Suspense>} />
+              <Route path="/productos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProductosLanding lang={lang} shellProps={verticalShellProps} /></React.Suspense>} />
+              <Route path="/turismo" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><TurismoLanding lang={lang} shellProps={verticalShellProps} /></React.Suspense>} />
               {['electronica', 'moda', 'hogar', 'tecnologia', 'telefonos', 'mascotas', 'infantil', 'negocios', 'ocio', 'boletos', 'hospedaje', 'tours', 'boletos_turismo', 'articulos_camping', 'souvenirs', 'renta_vehiculos', 'guias_servicios', 'atracciones_exp', 'retiros_bienestar'].map(category => (
-                <Route key={category} path={`/${category}`} element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category={category} lang={lang} /></React.Suspense>} />
+                <Route key={category} path={`/${category}`} element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category={category} lang={lang} shellProps={verticalShellProps} /></React.Suspense>} />
               ))}
               <Route path="/informatica" element={<Navigate to="/tecnologia" replace />} />
               <Route path="/telefonia" element={<Navigate to="/telefonos" replace />} />

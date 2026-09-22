@@ -8,6 +8,7 @@ import { categorySchema } from '../../../constants/categorySchema';
 import { categoryLandingTranslations } from '../../../constants/categoryLandingTranslations';
 import { getCategoryLandingSubsections } from '../../../utils/categoryLandingSubsections';
 import { getTranslations, normalizeLanguage } from '../../../utils/translations';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 import {
   BadgeCheck, ShieldCheck, Star, Zap, MessageCircle, BarChart3,
   Tv, Headphones, Laptop, Camera, Gamepad2, Printer, Tablet,
@@ -286,7 +287,7 @@ const COLOR_CLASSES = {
   },
 };
 
-export default function CategoryLanding({ category, lang = 'es' }) {
+export default function CategoryLanding({ category, lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const activeLang = normalizeLanguage(
     localStorage.getItem('lang') || localStorage.getItem('mercasto_language') || lang
@@ -347,6 +348,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
   const heroSubsections = localizedSubsections;
 
   return (
+    <GoldenPublicPageShell {...shellProps} testId="golden-category-main" className="mcg-vertical-page mcg-category-page" active="search">
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <VerticalHero
         title={cfg.title}
@@ -473,12 +475,13 @@ export default function CategoryLanding({ category, lang = 'es' }) {
             <p className="text-white/80">{cfg.ctaDesc}</p>
           </div>
           <button onClick={() => navigate('/post')}
-            className={`shrink-0 px-8 py-3 bg-white ${c.ctaBtn} font-bold rounded-xl hover:bg-white/90 transition-colors text-[15px]`}>
+            className={`mcg-preserve-white-accent shrink-0 px-8 py-3 bg-white ${c.ctaBtn} font-bold rounded-xl hover:bg-white/90 transition-colors text-[15px]`}>
             {cfg.ctaBtn}
           </button>
         </section>
 
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }

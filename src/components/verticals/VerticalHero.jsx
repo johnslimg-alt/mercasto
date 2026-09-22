@@ -110,7 +110,7 @@ export default function VerticalHero({
                   <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${accent.bg} text-white shadow-sm md:mx-auto md:mb-1.5 md:h-8 md:w-8 md:rounded-xl`}>
                     <Icon size={17} strokeWidth={2.2} />
                   </span>
-                  <span className="block whitespace-nowrap text-[11px] font-extrabold text-slate-950">{item.name}</span>
+                  <span className="mcg-hero-subsection-label block whitespace-nowrap text-[11px] font-extrabold text-slate-950">{item.name}</span>
                 </button>
               );
             })}

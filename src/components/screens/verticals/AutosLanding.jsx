@@ -6,6 +6,7 @@ import MapV3 from '../../common/MapV3';
 import { Bike, Car, CarFront, Gauge, PackageSearch, Truck, Wrench } from 'lucide-react';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 import { getAutosLandingCopy } from '../../../utils/autosLandingCopy';
+import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -72,7 +73,7 @@ const SUBSECTIONS = [
   { query: 'autopartes', Icon: PackageSearch },
 ];
 
-export default function AutosLanding({ lang = 'es' }) {
+export default function AutosLanding({ lang = 'es', shellProps = {} }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'motor');
   const landingCopy = getAutosLandingCopy(lang);
@@ -104,6 +105,7 @@ export default function AutosLanding({ lang = 'es' }) {
   };
 
   return (
+    <GoldenPublicPageShell {...shellProps} testId="golden-autos-main" className="mcg-vertical-page mcg-autos-page" active="search">
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
         title={copy.title}
@@ -222,5 +224,6 @@ export default function AutosLanding({ lang = 'es' }) {
         </section>
       </div>
     </div>
+    </GoldenPublicPageShell>
   );
 }
