@@ -294,3 +294,26 @@
 .dark .mcg-legal-page .border-emerald-200{border-color:#065f46!important}
 .dark .mcg-legal-page .text-emerald-900{color:#a7f3d0!important}
 @media(max-width:767px){.mcg-legal-page .rounded-\[2rem\]{border-radius:1.35rem}}
+
+/* Golden vertical discovery pages. */
+.mcg-vertical-page{background:var(--mcg-soft)!important;color:var(--mcg-ink)}
+.mcg-vertical-page .bg-white{background:var(--mcg-card)!important}
+.mcg-vertical-page .border-slate-100,.mcg-vertical-page .border-slate-200,.mcg-vertical-page .border-slate-700{border-color:var(--mcg-line)!important}
+.dark .mcg-vertical-page .dark\:bg-slate-800{background:var(--mcg-card)!important}
+.dark .mcg-vertical-page .dark\:bg-slate-900,.dark .mcg-vertical-page .dark\:bg-slate-950{background:var(--mcg-soft)!important}
+.dark .mcg-vertical-page .bg-blue-50{background:#172554!important}
+.dark .mcg-vertical-page .border-blue-100{border-color:#1e40af!important}
+.dark .mcg-vertical-page .bg-emerald-50{background:#052e2b!important}
+.dark .mcg-vertical-page .border-emerald-100{border-color:#065f46!important}
+.dark .mcg-vertical-page .bg-purple-50{background:#2e1065!important}
+.dark .mcg-vertical-page .border-purple-100{border-color:#6b21a8!important}
+.dark .mcg-vertical-page .bg-orange-50{background:#431407!important}
+.dark .mcg-vertical-page .border-orange-100{border-color:#9a3412!important}
+@media(max-width:767px){
+  .mcg-vertical-page{overflow-x:clip}
+  .mcg-vertical-page .max-w-\[1440px\]{padding-left:14px;padding-right:14px}
+}
+
+/* Explicit dark utilities win over vertical accent helpers. */
+.dark .mcg-vertical-page .dark\:bg-slate-800{background:#1e293b!important}
+.dark .mcg-vertical-page .dark\:bg-slate-900,.dark .mcg-vertical-page .dark\:bg-slate-950{background:#0f172a!important}
