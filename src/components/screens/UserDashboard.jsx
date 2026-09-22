@@ -230,6 +230,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
   const navigate = useNavigate();
   const { toggleDarkMode, setLang } = useUI();
   const [dashToast, setDashToast] = React.useState(null);
+  const [showGoldenAccountMenu, setShowGoldenAccountMenu] = React.useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
   const [profileVisible, setProfileVisible] = React.useState(() => localStorage.getItem('mercasto_privacy_profile_visible') !== 'false');
   const [trackingConsent, setTrackingConsent] = React.useState(() => localStorage.getItem('mercasto_privacy_tracking_consent') !== 'false');
@@ -246,6 +247,12 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
     if (state) params.set('state', state);
     const query = params.toString();
     navigate(query ? `/listings?${query}` : '/listings');
+  };
+
+  const toggleGoldenAccountMenu = () => setShowGoldenAccountMenu(value => !value);
+  const logoutFromGoldenMenu = () => {
+    setShowGoldenAccountMenu(false);
+    handleLogout?.();
   };
 
   const showDashToast = (msg, type = 'success') => {
@@ -397,7 +404,8 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
       <MercastoGoldenHeader
         publish={() => setCurrentTab('post')}
         onLocationApply={applyGoldenLocation}
-        onAccount={() => navigate('/profile')}
+        onAccount={toggleGoldenAccountMenu}
+        accountLabel={user?.name ? `${user.name} · ${t.open_account_menu || t.my_account || ''}` : (t.open_account_menu || t.my_account || '')}
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
         lang={lang}
@@ -406,6 +414,18 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
         selectedState=""
         t={t}
       />
+      {showGoldenAccountMenu && (
+        <div data-testid="golden-account-menu" role="menu" className="fixed right-3 bottom-[82px] z-[120] w-[min(280px,calc(100vw-24px))] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-900 md:right-8 md:top-[76px] md:bottom-auto">
+          <div className="px-3 py-2">
+            <p className="truncate text-sm font-extrabold text-slate-900 dark:text-white">{user?.name || t.my_account}</p>
+            {user?.email && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>}
+          </div>
+          <button type="button" role="menuitem" onClick={logoutFromGoldenMenu} className="mt-1 flex min-h-12 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
+            <LogOut size={17} aria-hidden="true" />
+            {t.logout || 'Cerrar sesión'}
+          </button>
+        </div>
+      )}
       <div data-testid="golden-dashboard-main" className="mcg-dashboard-page dashboard-dark-scope bg-[var(--paper)] min-h-screen pb-[88px] md:pb-12 w-full">
       <div className="p-4 md:p-8 w-full max-w-[1400px] mx-auto">
         
@@ -1408,7 +1428,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
         active="account"
         publish={() => setCurrentTab('post')}
         onNotifications={() => navigate('/notificaciones')}
-        onAccount={() => navigate('/profile')}
+        onAccount={toggleGoldenAccountMenu}
         unreadCount={0}
         t={t}
       />
