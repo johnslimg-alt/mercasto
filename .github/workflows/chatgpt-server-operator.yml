@@ -111,18 +111,6 @@ jobs:
             echo
             echo "== MCP local listeners =="
             ss -lntpH 2>/dev/null | grep -E '127\.0\.0\.1|\[::1\]' | grep -Ei 'mcp|ssh|node|:8001|:8765|:300[0-9]|:30[0-9]{2}' || true
-            echo
-            echo "== mcp.mercasto.com DNS =="
-            getent ahostsv4 mcp.mercasto.com || true
-            echo
-            echo "== Nginx MCP routing (sanitized) =="
-            nginx -T 2>/dev/null | grep -nE 'server_name[[:space:]]+mcp\.mercasto\.com|proxy_pass[[:space:]]+http://127\.0\.0\.1:(8001|8765)' || true
-            echo
-            echo "== Public MCP HTTP without auth =="
-            for p in / /mcp /sse; do
-              code="$(curl -skS --max-time 10 -o /dev/null -w '%{http_code}' "https://mcp.mercasto.com$p" || true)"
-              echo "$p -> $code"
-            done
           else
             OPERATION="$OPERATION" CONFIRM="$CONFIRM" TAIL_LINES="$TAIL_LINES" \
               bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
