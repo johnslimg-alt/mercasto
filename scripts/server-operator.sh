@@ -284,6 +284,41 @@ case "$OPERATION" in
     public_smoke
     ;;
 
+  mcp_plugin_tls_issue)
+    require_confirm
+    print_header "MCP ACME reachability"
+    sudo -n install -d -m 0755 /var/www/certbot/.well-known/acme-challenge
+    acme_probe="/var/www/certbot/.well-known/acme-challenge/mercasto-mcp-probe"
+    printf 'MCP_ACME_OK\n' | sudo -n tee "$acme_probe" >/dev/null
+    trap 'sudo -n rm -f /var/www/certbot/.well-known/acme-challenge/mercasto-mcp-probe; rm -rf "$SERVER_OPERATOR_TMPDIR"' EXIT
+
+    probe_body="$(curl -fsSL --max-time 20 http://mcp.mercasto.com/.well-known/acme-challenge/mercasto-mcp-probe)"
+    if [ "$probe_body" != "MCP_ACME_OK" ]; then
+      echo "Public ACME webroot probe did not reach the MCP bootstrap vhost." >&2
+      exit 69
+    fi
+    echo "mcp_acme_probe=ok"
+    sudo -n rm -f "$acme_probe"
+
+    print_header "Issue or refresh MCP TLS certificate"
+    "${COMPOSE_PROD[@]}" run --rm --no-deps --entrypoint certbot certbot \
+      certonly \
+      --webroot \
+      -w /var/www/certbot \
+      -d mcp.mercasto.com \
+      --non-interactive \
+      --agree-tos \
+      --register-unsafely-without-email \
+      --keep-until-expiring
+
+    sudo -n test -s /etc/letsencrypt/live/mcp.mercasto.com/fullchain.pem
+    sudo -n test -s /etc/letsencrypt/live/mcp.mercasto.com/privkey.pem
+    sudo -n openssl x509 \
+      -in /etc/letsencrypt/live/mcp.mercasto.com/fullchain.pem \
+      -noout -subject -issuer -dates
+    echo "mcp_tls_certificate=ready"
+    ;;
+
   deploy_main)
     require_confirm
     print_header "Sync main"

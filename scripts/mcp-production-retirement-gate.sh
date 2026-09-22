@@ -33,6 +33,7 @@ allowed_hostname_paths=(
   "docs/mcp-agents.md"
   "mcp-plugin/server.mjs"
   "scripts/server-operator.sh"
+  "scripts/workflow-concurrency-guard.test.mjs"
   "scripts/mcp-production-retirement-gate.sh"
 )
 
