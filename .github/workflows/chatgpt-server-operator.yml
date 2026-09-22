@@ -102,7 +102,7 @@ jobs:
             bash scripts/server-status-safe.sh
           elif [ "$OPERATION" = "mcp_status" ]; then
             echo "== MCP systemd =="
-            for unit in mercasto-ssh-mcp.service mercasto-ssh-mcp-stdio.service desktop-commander.service remote-desktop-commander.service mercasto-mcp-plugin.service mercasto-mcp-edge-bridge.service; do
+            for unit in mercasto-ssh-mcp.service mercasto-ssh-mcp-stdio.service desktop-commander.service remote-desktop-commander.service; do
               echo "-- $unit"
               printf 'enabled='; systemctl is-enabled "$unit" 2>/dev/null || true
               printf 'active='; systemctl is-active "$unit" 2>/dev/null || true
