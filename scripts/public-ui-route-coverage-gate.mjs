@@ -53,7 +53,7 @@ assert.deepEqual(
   ].sort(),
   'Sitemap XML routes must stay on the explicit non-visual allowlist.',
 );
-assert.equal(backendStaticScreens.length, 40, 'Expected all 40 current static backend browser surfaces.');
+assert.equal(backendStaticScreens.length, 42, 'Expected all 42 current static backend browser surfaces.');
 assert.equal(
   new Set(backendStaticScreens.map(screen => screen.path)).size,
   backendStaticScreens.length,

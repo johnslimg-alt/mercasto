@@ -57,8 +57,9 @@ test('public metadata and official source copy use the AI positioning', () => {
   const geo = source('src/content/geoSourcePages.js');
   const manifest = source('public/manifest.json');
   const faq = source('src/utils/homeFaqCopy.js');
-  const refunds = source('public/reembolsos/index.html');
-  const moderation = source('public/moderacion/index.html');
+  const publicShell = source('src/components/shell/GoldenPublicPageShell.jsx');
+  const refunds = source('src/components/screens/legal/ReembolsosScreen.jsx');
+  const moderation = source('src/components/screens/legal/ModeracionScreen.jsx');
   assert.match(index, /La plataforma de clasificados más moderna e inteligente con AI/);
   assert.match(index, /moderación inteligente/);
   assert.match(geo, /plataforma de clasificados más moderna e inteligente con AI/);
@@ -66,6 +67,7 @@ test('public metadata and official source copy use the AI positioning', () => {
   assert.match(manifest, /clasificados más moderna e inteligente con AI/);
   assert.match(faq, /Cómo usa Mercasto la AI\?/);
   assert.match(faq, /most modern and intelligent AI-powered classifieds platform/);
-  assert.match(refunds, /plataforma de clasificados más moderna e inteligente con AI/);
-  assert.match(moderation, /plataforma de clasificados más moderna e inteligente con AI/);
+  assert.match(publicShell, /showAiBrand/);
+  assert.match(refunds, /GoldenPublicPageShell/);
+  assert.match(moderation, /GoldenPublicPageShell/);
 });

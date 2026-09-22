@@ -220,4 +220,7 @@ test('Golden legal sticky controls use Golden offsets and accessible dark contra
   const updated = page.getByText(/Última actualización: 23 de mayo de 2026/);
   await expect(updated).toBeVisible();
   await expect(updated).toHaveClass(/text-slate-300/);
+  await expect(page.getByText(/no se renuevan automáticamente/).first()).toBeVisible();
+  await expect(page.getByText(/se requiere una nueva compra para activar otro periodo/).first()).toBeVisible();
+  await expect(page.getByText(/La cancelación evita renovaciones posteriores/)).toHaveCount(0);
 });
