@@ -46,10 +46,16 @@ const routes = [
   ['/contacto', 'golden-contact-main'],
   ['/verificar-email?token=test-token&email=user%40example.com', 'golden-email-verification-main'],
   ['/como-funciona', 'golden-geo-source-main'],
+  ['/safety', 'golden-geo-source-main'],
+  ['/terminos', 'golden-terms-main'],
+  ['/privacidad', 'golden-privacy-main'],
+  ['/cookies', 'golden-cookies-main'],
+  ['/moderacion', 'golden-moderation-main'],
+  ['/reembolsos', 'golden-refunds-main'],
   ['/ruta-inexistente-golden', 'golden-not-found-main'],
 ];
 
-test('public utility routes share Golden chrome on desktop and mobile', async ({ page }, testInfo) => {
+test('public utility and legal routes share Golden chrome on desktop and mobile', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   test.setTimeout(60_000);
   await installSession(page);

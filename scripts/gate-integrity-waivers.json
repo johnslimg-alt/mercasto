@@ -16,13 +16,6 @@
   "waivers": [
     {
       "check": "asserted-orphan",
-      "gate": "scripts/fixed-period-plan-copy-gate.sh",
-      "target": "src/components/screens/legal/ReembolsosScreen.jsx",
-      "owner": "gate-maintenance",
-      "reason": "REAL FINDING, awaiting fix (retrospective-2 RC-3 case 6, D-054). ReembolsosScreen.jsx is imported by nothing while the shipped page is public/reembolsos/index.html -- the exact wrong-observation-surface defect, where the gate watched a component the browser never runs. Declared rather than fixed because the correct target is the delivered static page and rewriting the assertion is outside this task's scope. Re-verified 2026-09-13."
-    },
-    {
-      "check": "asserted-orphan",
       "gate": "scripts/funnel-analytics-contract-gate.sh",
       "target": "src/contexts/AuthContext.jsx",
       "owner": "gate-maintenance",

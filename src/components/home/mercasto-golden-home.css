@@ -277,3 +277,19 @@
   .mcg-public-search-form{height:48px}
   .mcg-public-search-form button{height:40px;min-width:48px;padding:0 10px}
 }
+
+/* Golden legal surfaces: keep policy cards readable in both themes. */
+.mcg-legal-page article,.mcg-legal-page aside{color:var(--mcg-ink)}
+.dark .mcg-legal-page .bg-lime-50{background:#1a2e05!important}
+.dark .mcg-legal-page .border-lime-100{border-color:#3f6212!important}
+.dark .mcg-legal-page .text-lime-700{color:#bef264!important}
+.dark .mcg-legal-page .bg-red-50{background:#3a1719!important}
+.dark .mcg-legal-page .border-red-100,.dark .mcg-legal-page .border-red-200{border-color:#7f1d1d!important}
+.dark .mcg-legal-page .text-red-700,.dark .mcg-legal-page .text-red-900{color:#fecaca!important}
+.dark .mcg-legal-page .bg-amber-50{background:#35240a!important}
+.dark .mcg-legal-page .border-amber-200{border-color:#92400e!important}
+.dark .mcg-legal-page .text-amber-900{color:#fde68a!important}
+.dark .mcg-legal-page .bg-emerald-50{background:#082f27!important}
+.dark .mcg-legal-page .border-emerald-200{border-color:#065f46!important}
+.dark .mcg-legal-page .text-emerald-900{color:#a7f3d0!important}
+@media(max-width:767px){.mcg-legal-page .rounded-\[2rem\]{border-radius:1.35rem}}
