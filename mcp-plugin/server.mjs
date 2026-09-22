@@ -15,20 +15,23 @@ const HOST = process.env.MCP_BIND_HOST || '127.0.0.1';
 const PORT = Number.parseInt(process.env.MCP_PORT || '8780', 10);
 const VERSION = '1.0.0';
 
-const RUNNER_UNITS = [
-  'actions.runner.johnslimg-alt-mercasto.srv1526037.service',
-  'actions.runner.johnslimg-alt-mercasto-mobile.srv1526037-mobile.service',
-];
+const RUNNER_UNITS = {
+  primary: 'actions.runner.johnslimg-alt-mercasto.srv1526037.service',
+  mobile: 'actions.runner.johnslimg-alt-mercasto-mobile.srv1526037-mobile.service',
+};
 
-const MCP_UNITS = [
-  'mercasto-ssh-mcp.service',
-  'mercasto-ssh-mcp-stdio.service',
-  'desktop-commander.service',
-  'remote-desktop-commander.service',
-  'mercasto-mcp-plugin.service',
-];
+const MCP_UNITS = {
+  legacyShell: 'mercasto-ssh-mcp.service',
+  legacyShellStdio: 'mercasto-ssh-mcp-stdio.service',
+  legacyDesktopCommander: 'desktop-commander.service',
+  remoteDesktopCommander: 'remote-desktop-commander.service',
+  plugin: 'mercasto-mcp-plugin.service',
+};
 
-const OBSERVED_PORTS = [3080, 3081, 3091, 8765, 8780];
+const SYSTEMD_ALLOWLIST = new Set([
+  ...Object.values(RUNNER_UNITS),
+  ...Object.values(MCP_UNITS),
+]);
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -55,8 +58,7 @@ function parseSystemctlShow(stdout) {
 }
 
 async function unitStatus(unit) {
-  const allowed = new Set([...RUNNER_UNITS, ...MCP_UNITS]);
-  if (!allowed.has(unit)) {
+  if (!SYSTEMD_ALLOWLIST.has(unit)) {
     throw new Error('Unit is not allowlisted');
   }
 
@@ -67,37 +69,31 @@ async function unitStatus(unit) {
         'show',
         unit,
         '--no-pager',
-        '--property=LoadState,ActiveState,SubState,MainPID,NRestarts,ExecMainStartTimestamp,UnitFileState',
+        '--property=LoadState,ActiveState,SubState,NRestarts,UnitFileState',
       ],
       { timeout: 2500, maxBuffer: 64 * 1024 },
     );
 
     const s = parseSystemctlShow(stdout);
     return {
-      unit,
       loadState: s.LoadState || 'unknown',
       activeState: s.ActiveState || 'unknown',
       subState: s.SubState || 'unknown',
       unitFileState: s.UnitFileState || 'unknown',
-      mainPid: Number.parseInt(s.MainPID || '0', 10) || 0,
       restarts: Number.parseInt(s.NRestarts || '0', 10) || 0,
-      startedAt: s.ExecMainStartTimestamp || null,
     };
   } catch {
     return {
-      unit,
       loadState: 'unknown',
       activeState: 'unknown',
       subState: 'unknown',
       unitFileState: 'unknown',
-      mainPid: 0,
       restarts: 0,
-      startedAt: null,
     };
   }
 }
 
-async function tcpStatus(port) {
+async function tcpOpen(port) {
   return await new Promise((resolve) => {
     const socket = net.createConnection({ host: '127.0.0.1', port });
     let settled = false;
@@ -106,7 +102,7 @@ async function tcpStatus(port) {
       if (settled) return;
       settled = true;
       socket.destroy();
-      resolve({ port, open });
+      resolve(open);
     };
 
     socket.setTimeout(700);
@@ -125,12 +121,16 @@ async function httpStatus(url) {
       headers: { 'User-Agent': 'Mercasto-MCP-Status/1.0' },
     });
     return {
-      url,
+      target: new URL(url).pathname || '/',
       status: response.status,
       ok: response.status >= 200 && response.status < 400,
     };
   } catch {
-    return { url, status: 0, ok: false };
+    return {
+      target: new URL(url).pathname || '/',
+      status: 0,
+      ok: false,
+    };
   }
 }
 
@@ -143,21 +143,19 @@ async function resourceSnapshot() {
   const freeMem = os.freemem();
 
   return {
-    hostname: os.hostname(),
     uptimeSeconds: Math.floor(os.uptime()),
     loadAverage: os.loadavg().map((n) => Number(n.toFixed(2))),
-    memory: {
-      totalBytes: totalMem,
-      freeBytes: freeMem,
-      usedPercent: Number((((totalMem - freeMem) / totalMem) * 100).toFixed(1)),
-    },
-    diskRoot: {
-      totalBytes,
-      freeBytes,
-      usedBytes,
-      usedPercent: totalBytes > 0 ? Number(((usedBytes / totalBytes) * 100).toFixed(1)) : 0,
-    },
+    memoryUsedPercent: Number((((totalMem - freeMem) / totalMem) * 100).toFixed(1)),
+    diskUsedPercent: totalBytes > 0 ? Number(((usedBytes / totalBytes) * 100).toFixed(1)) : 0,
   };
+}
+
+function isActive(s) {
+  return s.activeState === 'active' && s.subState === 'running';
+}
+
+function isRetired(s) {
+  return s.activeState === 'inactive' && s.subState === 'dead';
 }
 
 function buildMcpServer() {
@@ -169,7 +167,7 @@ function buildMcpServer() {
     },
     {
       instructions:
-        'Read-only operational observability for Mercasto. Never claim that a server mutation was performed: this server intentionally exposes no write, shell, filesystem, Docker-control, deploy, or restart tools. The historical public Shell MCP is retired.',
+        'Read-only operational observability for Mercasto. Never claim that a server mutation was performed: this server intentionally exposes no write, shell, filesystem, Docker-control, deploy, restart, credential, or secret-reading tools. The historical public Shell MCP remains retired.',
     },
   );
 
@@ -177,23 +175,13 @@ function buildMcpServer() {
     'server_resources',
     {
       title: 'Server resources',
-      description: 'Read current uptime, load average, memory use and root-filesystem use from the Mercasto VPS.',
+      description: 'Read coarse VPS uptime, load, memory-use percentage and root-filesystem-use percentage. No process list, hostname, filesystem content or secrets are returned.',
       inputSchema: z.object({}).strict(),
       outputSchema: z.object({
-        hostname: z.string(),
         uptimeSeconds: z.number(),
         loadAverage: z.array(z.number()),
-        memory: z.object({
-          totalBytes: z.number(),
-          freeBytes: z.number(),
-          usedPercent: z.number(),
-        }),
-        diskRoot: z.object({
-          totalBytes: z.number(),
-          freeBytes: z.number(),
-          usedBytes: z.number(),
-          usedPercent: z.number(),
-        }),
+        memoryUsedPercent: z.number(),
+        diskUsedPercent: z.number(),
       }),
       annotations: readOnlyAnnotations,
     },
@@ -204,12 +192,12 @@ function buildMcpServer() {
     'production_status',
     {
       title: 'Production status',
-      description: 'Check the public Mercasto web app and its public categories API without reading private application data.',
+      description: 'Check only the public Mercasto homepage and public categories API and return HTTP status codes.',
       inputSchema: z.object({}).strict(),
       outputSchema: z.object({
         checks: z.array(
           z.object({
-            url: z.string(),
+            target: z.string(),
             status: z.number(),
             ok: z.boolean(),
           }),
@@ -230,61 +218,69 @@ function buildMcpServer() {
     'runner_status',
     {
       title: 'GitHub runner status',
-      description: 'Read status of the two fixed Mercasto GitHub Actions runner services. No service control is available.',
+      description: 'Read sanitized status of the two fixed Mercasto GitHub Actions runner services. No service names, PIDs, command lines, credentials or control actions are exposed.',
       inputSchema: z.object({}).strict(),
       outputSchema: z.object({
-        services: z.array(
+        runners: z.array(
           z.object({
-            unit: z.string(),
-            loadState: z.string(),
-            activeState: z.string(),
-            subState: z.string(),
-            unitFileState: z.string(),
-            mainPid: z.number(),
+            name: z.enum(['primary', 'mobile']),
+            active: z.boolean(),
             restarts: z.number(),
-            startedAt: z.string().nullable(),
           }),
         ),
-      }),
-      annotations: readOnlyAnnotations,
-    },
-    async () => result({ services: await Promise.all(RUNNER_UNITS.map(unitStatus)) }),
-  );
-
-  server.registerTool(
-    'mcp_services_status',
-    {
-      title: 'MCP service status',
-      description: 'Read status of the fixed MCP-related systemd units and whether a small allowlist of localhost ports is accepting TCP connections.',
-      inputSchema: z.object({}).strict(),
-      outputSchema: z.object({
-        services: z.array(
-          z.object({
-            unit: z.string(),
-            loadState: z.string(),
-            activeState: z.string(),
-            subState: z.string(),
-            unitFileState: z.string(),
-            mainPid: z.number(),
-            restarts: z.number(),
-            startedAt: z.string().nullable(),
-          }),
-        ),
-        listeners: z.array(
-          z.object({
-            port: z.number(),
-            open: z.boolean(),
-          }),
-        ),
+        allHealthy: z.boolean(),
       }),
       annotations: readOnlyAnnotations,
     },
     async () => {
-      const [services, listeners] = await Promise.all([
-        Promise.all(MCP_UNITS.map(unitStatus)),
-        Promise.all(OBSERVED_PORTS.map(tcpStatus)),
+      const [primary, mobile] = await Promise.all([
+        unitStatus(RUNNER_UNITS.primary),
+        unitStatus(RUNNER_UNITS.mobile),
       ]);
-      return result({ services, listeners });
+      const runners = [
+        { name: 'primary', active: isActive(primary), restarts: primary.restarts },
+        { name: 'mobile', active: isActive(mobile), restarts: mobile.restarts },
+      ];
+      return result({
+        runners,
+        allHealthy: runners.every((runner) => runner.active),
+      });
+    },
+  );
+
+  server.registerTool(
+    'integration_status',
+    {
+      title: 'Integration status',
+      description: 'Read a sanitized summary of MCP-related integration health. Confirms that retired public-shell services stay off and that the approved local bridges are available.',
+      inputSchema: z.object({}).strict(),
+      outputSchema: z.object({
+        legacyPublicShellRetired: z.boolean(),
+        remoteDesktopCommanderActive: z.boolean(),
+        remoteDesktopListenerOpen: z.boolean(),
+        pluginServiceActive: z.boolean(),
+        pluginListenerOpen: z.boolean(),
+      }),
+      annotations: readOnlyAnnotations,
+    },
+    async () => {
+      const [legacyShell, legacyShellStdio, remoteDesktopCommander, plugin, remoteDesktopListenerOpen, pluginListenerOpen] =
+        await Promise.all([
+          unitStatus(MCP_UNITS.legacyShell),
+          unitStatus(MCP_UNITS.legacyShellStdio),
+          unitStatus(MCP_UNITS.remoteDesktopCommander),
+          unitStatus(MCP_UNITS.plugin),
+          tcpOpen(8765),
+          tcpOpen(8780),
+        ]);
+
+      return result({
+        legacyPublicShellRetired: isRetired(legacyShell) && isRetired(legacyShellStdio),
+        remoteDesktopCommanderActive: isActive(remoteDesktopCommander),
+        remoteDesktopListenerOpen,
+        pluginServiceActive: isActive(plugin),
+        pluginListenerOpen,
+      });
     },
   );
 
