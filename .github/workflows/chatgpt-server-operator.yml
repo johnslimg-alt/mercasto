@@ -19,6 +19,7 @@ jobs:
       github.actor == 'johnslimg-alt' &&
       (
         github.event.comment.body == 'RUN:status' ||
+        github.event.comment.body == 'RUN:mcp_status' ||
         github.event.comment.body == 'RUN:verify_quick' ||
         github.event.comment.body == 'RUN:security_smoke' ||
         github.event.comment.body == 'RUN:seo_aeo_smoke' ||
@@ -50,6 +51,7 @@ jobs:
             const body = context.payload.comment.body.trim();
             const commands = {
               'RUN:status': ['status', '', '160'],
+              'RUN:mcp_status': ['mcp_status', '', '220'],
               'RUN:verify_quick': ['verify_quick', '', '160'],
               'RUN:security_smoke': ['security_smoke', '', '160'],
               'RUN:seo_aeo_smoke': ['seo_aeo_smoke', '', '160'],
@@ -98,6 +100,17 @@ jobs:
           cd /var/www/mercasto
           if [ "$OPERATION" = "status" ]; then
             bash scripts/server-status-safe.sh
+          elif [ "$OPERATION" = "mcp_status" ]; then
+            echo "== MCP systemd =="
+            for unit in mercasto-ssh-mcp.service mercasto-ssh-mcp-stdio.service desktop-commander.service remote-desktop-commander.service; do
+              echo "-- $unit"
+              printf 'enabled='; systemctl is-enabled "$unit" 2>/dev/null || true
+              printf 'active='; systemctl is-active "$unit" 2>/dev/null || true
+              systemctl show "$unit" --no-pager -p FragmentPath -p ActiveState -p SubState -p MainPID -p User 2>/dev/null || true
+            done
+            echo
+            echo "== MCP local listeners =="
+            ss -lntpH 2>/dev/null | grep -E '127\.0\.0\.1|\[::1\]' | grep -Ei 'mcp|ssh|node|:8001|:8765|:300[0-9]|:30[0-9]{2}' || true
           else
             OPERATION="$OPERATION" CONFIRM="$CONFIRM" TAIL_LINES="$TAIL_LINES" \
               bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
