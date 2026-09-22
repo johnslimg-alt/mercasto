@@ -1,0 +1,91 @@
+limit_req_zone $binary_remote_addr zone=mcp_plugin_per_ip:10m rate=30r/m;
+limit_conn_zone $binary_remote_addr zone=mcp_plugin_conn_per_ip:10m;
+
+server {
+    listen 80;
+    server_name mcp.mercasto.com;
+
+    client_max_body_size 1m;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+    }
+
+    location / {
+        return 308 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name mcp.mercasto.com;
+
+    ssl_certificate /etc/letsencrypt/live/mcp.mercasto.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mcp.mercasto.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL_MCP_PLUGIN:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    client_max_body_size 1m;
+    client_header_timeout 15s;
+    client_body_timeout 30s;
+    send_timeout 3600s;
+    keepalive_timeout 30s;
+    keepalive_requests 500;
+
+    limit_req_status 429;
+    limit_conn_status 429;
+    limit_conn mcp_plugin_conn_per_ip 8;
+
+    include /etc/nginx/conf.d/security_headers.conf;
+
+    location = /healthz {
+        limit_req zone=mcp_plugin_per_ip burst=20 nodelay;
+        proxy_pass http://__MCP_BRIDGE_HOST__:18780;
+        proxy_http_version 1.1;
+        proxy_set_header Host mcp.mercasto.com;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 5s;
+        proxy_buffering off;
+        proxy_cache off;
+    }
+
+    location = /.well-known/openai-apps-challenge {
+        limit_req zone=mcp_plugin_per_ip burst=20 nodelay;
+        proxy_pass http://__MCP_BRIDGE_HOST__:18780;
+        proxy_http_version 1.1;
+        proxy_set_header Host mcp.mercasto.com;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 5s;
+        proxy_buffering off;
+        proxy_cache off;
+    }
+
+    location = /mcp {
+        limit_req zone=mcp_plugin_per_ip burst=30 nodelay;
+        proxy_pass http://__MCP_BRIDGE_HOST__:18780;
+        proxy_http_version 1.1;
+        proxy_set_header Host mcp.mercasto.com;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Connection "";
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+        proxy_cache off;
+        gzip off;
+    }
+
+    location / {
+        return 404;
+    }
+}
