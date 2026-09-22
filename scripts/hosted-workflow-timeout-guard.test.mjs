@@ -33,6 +33,7 @@ const expectedTimeouts = new Map([
   ['registration-consent-contract', 20],
   ['chat-ui-flow-execution', 20],
   ['frontend-docker-build', 20],
+  ['mcp-plugin-docker-build', 15],
   ['backend-docker-build', 20],
 ]);
 

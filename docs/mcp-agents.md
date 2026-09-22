@@ -87,7 +87,21 @@ The historical public Shell MCP/SSE bridge is retired in production.
 - `start_mcp_vps.sh` intentionally fails closed and must not be converted back into a tunnel launcher.
 - `start_mcp_chatgpt.cjs` is a local experimental helper only and remains blocked unless a human explicitly sets its high-risk opt-in flag.
 - Production automation must use a bounded non-root SSH identity, an allowlisted command surface and the read/write gates in this guide.
-- The retired public DNS name `mcp.mercasto.com` and its certificate renewal lineage were removed on 2026-08-07; do not recreate them.
+- The historical arbitrary-shell service on `mcp.mercasto.com` remains retired permanently. The hostname may be reused only by the new **read-only MCP plugin** described below; it must never proxy the old Shell MCP/SSE bridge.
 - Historical public-SSE Nginx and client scratch files are intentionally absent and protected by the retirement gate.
+
+## Mercasto read-only MCP plugin
+
+The safe replacement for the retired Shell MCP is `Mercasto Server Status`.
+
+- Public endpoint: `https://mcp.mercasto.com/mcp`.
+- Transport: Streamable HTTP.
+- Runtime: an isolated non-root Docker Compose service on the private Mercasto network. It exposes port `8780` only to sibling containers and publishes no host port or Docker socket.
+- Public tools are read-only and return sanitized operational summaries only: coarse MCP-runtime resources, public-production HTTP status, and the plugin's immutable security posture.
+- It exposes no arbitrary shell, Docker control, filesystem browsing, deploy, restart, secret, credential, environment-file, process-list, or private application-data tools.
+- The public container has no command-execution surface and no host filesystem, systemd or Docker access. Tool arguments cannot select a URL, path, executable or command.
+- Mutating production actions continue through the exact GitHub issue-command allowlist and its CI/security gates.
+- Before any future private-data or write-capable MCP tools are added, add proper OAuth authorization and a separate security review. Do not use a static API key as a substitute for per-user authorization.
+- `/.well-known/openai-apps-challenge` is reserved for OpenAI app-domain verification when a challenge value is explicitly configured.
 
 The 2026-08-06 verification and retirement evidence is recorded in `docs/evidence/operator/2026-08-06/README.md`.

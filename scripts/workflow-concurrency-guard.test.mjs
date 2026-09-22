@@ -80,6 +80,7 @@ const serverOperatorCommands = [
   'RUN:cleanup_docker:MERCASTO',
   'RUN:maintenance_reboot:MERCASTO',
   'RUN:mcp_status',
+  'RUN:mcp_plugin_bootstrap:MERCASTO',
 ];
 
 function sortedUnique(values) {
@@ -131,3 +132,17 @@ test('content quality audit operator remains fixed and read-only', () => {
   );
   assert.doesNotMatch(block, /require_confirm|\brm\b|\bdelete\b|\bupdate\b|restart|up -d|migrate|reset --hard|git clean/);
 });
+
+test('MCP bootstrap operator stays service-scoped and keeps HTTP MCP blocked before TLS', () => {
+  const source = readFileSync('scripts/server-operator.sh', 'utf8');
+  const match = source.match(/\n  mcp_plugin_bootstrap\)\n([\s\S]*?)\n    ;;/);
+  assert.ok(match, 'mcp_plugin_bootstrap operation must exist');
+  const block = match[1];
+  assert.match(block, /require_confirm/);
+  assert.match(block, /up -d --build --no-deps mercasto-mcp-plugin/);
+  assert.match(block, /Host: mcp\.mercasto\.com/);
+  assert.match(block, /mcp_http_code/);
+  assert.match(block, /!= "426"/);
+  assert.doesNotMatch(block, /up -d --build --remove-orphans|php artisan migrate|restart_stack|docker system prune/);
+});
+

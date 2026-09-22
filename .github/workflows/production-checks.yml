@@ -162,6 +162,39 @@ jobs:
           trap cleanup EXIT
           docker build -f Dockerfile .
 
+  mcp-plugin-docker-build:
+    name: Build and smoke MCP plugin image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build MCP plugin image
+        run: docker build -t mercasto-mcp-plugin-ci:pr mcp-plugin
+
+      - name: Smoke MCP runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          container="$(docker run -d --rm -p 127.0.0.1:18780:8780 mercasto-mcp-plugin-ci:pr)"
+          trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS -H 'Host: 127.0.0.1' http://127.0.0.1:18780/healthz >/tmp/mcp-health.json; then
+              break
+            fi
+            sleep 1
+          done
+          grep -q '"mode":"read-only"' /tmp/mcp-health.json
+          curl -fsS --max-time 10 \
+            -X POST http://127.0.0.1:18780/mcp \
+            -H 'Host: 127.0.0.1' \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2026-07-28","capabilities":{},"clientInfo":{"name":"mercasto-ci","version":"1.0"}}}' \
+            >/tmp/mcp-initialize.txt
+          grep -q 'Mercasto Server Status' /tmp/mcp-initialize.txt
+
   backend-docker-build:
     name: Build backend Docker image
     runs-on: ubuntu-latest
