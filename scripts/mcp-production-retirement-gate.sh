@@ -32,6 +32,7 @@ allowed_hostname_paths=(
   "default.conf"
   "docs/mcp-agents.md"
   "mcp-plugin/server.mjs"
+  "scripts/server-operator.sh"
   "scripts/mcp-production-retirement-gate.sh"
 )
 
