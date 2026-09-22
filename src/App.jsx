@@ -4322,8 +4322,8 @@ function App() {
         </div>
       )}
 
-      {/* GLOBAL HEADER */}
-      <AppHeader
+      {/* GLOBAL HEADER — Golden catalog owns its own chrome from the first render. */}
+      {location.pathname !== '/listings' && <AppHeader
         LANGUAGE_OPTIONS={LANGUAGE_OPTIONS}
         MEXICO_STATES_CITIES={MEXICO_STATES_CITIES}
         activeCat={activeCat}
@@ -4390,7 +4390,7 @@ function App() {
         t={t}
         unreadCount={unreadCount}
         user={user}
-      />
+      />}
 
       {/* MAIN CONTENT */}
       <main className="w-full">
