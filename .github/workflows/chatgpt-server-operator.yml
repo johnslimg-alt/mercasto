@@ -35,7 +35,8 @@ jobs:
         github.event.comment.body == 'RUN:hermes_publish:MERCASTO' ||
         github.event.comment.body == 'RUN:cleanup_build_cache:MERCASTO' ||
         github.event.comment.body == 'RUN:cleanup_docker:MERCASTO' ||
-        github.event.comment.body == 'RUN:maintenance_reboot:MERCASTO'
+        github.event.comment.body == 'RUN:maintenance_reboot:MERCASTO' ||
+        github.event.comment.body == 'RUN:mcp_plugin_deploy:MERCASTO'
       )
     runs-on: [self-hosted]
     timeout-minutes: 60
@@ -68,6 +69,7 @@ jobs:
               'RUN:cleanup_build_cache:MERCASTO': ['cleanup_build_cache', 'MERCASTO', '160'],
               'RUN:cleanup_docker:MERCASTO': ['cleanup_docker', 'MERCASTO', '160'],
               'RUN:maintenance_reboot:MERCASTO': ['maintenance_reboot', 'MERCASTO', '220'],
+              'RUN:mcp_plugin_deploy:MERCASTO': ['mcp_plugin_deploy', 'MERCASTO', '260'],
             };
             const selected = commands[body];
             if (!selected) {
@@ -102,7 +104,7 @@ jobs:
             bash scripts/server-status-safe.sh
           elif [ "$OPERATION" = "mcp_status" ]; then
             echo "== MCP systemd =="
-            for unit in mercasto-ssh-mcp.service mercasto-ssh-mcp-stdio.service desktop-commander.service remote-desktop-commander.service; do
+            for unit in mercasto-ssh-mcp.service mercasto-ssh-mcp-stdio.service desktop-commander.service remote-desktop-commander.service mercasto-mcp-plugin.service mercasto-mcp-edge-bridge.service; do
               echo "-- $unit"
               printf 'enabled='; systemctl is-enabled "$unit" 2>/dev/null || true
               printf 'active='; systemctl is-active "$unit" 2>/dev/null || true
