@@ -1,6 +1,6 @@
 name: Hosted Server Runner Status
 
-# Read-only out-of-band diagnostics for the VPS GitHub runners.
+# Out-of-band diagnostics plus a narrow, allowlisted recovery path for the VPS GitHub runners.
 on:
   workflow_dispatch:
   issue_comment:
@@ -124,3 +124,104 @@ jobs:
           body="$(printf 'HOSTED_RUNNER_STATUS_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' \
             "$JOB_STATUS" "$GITHUB_RUN_ID" "$RUN_URL")"
           gh api "repos/$REPO/issues/832/comments" -f body="$body"
+
+  recover:
+    name: Recover VPS GitHub runners out of band
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      github.event.comment.body == 'RUN:hosted_runner_recover:MERCASTO'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate recovery secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_runner_recovery_key
+          chmod 600 ~/.ssh/mercasto_runner_recovery_key
+          scan_file="$(mktemp)"
+          trap 'rm -f "$scan_file"' EXIT
+          for attempt in 1 2 3 4; do
+            : > "$scan_file"
+            if ssh-keyscan -T 5 -H "$SERVER_HOST" > "$scan_file" 2>/dev/null && [ -s "$scan_file" ]; then
+              cat "$scan_file" >> ~/.ssh/known_hosts
+              break
+            fi
+            if [ "$attempt" -eq 4 ]; then
+              echo "Unable to read the VPS SSH host key after $attempt attempts." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Restart only the GitHub runner services
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_runner_recovery_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          units=(
+            actions.runner.johnslimg-alt-mercasto.srv1526037.service
+            actions.runner.johnslimg-alt-mercasto-mobile.srv1526037-mobile.service
+          )
+
+          for unit in "${units[@]}"; do
+            systemctl restart "$unit"
+          done
+
+          sleep 5
+
+          failed=0
+          for unit in "${units[@]}"; do
+            echo "-- $unit --"
+            systemctl show "$unit" --no-pager \
+              -p LoadState -p ActiveState -p SubState -p MainPID -p NRestarts \
+              -p ExecMainStartTimestamp -p WorkingDirectory
+            if ! systemctl is-active --quiet "$unit"; then
+              failed=1
+            fi
+          done
+
+          echo '=== RUNNER LISTENERS ==='
+          ps -eo pid=,ppid=,user=,etime=,args= | grep '[R]unner.Listener' || true
+
+          exit "$failed"
+          REMOTE
+
+      - name: Remove SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/mercasto_runner_recovery_key
+
+      - name: Report recovery result
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          body="$(printf 'HOSTED_RUNNER_RECOVERY_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' \
+            "$JOB_STATUS" "$GITHUB_RUN_ID" "$RUN_URL")"
+          gh api "repos/$REPO/issues/832/comments" -f body="$body"
+
