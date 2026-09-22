@@ -35,8 +35,7 @@ jobs:
         github.event.comment.body == 'RUN:hermes_publish:MERCASTO' ||
         github.event.comment.body == 'RUN:cleanup_build_cache:MERCASTO' ||
         github.event.comment.body == 'RUN:cleanup_docker:MERCASTO' ||
-        github.event.comment.body == 'RUN:maintenance_reboot:MERCASTO' ||
-        github.event.comment.body == 'RUN:mcp_plugin_deploy:MERCASTO'
+        github.event.comment.body == 'RUN:maintenance_reboot:MERCASTO'
       )
     runs-on: [self-hosted]
     timeout-minutes: 60
@@ -69,7 +68,6 @@ jobs:
               'RUN:cleanup_build_cache:MERCASTO': ['cleanup_build_cache', 'MERCASTO', '160'],
               'RUN:cleanup_docker:MERCASTO': ['cleanup_docker', 'MERCASTO', '160'],
               'RUN:maintenance_reboot:MERCASTO': ['maintenance_reboot', 'MERCASTO', '220'],
-              'RUN:mcp_plugin_deploy:MERCASTO': ['mcp_plugin_deploy', 'MERCASTO', '260'],
             };
             const selected = commands[body];
             if (!selected) {
