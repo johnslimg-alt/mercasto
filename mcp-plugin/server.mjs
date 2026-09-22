@@ -24,6 +24,28 @@ function result(output) {
   };
 }
 
+async function httpStatus(url, options = {}) {
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(7000),
+      headers: {
+        Accept: 'application/json,text/plain,*/*',
+        'User-Agent': 'Mercasto-MCP-Status/1.0',
+        ...(options.headers || {}),
+      },
+    });
+    return {
+      url,
+      status: response.status,
+      ok: response.status >= 200 && response.status < 400,
+    };
+  } catch {
+    return { url, status: 0, ok: false };
+  }
+}
+
 async function runtimeSnapshot() {
   const disk = await fs.statfs('/');
   const totalBytes = disk.blocks * disk.bsize;
@@ -31,32 +53,69 @@ async function runtimeSnapshot() {
   const usedBytes = Math.max(0, totalBytes - freeBytes);
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
+  const memory = process.memoryUsage();
 
   return {
+    hostname: os.hostname(),
     uptimeSeconds: Math.floor(os.uptime()),
     loadAverage: os.loadavg().map((n) => Number(n.toFixed(2))),
-    memoryUsedPercent: Number((((totalMem - freeMem) / totalMem) * 100).toFixed(1)),
-    filesystemUsedPercent:
-      totalBytes > 0 ? Number(((usedBytes / totalBytes) * 100).toFixed(1)) : 0,
+    process: {
+      pid: process.pid,
+      rssBytes: memory.rss,
+      heapUsedBytes: memory.heapUsed,
+    },
+    memory: {
+      totalBytes: totalMem,
+      freeBytes: freeMem,
+      usedPercent: totalMem > 0
+        ? Number((((totalMem - freeMem) / totalMem) * 100).toFixed(1))
+        : 0,
+    },
+    filesystem: {
+      totalBytes,
+      freeBytes,
+      usedBytes,
+      usedPercent: totalBytes > 0
+        ? Number(((usedBytes / totalBytes) * 100).toFixed(1))
+        : 0,
+    },
+    scope: 'mcp-container-runtime',
   };
 }
 
-async function httpStatus(url) {
-  const target = new URL(url).pathname || '/';
+async function githubOperatorStatus() {
+  const url =
+    'https://api.github.com/repos/johnslimg-alt/mercasto/actions/workflows/chatgpt-server-operator.yml/runs?per_page=5';
+
   try {
     const response = await fetch(url, {
-      method: 'GET',
-      redirect: 'manual',
-      signal: AbortSignal.timeout(5000),
-      headers: { 'User-Agent': 'Mercasto-MCP-Status/1.0' },
+      signal: AbortSignal.timeout(7000),
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'Mercasto-MCP-Status/1.0',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
     });
-    return {
-      target,
-      status: response.status,
-      ok: response.status >= 200 && response.status < 400,
-    };
+
+    if (!response.ok) {
+      return { ok: false, status: response.status, runs: [] };
+    }
+
+    const payload = await response.json();
+    const runs = Array.isArray(payload.workflow_runs)
+      ? payload.workflow_runs.slice(0, 5).map((run) => ({
+          id: run.id,
+          status: run.status,
+          conclusion: run.conclusion,
+          event: run.event,
+          createdAt: run.created_at,
+          updatedAt: run.updated_at,
+        }))
+      : [];
+
+    return { ok: true, status: response.status, runs };
   } catch {
-    return { target, status: 0, ok: false };
+    return { ok: false, status: 0, runs: [] };
   }
 }
 
@@ -69,22 +128,38 @@ function buildMcpServer() {
     },
     {
       instructions:
-        'Public read-only Mercasto observability. This server intentionally exposes no write, shell, filesystem-browsing, Docker-control, deploy, restart, credential, secret-reading, private-data, or arbitrary-command tools. Mutating production work remains behind the separate GitHub allowlist.',
+        'Read-only operational observability for Mercasto. This server intentionally exposes no shell, filesystem mutation, Docker control, deployment, service restart, database mutation, or arbitrary command execution. The historical public Shell MCP remains retired.',
     },
   );
 
   server.registerTool(
-    'runtime_resources',
+    'mcp_runtime_status',
     {
-      title: 'MCP runtime resources',
+      title: 'MCP runtime status',
       description:
-        'Read coarse resource percentages for the isolated MCP runtime container. This is not unrestricted host inspection.',
+        'Read the isolated MCP container runtime snapshot: process memory, uptime, load and container filesystem usage. This is not host-root access.',
       inputSchema: z.object({}).strict(),
       outputSchema: z.object({
+        hostname: z.string(),
         uptimeSeconds: z.number(),
         loadAverage: z.array(z.number()),
-        memoryUsedPercent: z.number(),
-        filesystemUsedPercent: z.number(),
+        process: z.object({
+          pid: z.number(),
+          rssBytes: z.number(),
+          heapUsedBytes: z.number(),
+        }),
+        memory: z.object({
+          totalBytes: z.number(),
+          freeBytes: z.number(),
+          usedPercent: z.number(),
+        }),
+        filesystem: z.object({
+          totalBytes: z.number(),
+          freeBytes: z.number(),
+          usedBytes: z.number(),
+          usedPercent: z.number(),
+        }),
+        scope: z.literal('mcp-container-runtime'),
       }),
       annotations: readOnlyAnnotations,
     },
@@ -96,17 +171,16 @@ function buildMcpServer() {
     {
       title: 'Mercasto production status',
       description:
-        'Check only the public Mercasto homepage and public categories API and return HTTP status codes.',
+        'Check public Mercasto production endpoints without reading private account or application data.',
       inputSchema: z.object({}).strict(),
       outputSchema: z.object({
         checks: z.array(
           z.object({
-            target: z.string(),
+            url: z.string(),
             status: z.number(),
             ok: z.boolean(),
           }),
         ),
-        allHealthy: z.boolean(),
       }),
       annotations: { ...readOnlyAnnotations, openWorldHint: true },
     },
@@ -114,39 +188,65 @@ function buildMcpServer() {
       const checks = await Promise.all([
         httpStatus('https://mercasto.com/'),
         httpStatus('https://mercasto.com/api/categories'),
+        httpStatus('https://mercasto.com/up'),
       ]);
-      return result({
-        checks,
-        allHealthy: checks.every((check) => check.ok),
-      });
+      return result({ checks });
     },
   );
 
   server.registerTool(
-    'plugin_status',
+    'github_operator_status',
     {
-      title: 'MCP plugin status',
+      title: 'GitHub server operator status',
       description:
-        'Return the plugin version and immutable security posture for this public endpoint.',
+        'Read the latest public GitHub Actions runs for the fixed Mercasto ChatGPT server-operator workflow. This tool cannot trigger or mutate workflows.',
       inputSchema: z.object({}).strict(),
       outputSchema: z.object({
+        ok: z.boolean(),
+        status: z.number(),
+        runs: z.array(
+          z.object({
+            id: z.number(),
+            status: z.string(),
+            conclusion: z.string().nullable(),
+            event: z.string(),
+            createdAt: z.string(),
+            updatedAt: z.string(),
+          }),
+        ),
+      }),
+      annotations: { ...readOnlyAnnotations, openWorldHint: true },
+    },
+    async () => result(await githubOperatorStatus()),
+  );
+
+  server.registerTool(
+    'mcp_server_info',
+    {
+      title: 'MCP server information',
+      description:
+        'Return the Mercasto MCP plugin version and its intentionally read-only security boundary.',
+      inputSchema: z.object({}).strict(),
+      outputSchema: z.object({
+        name: z.string(),
         version: z.string(),
         mode: z.literal('read-only'),
         transport: z.literal('streamable-http'),
-        writeTools: z.literal(false),
+        endpoint: z.literal('/mcp'),
         arbitraryShell: z.literal(false),
-        privateDataAccess: z.literal(false),
+        writeTools: z.literal(false),
       }),
       annotations: readOnlyAnnotations,
     },
     async () =>
       result({
+        name: 'Mercasto Server Status MCP',
         version: VERSION,
         mode: 'read-only',
         transport: 'streamable-http',
-        writeTools: false,
+        endpoint: '/mcp',
         arbitraryShell: false,
-        privateDataAccess: false,
+        writeTools: false,
       }),
   );
 
