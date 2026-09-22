@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 import SEO from '../../SEO';
 
@@ -17,11 +17,15 @@ const MiniCard = ({ title, children }) => (
 );
 
 export default function ModeracionScreen() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <GoldenPublicPageShell testId="golden-moderation-main" className="mcg-legal-page mcg-moderation-page">
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <SEO
-        title="Política de moderación"
+        title="Política de moderación | Mercasto"
         description="Conoce las reglas de moderación, contenido prohibido, reportes y apelaciones de Mercasto México."
         url="/moderacion"
         image="https://mercasto.com/icon-512x512.png"

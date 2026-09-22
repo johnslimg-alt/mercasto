@@ -282,6 +282,7 @@
 .mcg-legal-page article,.mcg-legal-page aside{color:var(--mcg-ink)}
 .dark .mcg-legal-page .bg-lime-50{background:#1a2e05!important}
 .dark .mcg-legal-page .border-lime-100{border-color:#3f6212!important}
+.dark .mcg-legal-page .bg-lime-100{background:#365314!important}
 .dark .mcg-legal-page .text-lime-700{color:#bef264!important}
 .dark .mcg-legal-page .bg-red-50{background:#3a1719!important}
 .dark .mcg-legal-page .border-red-100,.dark .mcg-legal-page .border-red-200{border-color:#7f1d1d!important}

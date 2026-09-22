@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import GoldenPublicPageShell from '../../shell/GoldenPublicPageShell';
 import SEO from '../../SEO';
 
@@ -20,10 +20,14 @@ const PolicyShell = ({ children }) => (
 );
 
 export default function ReembolsosScreen() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <PolicyShell>
       <SEO
-        title="Política de pagos y reembolsos"
+        title="Política de pagos y reembolsos | Mercasto"
         description="Consulta cómo funcionan los servicios de pago, promociones y revisiones de reembolso en Mercasto México."
         url="/reembolsos"
         image="https://mercasto.com/icon-512x512.png"
@@ -33,7 +37,7 @@ export default function ReembolsosScreen() {
           <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300 mb-3">Pagos, promociones y soporte</p>
           <h1 className="text-4xl sm:text-6xl font-black tracking-[-0.06em] leading-none mb-4">Política de pagos y reembolsos</h1>
           <p className="max-w-3xl text-slate-300 leading-relaxed">Esta página resume cómo funcionan los cargos por servicios de visibilidad, planes de cuenta y otros productos digitales dentro de Mercasto, así como los casos en los que puede proceder una revisión de reembolso.</p>
-          <p className="text-sm text-slate-400 mt-5">Última actualización: 23 de mayo de 2026 · Aplicable a Mercasto México</p>
+          <p className="text-sm text-slate-300 mt-5">Última actualización: 23 de mayo de 2026 · Aplicable a Mercasto México</p>
         </div>
 
         <div className="grid lg:grid-cols-[260px_1fr] gap-6">
