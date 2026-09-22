@@ -231,17 +231,15 @@ test('tablet footer legal controls remain reachable above the fixed Golden nav',
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await page.setViewportSize({ width: 768, height: 844 });
   await page.goto('/motor', { waitUntil: 'domcontentloaded' });
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await expect.poll(() => page.evaluate(
-    () => Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 2,
-  )).toBeTruthy();
-
   const legal = page.locator('.app-footer-legal');
   const tabbar = page.getByTestId('golden-bottom-nav');
   await expect(legal).toBeVisible();
   await expect(tabbar).toBeVisible();
 
+  await legal.evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(100);
   const [legalBox, tabBox] = await Promise.all([legal.boundingBox(), tabbar.boundingBox()]);
+  expect(legalBox.y).toBeGreaterThanOrEqual(0);
   expect(legalBox.y + legalBox.height).toBeLessThanOrEqual(tabBox.y + 1);
 });
 
