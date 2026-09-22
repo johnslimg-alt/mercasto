@@ -236,11 +236,18 @@ test('tablet footer legal controls remain reachable above the fixed Golden nav',
   await expect(legal).toBeVisible();
   await expect(tabbar).toBeVisible();
 
-  await legal.evaluate(element => element.scrollIntoView({ block: 'center' }));
-  await page.waitForTimeout(100);
-  const [legalBox, tabBox] = await Promise.all([legal.boundingBox(), tabbar.boundingBox()]);
-  expect(legalBox.y).toBeGreaterThanOrEqual(0);
-  expect(legalBox.y + legalBox.height).toBeLessThanOrEqual(tabBox.y + 1);
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const legalNode = document.querySelector('.app-footer-legal');
+    const navNode = document.querySelector('[data-testid="golden-bottom-nav"]');
+    if (!legalNode || !navNode) return false;
+    const legalRect = legalNode.getBoundingClientRect();
+    const navRect = navNode.getBoundingClientRect();
+    return legalRect.top >= 0 && legalRect.bottom <= navRect.top + 1;
+  })).toBeTruthy();
 });
 
 test('dark vertical accents preserve readable light chips and CTA buttons', async ({ page }, testInfo) => {
