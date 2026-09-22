@@ -28,14 +28,6 @@ services:
         read_only: true
         bind:
           create_host_path: false
-      # Mercasto read-only MCP plugin owns mcp.mercasto.com. Keep the vhost
-      # outside the checkout so deploy/reset cannot delete runtime edge state.
-      - type: bind
-        source: /etc/mercasto-edge/mcp.conf
-        target: /etc/nginx/conf.d/mcp.conf
-        read_only: true
-        bind:
-          create_host_path: false
       # LLM Council owns council.flyaicrm.com on the shared edge. Keep its
       # vhost outside the Mercasto checkout, but mount it explicitly so container
       # recreation cannot silently drop the hostname or leave untracked config drift.
