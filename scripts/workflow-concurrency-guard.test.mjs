@@ -79,6 +79,7 @@ const serverOperatorCommands = [
   'RUN:cleanup_build_cache:MERCASTO',
   'RUN:cleanup_docker:MERCASTO',
   'RUN:maintenance_reboot:MERCASTO',
+  'RUN:mcp_status',
 ];
 
 function sortedUnique(values) {
