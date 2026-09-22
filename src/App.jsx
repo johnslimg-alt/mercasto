@@ -4310,7 +4310,8 @@ function App() {
         </div>
       )}
 
-      {/* GLOBAL HEADER */}
+      {/* GLOBAL HEADER — Golden Catalog owns its header from the first paint. */}
+      {location.pathname !== '/listings' && (
       <AppHeader
         LANGUAGE_OPTIONS={LANGUAGE_OPTIONS}
         MEXICO_STATES_CITIES={MEXICO_STATES_CITIES}
@@ -4379,6 +4380,7 @@ function App() {
         unreadCount={unreadCount}
         user={user}
       />
+      )}
 
       {/* MAIN CONTENT */}
       <main className="w-full">
