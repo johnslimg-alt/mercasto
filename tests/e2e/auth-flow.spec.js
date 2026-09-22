@@ -34,10 +34,9 @@ async function dismissCookies(page) {
 }
 
 async function openAuthModal(page) {
-  const viewport = page.viewportSize();
-  const btn = viewport && viewport.width >= 640
-    ? page.locator('.header-user-button')
-    : page.locator('.mobile-account-button');
+  const btn = page.locator(
+    '[data-testid="golden-account-button"]:visible, [data-testid="golden-mobile-account-tab"]:visible, .header-user-button:visible, .mobile-account-button:visible'
+  ).first();
 
   await expect(btn).toBeVisible({ timeout: 25000 });
   await btn.click();
@@ -235,15 +234,42 @@ test.describe('Authentication E2E Flow', () => {
   });
 
   test('registered user can log out and log back in', async ({ page }) => {
-    const email = randomEmail();
+    const email = 'e2e-login@example.test';
     const password = 'E2eTestPass99!';
-    await registerUser(page, email, 'E2E Login User', password);
+    const e2eUser = { id: 7001, name: 'E2E Login User', email, role: 'individual', account_verified: true };
+
+    await page.route('**/api/**', async route => {
+      const url = new URL(route.request().url());
+      const method = route.request().method();
+      const json = (payload, status = 200) => route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+      });
+      if (url.pathname.endsWith('/login') && method === 'POST') {
+        return json({ access_token: 'e2e-login-token', user: e2eUser });
+      }
+      if (url.pathname.endsWith('/logout') && method === 'POST') return json({ ok: true });
+      if (url.pathname.endsWith('/user')) return json(e2eUser);
+      if (url.pathname.endsWith('/auth/providers')) return json({ google: false, apple: false, sms: false });
+      if (url.pathname.endsWith('/categories') || url.pathname.endsWith('/category-attributes') || url.pathname.endsWith('/favorites')) return json([]);
+      if (url.pathname.endsWith('/ads')) return json({ data: [], total: 0, current_page: 1, last_page: 1 });
+      if (url.pathname.endsWith('/banners')) return json({ banners: [] });
+      return json({});
+    });
+
+    await page.evaluate(({ user }) => {
+      localStorage.setItem('auth_token', 'e2e-seeded-token');
+      localStorage.setItem('user', JSON.stringify(user));
+    }, { user: e2eUser });
 
     await page.goto('/profile');
-    const accountButton = page.getByRole('button', { name: /E2E Login User|Abrir menú de cuenta/i }).filter({ visible: true }).first();
+    const accountButton = page.getByTestId('golden-account-button');
     await expect(accountButton).toBeVisible({ timeout: 10000 });
     await accountButton.click();
-    const logoutButton = page.getByRole('button', { name: /Cerrar sesión|Salir|Log out|Logout/i }).filter({ visible: true }).first();
+    const accountMenu = page.getByTestId('golden-account-menu');
+    await expect(accountMenu).toBeVisible({ timeout: 5000 });
+    const logoutButton = accountMenu.getByRole('menuitem', { name: /Cerrar sesión|Salir|Log out|Logout/i });
     await expect(logoutButton).toBeVisible({ timeout: 5000 });
     await logoutButton.click();
     await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBeNull();
@@ -258,4 +284,168 @@ test.describe('Authentication E2E Flow', () => {
     await page.goto('/profile');
     await expect(page.locator('body')).toContainText(/E2E Login User|Cuenta|Perfil/i);
   });
+});
+
+
+test('login and register entry routes use the shared Golden shell on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.addInitScript(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('cookiesAccepted', 'true');
+  });
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/auth/providers')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ google: false, apple: false, sms: false }),
+      });
+    }
+    return route.fulfill({ status: 401, contentType: 'application/json', body: '{}' });
+  });
+
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+    for (const route of ['/login', '/register']) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('golden-header')).toBeVisible();
+      await expect(page.getByTestId('golden-auth-entry-main')).toBeVisible();
+      await expect(page.locator('.site-header')).toBeHidden();
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(1);
+
+      if (viewport.name === 'mobile') {
+        await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
+        await expect(page.getByTestId('golden-mobile-account-tab')).toHaveClass(/active/);
+        await expect(page.locator('.mobile-tabbar')).toBeHidden();
+      }
+    }
+  }
+});
+
+
+test('direct auth entry keeps the Golden shell visible while a stored session is validated', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('auth_token', 'expired-e2e-token');
+  });
+
+  let releaseUserValidation;
+  const userValidationHold = new Promise(resolve => {
+    releaseUserValidation = resolve;
+  });
+  const userValidationRequest = page.waitForRequest(request => {
+    try {
+      return new URL(request.url()).pathname === '/api/user';
+    } catch {
+      return false;
+    }
+  });
+
+  await page.route('**/api/user', async route => {
+    await userValidationHold;
+    await route.fulfill({ status: 401, contentType: 'application/json', body: '{}' });
+  });
+  await page.route('**/api/auth/providers', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ google: false, apple: false, sms: false }),
+  }));
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await userValidationRequest;
+
+  await expect(page.getByTestId('golden-header')).toBeVisible();
+  await expect(page.getByTestId('golden-auth-entry-main')).toBeVisible();
+  await expect(page.getByTestId('golden-auth-entry-main').locator('.animate-spin')).toBeVisible();
+  await expect(page.locator('.site-header')).toBeHidden();
+
+  releaseUserValidation();
+
+  await expect(page.getByTestId('auth-modal-close')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('golden-header')).toBeVisible();
+  await expect(page.locator('.site-header')).toBeHidden();
+});
+
+test('direct auth fallback keeps dark text on the lime CTA in dark mode', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('cookiesAccepted', 'true');
+  });
+  await page.route('**/api/auth/providers', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ google: false, apple: false, sms: false }),
+  }));
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('auth-modal-close')).toBeVisible();
+  await page.getByTestId('auth-modal-close').click();
+
+  const themeToggle = page.getByTestId('golden-theme-toggle');
+  await expect(themeToggle).toBeVisible();
+  if (!await page.evaluate(() => document.documentElement.classList.contains('dark'))) {
+    await themeToggle.click();
+  }
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(true);
+
+  const cta = page.locator('.mcg-auth-lime-cta');
+  await expect(cta).toBeVisible();
+  const colors = await cta.evaluate(node => {
+    const style = getComputedStyle(node);
+    return { color: style.color, backgroundColor: style.backgroundColor };
+  });
+  expect(colors.color).toBe('rgb(15, 23, 42)');
+  expect(colors.backgroundColor).toBe('rgb(132, 204, 22)');
+});
+
+test('direct auth shell keeps the tablet footer content above the fixed Golden nav', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 800 });
+  await page.addInitScript(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('cookiesAccepted', 'true');
+  });
+  await page.route('**/api/auth/providers', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ google: false, apple: false, sms: false }),
+  }));
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('auth-modal-close')).toBeVisible();
+  await page.getByTestId('auth-modal-close').click();
+
+  const footer = page.locator('.app-global-footer');
+  const legal = page.locator('.app-footer-legal');
+  const bottomNav = page.getByTestId('golden-bottom-nav');
+  await expect(footer).toBeVisible();
+  await expect(legal).toBeVisible();
+  await expect(bottomNav).toBeVisible();
+
+  const footerPaddingBottom = await footer.evaluate(node => parseFloat(getComputedStyle(node).paddingBottom));
+  expect(footerPaddingBottom).toBeGreaterThanOrEqual(100);
+
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const legalNode = document.querySelector('.app-footer-legal');
+    const navNode = document.querySelector('[data-testid="golden-bottom-nav"]');
+    if (!legalNode || !navNode) return false;
+    const legalRect = legalNode.getBoundingClientRect();
+    const navRect = navNode.getBoundingClientRect();
+    return legalRect.top >= 0 && legalRect.bottom <= navRect.top + 1;
+  })).toBeTruthy();
 });

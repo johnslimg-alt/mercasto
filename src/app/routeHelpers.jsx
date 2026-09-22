@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Loader2, ShieldCheck, Sparkles } from 'lucide-react';
 import { useUI } from '../contexts/UIContext';
 import { getTranslations } from '../utils/translations';
+import GoldenPublicPageShell from '../components/shell/GoldenPublicPageShell';
 
 export function LocalizedRouteLoadError({ translationKey }) {
   const { lang, loadedLangVersion } = useUI();
@@ -66,28 +67,36 @@ export function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuth
     }
   }, [authReady, hasToken, mode, setAuthMode, setShowAuthModal, user]);
 
-  if (!authReady) return <ProtectedRoutePlaceholder loading />;
+  if (!authReady) {
+    return (
+      <GoldenPublicPageShell testId="golden-auth-entry-main" className="mcg-auth-entry-page" active="account">
+        <ProtectedRoutePlaceholder loading />
+      </GoldenPublicPageShell>
+    );
+  }
   if (user && hasToken) return <Navigate to="/profile" replace />;
 
   return (
-    <section className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <ShieldCheck className="mx-auto mb-4 h-10 w-10 text-[#84CC16]" aria-hidden="true" />
-        <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-          {isRegistration ? `${t.register} · Mercasto` : `${t.login} · Mercasto`}
-        </h1>
-        <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {tagline || t.ai_brand_tagline}
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-          {isRegistration ? t.auth_register_desc : t.auth_login_desc}
-        </p>
-        <button type="button" onClick={() => { setAuthMode(mode); setShowAuthModal(true); }} className="btn-lg mt-6 w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">
-          {isRegistration ? t.register : t.login}
-        </button>
-      </div>
-    </section>
+    <GoldenPublicPageShell testId="golden-auth-entry-main" className="mcg-auth-entry-page" active="account">
+      <section className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <ShieldCheck className="mx-auto mb-4 h-10 w-10 text-[#84CC16]" aria-hidden="true" />
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white">
+            {isRegistration ? `${t.register} · Mercasto` : `${t.login} · Mercasto`}
+          </h1>
+          <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            {tagline || t.ai_brand_tagline}
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+            {isRegistration ? t.auth_register_desc : t.auth_login_desc}
+          </p>
+          <button type="button" onClick={() => { setAuthMode(mode); setShowAuthModal(true); }} className="btn-lg mcg-auth-lime-cta mt-6 w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">
+            {isRegistration ? t.register : t.login}
+          </button>
+        </div>
+      </section>
+    </GoldenPublicPageShell>
   );
 }
 

@@ -5,6 +5,9 @@ async function installSession(page) {
     localStorage.setItem('lang', 'es');
     localStorage.setItem('mercasto_language', 'es');
     localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
   });
 }
 

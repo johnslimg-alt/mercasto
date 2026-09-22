@@ -109,9 +109,35 @@ test('mobile catalog reveals cards in small batches', async ({ page }, testInfo)
   test.skip(!/mobile/i.test(testInfo.project.name), 'Batching is scoped to mobile catalog startup');
   await page.addInitScript(() => {
     window.__mercastoCatalogCls = 0;
+    window.__mercastoCatalogClsEntries = [];
+    const describeNode = (node) => {
+      if (!node) return null;
+      const testId = node.getAttribute?.('data-testid');
+      const catalogMarker = node.hasAttribute?.('data-catalog-card') ? '[data-catalog-card]' : '';
+      const id = node.id ? `#${node.id}` : '';
+      const classes = typeof node.className === 'string'
+        ? node.className.split(/\s+/).filter(Boolean).slice(0, 4).map(value => `.${value}`).join('')
+        : '';
+      return `${node.tagName?.toLowerCase?.() || 'node'}${id}${testId ? `[data-testid="${testId}"]` : ''}${catalogMarker}${classes}`;
+    };
+    const rect = value => value ? {
+      x: Math.round(value.x * 10) / 10,
+      y: Math.round(value.y * 10) / 10,
+      width: Math.round(value.width * 10) / 10,
+      height: Math.round(value.height * 10) / 10,
+    } : null;
     new PerformanceObserver(list => {
       for (const entry of list.getEntries()) {
-        if (!entry.hadRecentInput) window.__mercastoCatalogCls += entry.value;
+        if (entry.hadRecentInput) continue;
+        window.__mercastoCatalogCls += entry.value;
+        window.__mercastoCatalogClsEntries.push({
+          value: entry.value,
+          sources: (entry.sources || []).map(source => ({
+            node: describeNode(source.node),
+            previousRect: rect(source.previousRect),
+            currentRect: rect(source.currentRect),
+          })),
+        });
       }
     }).observe({ type: 'layout-shift', buffered: true });
   });
@@ -135,8 +161,14 @@ test('mobile catalog reveals cards in small batches', async ({ page }, testInfo)
   expect(countBeforeScroll).toBeGreaterThanOrEqual(8);
   expect(countBeforeScroll).toBeLessThan(catalogAds.length);
   expect(countBeforeScroll % 8).toBe(0);
-  const cls = await page.evaluate(() => window.__mercastoCatalogCls || 0);
-  expect(cls).toBeLessThan(0.1);
+  const clsSample = await page.evaluate(() => ({
+    cls: window.__mercastoCatalogCls || 0,
+    entries: window.__mercastoCatalogClsEntries || [],
+  }));
+  expect(
+    clsSample.cls,
+    `CLS entries: ${JSON.stringify(clsSample.entries)}`,
+  ).toBeLessThan(0.1);
 
   await page.locator('[data-catalog-batch-sentinel]').scrollIntoViewIfNeeded();
   await expect.poll(() => page.locator('[data-catalog-card]').count()).toBeGreaterThan(countBeforeScroll);

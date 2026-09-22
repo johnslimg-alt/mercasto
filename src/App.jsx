@@ -359,6 +359,18 @@ function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const { lang, setLang, loadedLangVersion, isDarkMode, setIsDarkMode } = useUI();
 
+  // /listings is lazy-loaded, so the child CatalogScreen cannot own the first-paint
+  // shell switch: the legacy 123px header would render for one frame and then disappear,
+  // producing a deterministic CLS. Activate the Golden shell at the parent route level
+  // before the browser paints the Suspense fallback.
+  useLayoutEffect(() => {
+    if (location.pathname !== '/listings') return undefined;
+    document.body.classList.add('mc-golden-shell-active', 'mc-golden-catalog-active');
+    return () => {
+      document.body.classList.remove('mc-golden-shell-active', 'mc-golden-catalog-active');
+    };
+  }, [location.pathname]);
+
   // Page-view tracking. Keep filtered/catalog/detail states out of homepage conversion metrics.
   useEffect(() => {
     trackPageView(location.pathname + location.search, document.title);
