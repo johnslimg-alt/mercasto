@@ -305,7 +305,7 @@ case "$OPERATION" in
       certonly \
       --webroot \
       -w /var/www/certbot \
-      --cert-name mcp.mercasto.com \
+      --cert-name mercasto-mcp-plugin \
       -d mcp.mercasto.com \
       --non-interactive \
       --agree-tos \
