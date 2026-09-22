@@ -74,7 +74,7 @@ grep -qF 'readOnlyHint: true' "$PLUGIN"
 grep -qF 'destructiveHint: false' "$PLUGIN"
 grep -qF "app.all('/mcp'" "$PLUGIN"
 
-for tool in runtime_resources production_status plugin_status; do
+for tool in mcp_runtime_status production_status github_operator_status mcp_server_info; do
   grep -qF "'$tool'" "$PLUGIN"
 done
 
