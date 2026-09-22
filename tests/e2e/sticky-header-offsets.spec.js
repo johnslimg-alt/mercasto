@@ -90,6 +90,8 @@ for (const width of [390, 768, 1024]) {
 
     for (const route of PUBLIC_STICKY_ROUTES) {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
+      const header = page.locator('[data-testid="golden-header"]:visible, .site-header:visible').first();
+      await expect(header).toBeVisible();
       await page.waitForTimeout(180);
 
       const metrics = await documentStickyMetrics(page);
