@@ -322,7 +322,7 @@
 .mc-golden-vertical-active .mcg-header{position:sticky;top:0;z-index:60}
 .mcg-vertical-page .vertical-quick-filters{top:70px!important}
 .dark .mcg-vertical-page .mcg-hero-subsection-label{color:#0f172a!important}
-.dark .mcg-vertical-page .mcg-preserve-white-accent{background:#fff!important}
+.dark .mcg-public-page.mcg-vertical-page .mcg-preserve-white-accent.bg-white{background:#fff!important;background-image:none!important}
 @media(max-width:1179px) and (min-width:768px){
   .mcg-vertical-page .vertical-quick-filters{top:72px!important}
   .mc-golden-public-active .app-global-footer{padding-bottom:106px!important}
