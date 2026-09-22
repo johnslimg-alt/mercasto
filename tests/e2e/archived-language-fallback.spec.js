@@ -33,7 +33,10 @@ for (const archived of archivedLanguages) {
     await expect.poll(() => page.evaluate(() => localStorage.getItem('lang'))).toBe('es');
     await expect.poll(() => page.evaluate(() => localStorage.getItem('mercasto_language'))).toBe('es');
     await expect(page.getByTestId('catalog-map-toggle')).toContainText('Ocultar mapa');
-    const languageSelect = page.getByTestId('desktop-language-select');
+    const languageSelect = page.locator(
+      '[data-testid="golden-language-select"]:visible, [data-testid="desktop-language-select"]:visible'
+    ).first();
+    await expect(languageSelect).toBeVisible();
     await expect(languageSelect.locator('option')).toHaveCount(11);
     await expect(languageSelect.locator('option[value="he"]')).toHaveCount(0);
     await expect(languageSelect.locator('option[value="yi"]')).toHaveCount(0);
