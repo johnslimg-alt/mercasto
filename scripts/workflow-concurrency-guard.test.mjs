@@ -165,12 +165,12 @@ test('MCP TLS issue operator quarantines only a fully stale fixed Certbot archiv
   const match = source.match(/\n  mcp_plugin_tls_issue\)\n([\s\S]*?)\n    ;;/);
   assert.ok(match, 'mcp_plugin_tls_issue operation must exist');
   const block = match[1];
-  assert.match(block, /\/etc\/letsencrypt\/archive\/mcp\.mercasto\.com/);
-  assert.match(block, /\/etc\/letsencrypt\/renewal\/mcp\.mercasto\.com\.conf/);
-  assert.match(block, /\/etc\/letsencrypt\/live\/mcp\.mercasto\.com/);
-  assert.match(block, /\/etc\/letsencrypt\/mercasto-stale/);
-  assert.match(block, /sudo -n mv "\$mcp_archive" "\$stale_target"/);
-  assert.match(block, /Refusing automatic Certbot repair/);
+  assert.ok(block.includes('/etc/letsencrypt/archive/mcp.mercasto.com'));
+  assert.ok(block.includes('/etc/letsencrypt/renewal/mcp.mercasto.com.conf'));
+  assert.ok(block.includes('/etc/letsencrypt/live/mcp.mercasto.com'));
+  assert.ok(block.includes('/etc/letsencrypt/mercasto-stale'));
+  assert.ok(block.includes('sudo -n mv "$mcp_archive" "$stale_target"'));
+  assert.ok(block.includes('Refusing automatic Certbot repair'));
   assert.doesNotMatch(block, /rm -rf \/etc\/letsencrypt\/archive/);
 });
 
