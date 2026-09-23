@@ -243,6 +243,29 @@ case "$OPERATION" in
     run_verify_quick
     ;;
 
+  harness_proxy_status)
+    print_header "Harness proxy status"
+    echo "-- /etc/deepseek-harness/nginx.conf --"
+    sudo -n awk '
+      /^[[:space:]]*(server_name|listen|location|proxy_pass|client_max_body_size|client_body_timeout|proxy_request_buffering)[[:space:]]/ {
+        print NR ":" $0
+      }
+    ' /etc/deepseek-harness/nginx.conf
+    echo
+    echo "-- /etc/mercasto-edge/harness.conf --"
+    sudo -n awk '
+      /^[[:space:]]*(server_name|listen|location|proxy_pass|client_max_body_size|client_body_timeout|proxy_request_buffering)[[:space:]]/ {
+        print NR ":" $0
+      }
+    ' /etc/mercasto-edge/harness.conf
+    echo
+    printf 'deepseek_harness_proxy='
+    systemctl is-active deepseek-harness-proxy.service 2>/dev/null || true
+    printf 'frontend_container='
+    docker inspect -f '{{.State.Status}}' mercasto_frontend_container 2>/dev/null || true
+    ;;
+
+
   mcp_plugin_bootstrap)
     require_confirm
     print_header "Sync main for bounded MCP bootstrap"
