@@ -21,6 +21,7 @@ jobs:
         github.event.comment.body == 'RUN:status' ||
         github.event.comment.body == 'RUN:mcp_status' ||
         github.event.comment.body == 'RUN:harness_proxy_status' ||
+        github.event.comment.body == 'RUN:harness_upload_fix:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_bootstrap:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_tls_issue:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_publish:MERCASTO' ||
@@ -57,6 +58,7 @@ jobs:
               'RUN:status': ['status', '', '160'],
               'RUN:mcp_status': ['mcp_status', '', '220'],
               'RUN:harness_proxy_status': ['harness_proxy_status', '', '220'],
+              'RUN:harness_upload_fix:MERCASTO': ['harness_upload_fix', 'MERCASTO', '260'],
               'RUN:mcp_plugin_bootstrap:MERCASTO': ['mcp_plugin_bootstrap', 'MERCASTO', '220'],
               'RUN:mcp_plugin_tls_issue:MERCASTO': ['mcp_plugin_tls_issue', 'MERCASTO', '220'],
               'RUN:mcp_plugin_publish:MERCASTO': ['mcp_plugin_publish', 'MERCASTO', '260'],
