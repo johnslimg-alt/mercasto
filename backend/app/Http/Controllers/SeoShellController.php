@@ -267,6 +267,107 @@ class SeoShellController extends Controller
         ]);
     }
 
+    public function blogIndex(): Response
+    {
+        $page = (array) config('blog_seo.index', []);
+        $articles = (array) config('blog_seo.articles', []);
+        $canonical = url('/blog');
+
+        return $this->renderShell([
+            'title' => (string) ($page['title'] ?? 'Consejos y novedades | Mercasto'),
+            'description' => (string) ($page['description'] ?? 'Guías oficiales de Mercasto para comprar y vender con más confianza.'),
+            'canonical' => $canonical,
+            'type' => 'website',
+            'image' => url('/icon-512x512.png'),
+            'robots' => SeoIndexability::ROBOTS_INDEXABLE,
+        ], [
+            '@context' => 'https://schema.org',
+            '@type' => 'CollectionPage',
+            'name' => (string) ($page['name'] ?? 'Consejos y novedades'),
+            'description' => (string) ($page['description'] ?? ''),
+            'url' => $canonical,
+            'inLanguage' => 'es-MX',
+            'isPartOf' => [
+                '@type' => 'WebSite',
+                'name' => 'Mercasto',
+                'url' => url('/'),
+            ],
+            'mainEntity' => [
+                '@type' => 'ItemList',
+                'itemListElement' => collect($articles)->keys()->values()->map(
+                    fn (string $slug, int $index): array => [
+                        '@type' => 'ListItem',
+                        'position' => $index + 1,
+                        'url' => url('/blog/' . $slug),
+                    ],
+                )->all(),
+            ],
+        ], 200, 'blog');
+    }
+
+    public function blogArticle(string $slug): Response
+    {
+        $article = config('blog_seo.articles.' . $slug);
+        $canonical = url('/blog/' . $slug);
+
+        if (! is_array($article)) {
+            $description = 'Este artículo no existe o ya no está disponible.';
+
+            return $this->renderShell([
+                'title' => 'Artículo no encontrado | Mercasto',
+                'description' => $description,
+                'canonical' => $canonical,
+                'type' => 'website',
+                'image' => url('/icon-512x512.png'),
+                'robots' => 'noindex,nofollow',
+            ], [
+                '@context' => 'https://schema.org',
+                '@type' => 'WebPage',
+                'name' => 'Artículo no encontrado',
+                'description' => $description,
+                'url' => $canonical,
+                'isPartOf' => [
+                    '@type' => 'WebSite',
+                    'name' => 'Mercasto',
+                    'url' => url('/'),
+                ],
+            ], 404, 'blog');
+        }
+
+        return $this->renderShell([
+            'title' => (string) $article['title'] . ' | Mercasto',
+            'description' => (string) $article['description'],
+            'canonical' => $canonical,
+            'type' => 'article',
+            'image' => url('/icon-512x512.png'),
+            'robots' => SeoIndexability::ROBOTS_INDEXABLE,
+        ], [
+            '@context' => 'https://schema.org',
+            '@type' => 'Article',
+            'headline' => (string) $article['title'],
+            'description' => (string) $article['description'],
+            'datePublished' => (string) $article['updated_at'],
+            'dateModified' => (string) $article['updated_at'],
+            'mainEntityOfPage' => $canonical,
+            'url' => $canonical,
+            'inLanguage' => 'es-MX',
+            'author' => [
+                '@type' => 'Organization',
+                'name' => 'Mercasto',
+                'url' => url('/'),
+            ],
+            'publisher' => [
+                '@type' => 'Organization',
+                'name' => 'Mercasto',
+                'url' => url('/'),
+                'logo' => [
+                    '@type' => 'ImageObject',
+                    'url' => url('/icon-512x512.png'),
+                ],
+            ],
+        ], 200, 'blog');
+    }
+
     public function ad(int $id): Response
     {
         $ad = Ad::query()->where('status', 'active')->find($id);
