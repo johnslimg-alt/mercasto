@@ -131,7 +131,7 @@ jobs:
             grep -RIl --exclude-dir=node_modules --exclude-dir=.cache --exclude-dir=.npm --exclude-dir=vendor --exclude-dir=postgres-backups '9.0.0-alpha.2-nonstop' /var/www /root /home /opt /srv 2>/dev/null | head -100 || true
             echo
             echo "== Ghost git clones/branches =="
-            find /var/www /root /home /opt /srv -maxdepth 6 -type d -name .git -print 2>/dev/null | while read -r gitdir; do
+            while read -r gitdir; do
               worktree="${gitdir%/.git}"
               remote="$(git -C "$worktree" remote get-url origin 2>/dev/null || true)"
               case "$remote" in
@@ -142,7 +142,10 @@ jobs:
                   git -C "$worktree" log --all --oneline --grep='nonstop' -n 12 2>/dev/null || true
                   ;;
               esac
-            done
+            done < <(find /var/www /root /home /opt /srv -maxdepth 6 -type d -name .git -print 2>/dev/null || true)
+            echo
+            echo "== Runner history for deleted Ghost branch =="
+            grep -RInE --binary-files=without-match 'b53f580|tooling/chatgpt-nonstop-loop|chatgpt-nonstop.user.js|raw.githubusercontent.com/.*/ghost-in-the-loop' /opt/actions-runner/_diag 2>/dev/null | tail -200 || true
             echo
             echo "== Remote nonstop branch =="
             git ls-remote https://github.com/MShneur/ghost-in-the-loop.git 'refs/heads/tooling/chatgpt-nonstop-loop' 2>/dev/null || true
