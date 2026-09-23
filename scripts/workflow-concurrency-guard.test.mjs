@@ -82,6 +82,7 @@ const serverOperatorCommands = [
   'RUN:mcp_status',
   'RUN:mcp_plugin_bootstrap:MERCASTO',
   'RUN:mcp_plugin_tls_issue:MERCASTO',
+  'RUN:mcp_plugin_publish:MERCASTO',
 ];
 
 function sortedUnique(values) {
@@ -172,5 +173,21 @@ test('MCP TLS issue operator quarantines only a fully stale fixed Certbot archiv
   assert.ok(block.includes('sudo -n mv "$mcp_archive" "$stale_target"'));
   assert.ok(block.includes('Refusing automatic Certbot repair'));
   assert.doesNotMatch(block, /rm -rf \/etc\/letsencrypt\/archive/);
+});
+
+test('MCP HTTPS publish operator is fixed to the read-only plugin and public endpoint', () => {
+  const source = readFileSync('scripts/server-operator.sh', 'utf8');
+  const match = source.match(/\n  mcp_plugin_publish\)\n([\s\S]*?)\n    ;;/);
+  assert.ok(match, 'mcp_plugin_publish operation must exist');
+  const block = match[1];
+  assert.match(block, /require_confirm/);
+  assert.ok(block.includes('/etc/letsencrypt/live/mcp.mercasto.com-0001/fullchain.pem'));
+  assert.ok(block.includes('/etc/letsencrypt/live/mcp.mercasto.com-0001/privkey.pem'));
+  assert.ok(block.includes('up -d --build --no-deps mercasto-mcp-plugin'));
+  assert.ok(block.includes('--resolve mcp.mercasto.com:443:127.0.0.1'));
+  assert.ok(block.includes('https://mcp.mercasto.com/mcp'));
+  assert.ok(block.includes('Mercasto Server Status'));
+  assert.ok(block.includes('mcp_https_publish=ok'));
+  assert.doesNotMatch(block, /docker system prune|php artisan migrate|restart_stack|--dns-|bash-mcp|supergateway|mcp-sse-bridge/);
 });
 
