@@ -73,7 +73,7 @@ async function laidOutConsentEntry(page) {
   // commits. Poll until the invariant holds (or fail, naming how many candidates existed).
   const all = page.locator('[data-testid="golden-cookie-settings"], [data-testid="cookie-settings"]');
   const deadline = Date.now() + 15_000;
-  let count = 0;
+  let count;
   for (;;) {
     count = await all.count();
     for (let i = 0; i < count; i += 1) {
@@ -173,6 +173,9 @@ test.describe('cookie preferences entry point', () => {
 
     await expect(page.getByTestId('cookie-banner')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('cookie-consent-state')).toContainText('todas');
+
+    // Same invariant as the sibling tests: the dialog must own no consent chunk.
+    expect(traffic.consentChunkRequests).toEqual([]);
 
     await page.getByTestId('cookie-essential').click();
     await expect(page.getByTestId('cookie-banner')).toBeHidden();
