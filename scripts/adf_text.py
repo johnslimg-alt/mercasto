@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 
 MAX_DEPTH = 8
@@ -60,6 +61,8 @@ def _inline(nodes, depth: int) -> str:
             out.append((node.get("attrs") or {}).get("text") or "")
         elif kind == "emoji":
             out.append((node.get("attrs") or {}).get("shortName") or "")
+        elif kind in {"inlineCard", "blockCard"}:
+            out.append(_card(node))
         elif kind in {"extension", "inlineExtension", "bodiedExtension"}:
             out.append(_macro(node, depth))
         elif kind == "table":
@@ -142,6 +145,8 @@ def _expand(node: dict, depth: int) -> str:
 
 def _macro_label(attrs: dict) -> str:
     key = attrs.get("extensionKey") or "macro"
+    if key in {"jira", "jiraissue", "jiraissues"}:
+        return _jira_label(attrs)
     params = (attrs.get("parameters") or {}).get("macroParams") or {}
     shown = []
     for name in ("title", "colour", "color", "key", "jqlQuery", "language"):
@@ -151,11 +156,64 @@ def _macro_label(attrs: dict) -> str:
     return f"[macro:{key}]" if not shown else f"[macro:{key} {' '.join(shown)}]"
 
 
-def _param_value(value) -> str:
+def _jira_label(attrs: dict) -> str:
+    flat = _flat_params(attrs)
+    keys = flat.get("key") or flat.get("issueKey") or flat.get("issues") or ""
+    if not keys:
+        text = str(attrs.get("text") or "").strip()
+        if re.fullmatch(r"[A-Z][A-Z0-9]+-\d+(?:\s*,\s*[A-Z][A-Z0-9]+-\d+)*", text):
+            keys = text
+    jql = flat.get("jqlQuery") or flat.get("jql") or ""
+    columns = flat.get("columns") or ""
+    maximum = flat.get("maximumIssues") or flat.get("maxResults") or ""
+    count = flat.get("count", "").lower() == "true"
+    bits = ["[jira"]
+    if keys:
+        bits.append(re.sub(r"\s*,\s*", ", ", keys))
+    if jql:
+        bits.append(f'jql="{jql}"')
+    if columns:
+        bits.append(f"columns={columns}")
+    if maximum:
+        bits.append(f"max={maximum}")
+    if count:
+        bits.append("count")
+    if len(bits) == 1:
+        bits.append("issues")
+    return " ".join(bits) + "]"
+
+
+def _flat_params(attrs: dict) -> dict:
+    parameters = attrs.get("parameters") or {}
+    source = parameters.get("macroParams")
+    if not isinstance(source, dict):
+        source = {
+            name: value
+            for name, value in parameters.items()
+            if name not in {"macroParams", "macroMetadata"}
+        }
+    flat = {}
+    for name, value in source.items():
+        if name in {"serverId", "macroId", "schemaVersion"}:
+            continue
+        limit = 180 if name in {"jqlQuery", "jql"} else 120
+        text = _param_value(value, limit)
+        if text:
+            flat[name] = text
+    return flat
+
+
+def _card(node: dict) -> str:
+    url = str((node.get("attrs") or {}).get("url") or "")
+    match = re.search(r"/browse/([A-Z][A-Z0-9]+-\d+)", url)
+    return f"[jira {match.group(1)}]" if match else url
+
+
+def _param_value(value, limit: int = 120) -> str:
     if isinstance(value, dict):
         value = value.get("value")
     if isinstance(value, (str, int, float)):
-        return str(value).replace("\n", " ").strip()[:120]
+        return str(value).replace("\n", " ").strip()[:limit]
     return ""
 
 
@@ -244,9 +302,30 @@ def _check() -> None:
     assert "[macro:status title=Done colour=Green]" in rendered, rendered
     assert "[macro:expand title=Детали]" in rendered and "внутри" in rendered, rendered
     assert "| Дата | 12 сен |" in rendered, rendered
-    assert "[macro:jira key=MER-42]" in rendered, rendered
+    assert "[macro:jira key=MER-42]" not in rendered
+    assert "[jira MER-42]" in rendered, rendered
     assert "uuid-should-not-appear" not in rendered, rendered
-    assert rendered.index("[/macro:expand]") < rendered.index("[macro:jira"), rendered
+    assert rendered.index("[/macro:expand]") < rendered.index("[jira MER-42]"), rendered
+
+    jql_macro = {
+        "type": "extension",
+        "attrs": {
+            "extensionKey": "jiraissues",
+            "parameters": {
+                "jqlQuery": "project = MER AND status = Done",
+                "columns": "key,summary,status",
+                "maximumIssues": 20,
+                "count": "true",
+                "serverId": "d4e5-hidden",
+            },
+        },
+    }
+    jql_text = adf_to_text(jql_macro)
+    assert '[jira jql="project = MER AND status = Done"' in jql_text, jql_text
+    assert "columns=key,summary,status" in jql_text and "max=20" in jql_text and "count" in jql_text, jql_text
+    assert "d4e5-hidden" not in jql_text, jql_text
+    card = adf_to_text({"type": "inlineCard", "attrs": {"url": "https://mercasto.atlassian.net/browse/MER-7"}})
+    assert card == "[jira MER-7]", card
     print("adf nested tables ok")
 
 
