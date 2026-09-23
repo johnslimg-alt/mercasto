@@ -28,4 +28,6 @@ jobs:
           JIRA_STATUS: ${{ github.event.client_payload.status }}
           JIRA_SUMMARY: ${{ github.event.client_payload.summary }}
           JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: bash scripts/jira-webhook-pr-comment.sh
