@@ -55,6 +55,25 @@ assert(sitemap.includes("'vendedores' => ['weekly', '0.9']"), 'seller landing mu
 
 assert(sitemap.includes("'reembolsos/' => ['monthly', '0.5']"));
 assert(sitemap.includes("'moderacion/' => ['monthly', '0.5']"));
+assert(sitemap.includes("'blog' => ['weekly', '0.7']"));
+assert(sitemap.includes("'blog/como-vender-mas-rapido' => ['monthly', '0.6']"));
+assert(sitemap.includes("'blog/comprar-con-seguridad' => ['monthly', '0.6']"));
+assert(sitemap.includes("'blog/encontrar-grandes-oportunidades' => ['monthly', '0.6']"));
+assert(routes.includes("Route::get('/blog', [SeoShellController::class, 'blogIndex']);"));
+assert(routes.includes("Route::get('/blog/{slug}', [SeoShellController::class, 'blogArticle'])"));
+assert(nginx.includes('location ~ ^/blog(?:/[A-Za-z0-9-]+)?/?
+assert(!sitemap.includes("'moderacion' => ['monthly', '0.5']"));
+
+const guardedCopy = [
+  fs.readFileSync('src/components/screens/legal/TerminosScreen.jsx', 'utf8'),
+  fs.readFileSync('src/components/screens/ContactoScreen.jsx', 'utf8'),
+].join('\n');
+assert(!guardedCopy.includes('portal de clasificados líder en México'));
+assert(!guardedCopy.includes('Respondemos en menos de 24 horas'));
+assert(!guardedCopy.includes('respondemos en menos de 24 horas'));
+
+console.log(`Sitemap shell contract OK: ${Object.keys(VERTICAL_SEO_ROUTES).length} verticals, ${Object.keys(VERTICAL_CANONICAL_ALIASES).length} noindex aliases, ${Object.keys(PUBLIC_SEO_ROUTES).length} public pages.`);
+));
 assert(!sitemap.includes("'reembolsos' => ['monthly', '0.5']"));
 assert(!sitemap.includes("'moderacion' => ['monthly', '0.5']"));
 
