@@ -59,12 +59,13 @@ for pull in pulls:
 
 if not matched:
     print(f"No open pull request mentions {issue}.")
-    raise SystemExit(0)
 
 marker = f"<!-- mercasto-jira-{issue}-{status or 'updated'} -->"
 state = status or "обновлена"
 text = summary or "Без описания."
 body = f"{marker}\nJira **{issue}** теперь: {state}.\n\n{text}\n"
+posted = False
+links = []
 for pull in matched:
     number = pull["number"]
     comments = api("GET", f"https://api.github.com/repos/{repo}/issues/{number}/comments?per_page=100")
@@ -72,5 +73,29 @@ for pull in matched:
         print(f"PR #{number} already has this Jira status.")
         continue
     api("POST", f"https://api.github.com/repos/{repo}/issues/{number}/comments", {"body": body})
+    posted = True
+    if pull.get("html_url"):
+        links.append(pull["html_url"])
     print(f"Commented on PR #{number} for {issue}.")
+
+if matched and not posted:
+    (root / "jira-slack.json").write_text("")
+    raise SystemExit(0)
+
+base = (os.environ.get("JIRA_BASE_URL") or "").rstrip("/")
+jira_url = f"{base}/browse/{issue}" if base else ""
+lines = [f"Jira {issue} теперь: {state}", text]
+if jira_url:
+    lines.append(jira_url)
+lines.extend(links)
+if not links:
+    lines.append("Открытого PR с этим ключом нет.")
+(root / "jira-slack.json").write_text(json.dumps({"text": "\n".join(lines)}))
 PY
+
+if [ -n "${SLACK_WEBHOOK_URL:-}" ] && [ -s "$tmp/jira-slack.json" ]; then
+  curl -fsS -X POST -H "Content-type: application/json" --data-binary @"$tmp/jira-slack.json" "$SLACK_WEBHOOK_URL" >/dev/null
+  echo "Sent ${issue} to Slack."
+else
+  echo "Slack webhook is not configured or this Jira status was already delivered."
+fi
