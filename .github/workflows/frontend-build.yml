@@ -16,9 +16,13 @@ on:
       - 'scripts/design-token-contract-gate.sh'
       - 'docs/design/token-contract.md'
       - '.github/workflows/frontend-build.yml'
+      - 'scripts/pr-status-comment.sh'
 
 permissions:
   contents: read
+  checks: read
+  issues: write
+  pull-requests: read
 
 concurrency:
   group: frontend-build-${{ github.event.pull_request.number || github.sha }}
@@ -52,3 +56,10 @@ jobs:
           path: dist
           retention-days: 7
           if-no-files-found: error
+
+      - name: Comment PR status
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: bash scripts/pr-status-comment.sh
