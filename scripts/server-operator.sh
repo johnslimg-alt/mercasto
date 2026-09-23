@@ -556,7 +556,7 @@ def choose_and_patch(path, kind):
     else:
         candidates = [
             idx for idx, block in enumerate(rendered)
-            if re.search(r"^\\s*listen\\s+172\\.19\\.0\\.1:13080\\s*;", block, re.M)
+            if re.search(r"^\s*listen\s+172\.19\.0\.1:13080\s*;", block, re.M)
             and "proxy_pass" in block
         ]
 
