@@ -201,6 +201,8 @@
   {"domain":null,"method":"GET|HEAD","uri":"ayuda","name":null,"action":"App\\Http\\Controllers\\SeoShellController@publicPage","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"ayuda/comprar-y-contactar","name":null,"action":"App\\Http\\Controllers\\SeoShellController@source","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"ayuda/publicar-anuncio","name":null,"action":"App\\Http\\Controllers\\SeoShellController@source","middleware":["web"]},
+  {"domain":null,"method":"GET|HEAD","uri":"blog","name":null,"action":"App\\Http\\Controllers\\SeoShellController@blogIndex","middleware":["web"]},
+  {"domain":null,"method":"GET|HEAD","uri":"blog/{slug}","name":null,"action":"App\\Http\\Controllers\\SeoShellController@blogArticle","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"boletos","name":null,"action":"App\\Http\\Controllers\\SeoShellController@vertical","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"boletos_turismo","name":null,"action":"App\\Http\\Controllers\\SeoShellController@verticalAlias","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"como-funciona","name":null,"action":"App\\Http\\Controllers\\SeoShellController@source","middleware":["web"]},

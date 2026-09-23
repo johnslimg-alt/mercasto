@@ -195,6 +195,10 @@ class SitemapController extends Controller
             'cookies' => ['monthly', '0.5'],
             'contacto' => ['monthly', '0.5'],
             'ayuda' => ['monthly', '0.5'],
+            'blog' => ['weekly', '0.7'],
+            'blog/como-vender-mas-rapido' => ['monthly', '0.6'],
+            'blog/comprar-con-seguridad' => ['monthly', '0.6'],
+            'blog/encontrar-grandes-oportunidades' => ['monthly', '0.6'],
             'reembolsos/' => ['monthly', '0.5'],
             'moderacion/' => ['monthly', '0.5'],
         ];

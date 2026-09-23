@@ -55,7 +55,13 @@ assert(sitemap.includes("'vendedores' => ['weekly', '0.9']"), 'seller landing mu
 
 assert(sitemap.includes("'reembolsos/' => ['monthly', '0.5']"));
 assert(sitemap.includes("'moderacion/' => ['monthly', '0.5']"));
-assert(!sitemap.includes("'reembolsos' => ['monthly', '0.5']"));
+assert(sitemap.includes("'blog' => ['weekly', '0.7']"));
+assert(sitemap.includes("'blog/como-vender-mas-rapido' => ['monthly', '0.6']"));
+assert(sitemap.includes("'blog/comprar-con-seguridad' => ['monthly', '0.6']"));
+assert(sitemap.includes("'blog/encontrar-grandes-oportunidades' => ['monthly', '0.6']"));
+assert(routes.includes("Route::get('/blog', [SeoShellController::class, 'blogIndex']);"));
+assert(routes.includes("Route::get('/blog/{slug}', [SeoShellController::class, 'blogArticle'])"));
+assert(nginx.includes('location ~ ^/blog(?:/[A-Za-z0-9-]+)?/?'));
 assert(!sitemap.includes("'moderacion' => ['monthly', '0.5']"));
 
 const guardedCopy = [
