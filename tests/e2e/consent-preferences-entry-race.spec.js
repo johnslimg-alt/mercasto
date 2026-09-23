@@ -59,6 +59,34 @@ async function interceptTraffic(page, { failConsentChunks = false } = {}) {
   return { hits, consentChunkRequests };
 }
 
+// INVARIANT: at every viewport at least one cookie-settings entry point is laid out
+// and usable. The Golden shell ships two of them -- `golden-cookie-settings` (home
+// footer) and `cookie-settings` (AppFooter) -- and CSS collapses one per breakpoint
+// to a 0x0 box while keeping it in the DOM. So a test must not target one name: it
+// must target whichever is laid out, or it fails purely on the breakpoint. Targeting
+// whichever is usable also makes this an assertion of the invariant itself -- if both
+// collapse, this returns nothing and the test fails.
+async function laidOutConsentEntry(page) {
+  // POLLED, never one-shot: a single boundingBox() sample right after domcontentloaded
+  // races the second footer's mount and reports "no entry point" while one is still
+  // arriving -- the same false-negative shape as sampling a banner before its show timer
+  // commits. Poll until the invariant holds (or fail, naming how many candidates existed).
+  const all = page.locator('[data-testid="golden-cookie-settings"], [data-testid="cookie-settings"]');
+  const deadline = Date.now() + 15_000;
+  let count = 0;
+  for (;;) {
+    count = await all.count();
+    for (let i = 0; i < count; i += 1) {
+      const candidate = all.nth(i);
+      const box = await candidate.boundingBox();
+      if (box && box.width > 0 && box.height > 0) return candidate;
+    }
+    if (Date.now() > deadline) break;
+    await page.waitForTimeout(150);
+  }
+  throw new Error(`no cookie-settings entry point is laid out at this viewport (candidates: ${count})`);
+}
+
 test.describe('cookie preferences entry point', () => {
   test.use({ locale: 'es-MX' });
 
@@ -74,7 +102,7 @@ test.describe('cookie preferences entry point', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    const settings = page.getByTestId('golden-cookie-settings');
+    const settings = await laidOutConsentEntry(page);
     await expect(settings).toBeAttached();
     await settings.scrollIntoViewIfNeeded();
     await settings.click();
@@ -108,7 +136,12 @@ test.describe('cookie preferences entry point', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     // The application shell survives, so the footer entry point is still there.
-    const settings = page.getByTestId('cookie-settings');
+    // The tested route '/' renders the Golden shell, whose footer carries
+    // data-testid="golden-cookie-settings". The AppFooter variant (cookie-settings)
+    // is not on that surface, so targeting it here pointed at a button that was not
+    // rendered -- the assertions after it could never be reached. Sibling tests in
+    // this file already use the Golden entry point; this one now matches them.
+    const settings = await laidOutConsentEntry(page);
     await expect(settings).toBeAttached({ timeout: 15_000 });
     await settings.scrollIntoViewIfNeeded();
     await settings.click();
@@ -133,7 +166,7 @@ test.describe('cookie preferences entry point', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    const settings = page.getByTestId('golden-cookie-settings');
+    const settings = await laidOutConsentEntry(page);
     await expect(settings).toBeAttached();
     await settings.scrollIntoViewIfNeeded();
     await settings.click();
