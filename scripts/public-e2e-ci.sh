@@ -34,6 +34,7 @@ npx --no-install playwright test \
   tests/e2e/public-smoke.spec.js \
   tests/e2e/public-link-integrity.spec.js \
   tests/e2e/catalog-filter-state.spec.js \
+  tests/e2e/production-consent-banner-smoke.spec.js \
   --workers="$workers" \
   --output="$results_dir"
 
