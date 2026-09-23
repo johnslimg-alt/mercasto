@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './mercasto-golden-home.css';
+import './mercasto-golden-home.mobile-fix.css';
 import { formatMXN } from '../../utils/localeFormat';
 import { localizedText } from '../../utils/localize';
 import { events } from '../../utils/analytics';
