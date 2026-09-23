@@ -1,5 +1,5 @@
-/* Token bridge + mobile layout. Selectors are deeper than mercasto-golden-home.css
-   because that file is imported by the home chunk after this one. */
+/* Phone <=767px. Tablet is 768–1179px and desktop is >=1180px in mercasto-golden-home.css.
+   This file loads after that one. There is no 360px breakpoint. */
 
 .mcg-root {
   --mcg-green: var(--mc-brand, #84cc16);
