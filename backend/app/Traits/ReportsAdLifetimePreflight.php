@@ -264,6 +264,23 @@ trait ReportsAdLifetimePreflight
     }
 
     /**
+     * The `expires_at` line of the preflight block.
+     *
+     * Overridable because the lifetime a command writes is not always "now + lifetime": a
+     * correction is anchored on the moment the operator's activation published the row, so
+     * for that command a single "now + lifetime" date would be a wrong number in an operator
+     * warning. Commands that publish at the current time keep this default unchanged.
+     */
+    protected function preflightExpiryLine(): string
+    {
+        return sprintf(
+            '  expires_at       : %s (now + %d day(s); each activated row is stamped at its own update time)',
+            $this->activationExpiry()->format('Y-m-d H:i:s T'),
+            Ad::lifetimeDays()
+        );
+    }
+
+    /**
      * Print the preflight block.
      *
      * MUST be called before any write of the command that uses it, and in dry-run mode too.
@@ -280,11 +297,7 @@ trait ReportsAdLifetimePreflight
         $this->line('PREFLIGHT — activation lifetime and reversibility (no write has happened yet)');
         $this->line(sprintf('  ad_lifetime_days : %d day(s)', Ad::lifetimeDays()));
         $this->line(sprintf('  source           : %s', $this->adLifetimeSource()));
-        $this->line(sprintf(
-            '  expires_at       : %s (now + %d day(s); each activated row is stamped at its own update time)',
-            $this->activationExpiry()->format('Y-m-d H:i:s T'),
-            Ad::lifetimeDays()
-        ));
+        $this->line($this->preflightExpiryLine());
 
         $lines = [
             'change lifetime' => implode("\n", [
