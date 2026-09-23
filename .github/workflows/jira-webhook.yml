@@ -3,6 +3,7 @@ name: Jira webhook
 on:
   repository_dispatch:
     types: [jira_issue]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,11 +11,12 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: jira-webhook-${{ github.event.client_payload.issue || github.run_id }}
+  group: jira-webhook-${{ github.event.client_payload.issue_key || github.event.client_payload.issue || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   comment:
+    if: github.event_name == 'repository_dispatch'
     name: Comment on the matching pull request
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -24,10 +26,25 @@ jobs:
       - name: Apply the Jira status to open pull requests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JIRA_ISSUE: ${{ github.event.client_payload.issue }}
-          JIRA_STATUS: ${{ github.event.client_payload.status }}
-          JIRA_SUMMARY: ${{ github.event.client_payload.summary }}
+          JIRA_PAYLOAD: ${{ toJson(github.event.client_payload) }}
           JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: bash scripts/jira-webhook-pr-comment.sh
+
+  register:
+    if: github.event_name == 'workflow_dispatch'
+    name: Register the Jira Cloud webhook
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Register or refresh the webhook
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+          JIRA_WEBHOOK_URL: ${{ secrets.JIRA_WEBHOOK_URL }}
+        run: python3 scripts/jira_cloud.py register-webhook
