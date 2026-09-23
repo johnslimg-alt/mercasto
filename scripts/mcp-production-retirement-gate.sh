@@ -109,18 +109,28 @@ if printf '%s\n' "$plugin_block" | grep -qE '^[[:space:]]+ports:|/var/run/docker
   exit 1
 fi
 
-# Phase 1 is HTTP bootstrap only: ACME + health may use port 80, while MCP itself
-# must not be served without TLS.
+# Public MCP edge must keep ACME on HTTP and serve the transport only over
+# the dedicated TLS vhost. The origin certificate lineage is fixed and reviewed.
 nginx_block="$(
   sed -n '/# MERCASTO_MCP_PLUGIN_HTTP_BOOTSTRAP_BEGIN/,/# MERCASTO_MCP_PLUGIN_HTTP_BOOTSTRAP_END/p' "$NGINX"
 )"
 printf '%s\n' "$nginx_block" | grep -qF 'server_name mcp.mercasto.com;'
 printf '%s\n' "$nginx_block" | grep -qF 'location ^~ /.well-known/acme-challenge/'
+printf '%s\n' "$nginx_block" | grep -qF 'return 308 https://$host$request_uri;'
+printf '%s\n' "$nginx_block" | grep -qF 'listen 443 ssl;'
+printf '%s\n' "$nginx_block" | grep -qF 'ssl_certificate /etc/letsencrypt/live/mcp.mercasto.com-0001/fullchain.pem;'
+printf '%s\n' "$nginx_block" | grep -qF 'ssl_certificate_key /etc/letsencrypt/live/mcp.mercasto.com-0001/privkey.pem;'
 printf '%s\n' "$nginx_block" | grep -qF 'location = /healthz'
 printf '%s\n' "$nginx_block" | grep -qF 'location = /mcp'
-printf '%s\n' "$nginx_block" | grep -qF 'return 426;'
-if printf '%s\n' "$nginx_block" | grep -qF 'listen 443'; then
-  echo "MCP HTTPS must not be enabled before its dedicated certificate is provisioned." >&2
+printf '%s\n' "$nginx_block" | grep -qF 'proxy_buffering off;'
+printf '%s\n' "$nginx_block" | grep -qF 'proxy_request_buffering off;'
+printf '%s\n' "$nginx_block" | grep -qF 'add_header Cache-Control "no-store" always;'
+if printf '%s\n' "$nginx_block" | grep -Eq 'proxy_pass[[:space:]]+https?://[^$"]'; then
+  echo "MCP edge proxy target must remain the fixed Docker service variable." >&2
+  exit 1
+fi
+if printf '%s\n' "$nginx_block" | grep -Eq '(/sse|:8001([^0-9]|$)|bash-mcp|supergateway|mcp-sse-bridge)'; then
+  echo "Retired public-shell or SSE transport must not return through MCP HTTPS." >&2
   exit 1
 fi
 

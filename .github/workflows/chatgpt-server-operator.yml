@@ -22,6 +22,7 @@ jobs:
         github.event.comment.body == 'RUN:mcp_status' ||
         github.event.comment.body == 'RUN:mcp_plugin_bootstrap:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_tls_issue:MERCASTO' ||
+        github.event.comment.body == 'RUN:mcp_plugin_publish:MERCASTO' ||
         github.event.comment.body == 'RUN:verify_quick' ||
         github.event.comment.body == 'RUN:security_smoke' ||
         github.event.comment.body == 'RUN:seo_aeo_smoke' ||
@@ -56,6 +57,7 @@ jobs:
               'RUN:mcp_status': ['mcp_status', '', '220'],
               'RUN:mcp_plugin_bootstrap:MERCASTO': ['mcp_plugin_bootstrap', 'MERCASTO', '220'],
               'RUN:mcp_plugin_tls_issue:MERCASTO': ['mcp_plugin_tls_issue', 'MERCASTO', '220'],
+              'RUN:mcp_plugin_publish:MERCASTO': ['mcp_plugin_publish', 'MERCASTO', '260'],
               'RUN:verify_quick': ['verify_quick', '', '160'],
               'RUN:security_smoke': ['security_smoke', '', '160'],
               'RUN:seo_aeo_smoke': ['seo_aeo_smoke', '', '160'],
