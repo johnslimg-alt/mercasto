@@ -62,3 +62,46 @@ test('design documentation records the same contract version', () => {
   assert.match(doc, /Contract version: `2026-08-04`/);
   assert.match(doc, /Touch target \| `48px`/);
 });
+
+const spacing = fs.readFileSync(new URL('../src/design-spacing.css', import.meta.url), 'utf8');
+const mainJsx = fs.readFileSync(new URL('../src/main.jsx', import.meta.url), 'utf8');
+const goldenBridge = fs.readFileSync(new URL('../src/components/home/mercasto-golden-home.mobile-fix.css', import.meta.url), 'utf8');
+
+const spacingExpected = {
+  '--mc-space-1': '4px',
+  '--mc-space-2': '8px',
+  '--mc-space-3': '12px',
+  '--mc-space-4': '16px',
+  '--mc-space-5': '24px',
+  '--mc-space-6': '32px',
+  '--mc-space-stack': '8px',
+  '--mc-space-gutter': '12px',
+  '--mc-space-page': '16px',
+  '--mc-space-page-lg': '40px',
+  '--mc-space-section': '24px',
+  '--mc-space-touch': '48px',
+};
+
+function valueIn(source, token) {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = source.match(new RegExp(`${escaped}\\s*:\\s*([^;]+);`));
+  return match?.[1]?.trim();
+}
+
+test('spacing scale matches the contract and is loaded', () => {
+  for (const [token, value] of Object.entries(spacingExpected)) {
+    assert.equal(valueIn(spacing, token), value, token);
+    assert.ok(doc.includes(token), token);
+  }
+  assert.match(mainJsx, /import '\.\/design-spacing\.css'/);
+  assert.doesNotMatch(spacing, /#0f8f7d|#0b6f61/i);
+});
+
+test('golden home aliases the site brand instead of a private palette', () => {
+  assert.match(goldenBridge, /--mcg-green:\s*var\(--mc-brand/);
+  assert.match(goldenBridge, /--mcg-green-dark:\s*var\(--mc-brand-dark/);
+  assert.match(goldenBridge, /--mcg-ink:\s*var\(--mc-ink/);
+  assert.match(goldenBridge, /html\.dark \.mcg-root[\s\S]*--mcg-ink:\s*var\(--mc-dark-ink/);
+  assert.match(goldenBridge, /background:\s*var\(--mc-dark-background/);
+  assert.doesNotMatch(goldenBridge, /#0f8f7d|#0b6f61/i);
+});
