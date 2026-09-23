@@ -78,6 +78,22 @@ console.log(`BASE_URL=${baseUrl}`);
 const home = await checkPage('/');
 await checkPage('/listings');
 
+const blog = await checkPage('/blog');
+requireMatch('blog canonical', blog, /<link[^>]+rel=["']canonical["'][^>]+href=["']https:\/\/mercasto\.com\/blog["'][^>]*>/i);
+requireMatch('blog server SEO owner', blog, /data-mercasto-seo-owner=["']blog["']/i);
+requireMatch('blog collection schema', blog, /"@type":"CollectionPage"/i);
+
+const blogArticle = await checkPage('/blog/comprar-con-seguridad');
+requireMatch('blog article canonical', blogArticle, /<link[^>]+rel=["']canonical["'][^>]+href=["']https:\/\/mercasto\.com\/blog\/comprar-con-seguridad["'][^>]*>/i);
+requireMatch('blog article server SEO owner', blogArticle, /data-mercasto-seo-owner=["']blog["']/i);
+requireMatch('blog Article schema', blogArticle, /"@type":"Article"/i);
+requireMatch('blog article headline', blogArticle, /"headline":"Guía para comprar con seguridad"/i);
+
+const missingBlogArticle = await checkStatus('/blog/no-existe', [404]);
+requireMatch('missing blog canonical', missingBlogArticle.text, /<link[^>]+rel=["']canonical["'][^>]+href=["']https:\/\/mercasto\.com\/blog\/no-existe["'][^>]*>/i);
+requireMatch('missing blog noindex', missingBlogArticle.text, /<meta[^>]+name=["']robots["'][^>]+content=["']noindex,nofollow["'][^>]*>/i);
+requireMatch('missing blog server SEO owner', missingBlogArticle.text, /data-mercasto-seo-owner=["']blog["']/i);
+
 requireMatch('home description', home, /<meta[^>]+name=.description.[^>]+content=.{40,220}/i);
 requireMatch('home canonical', home, /<link[^>]+rel=.canonical.[^>]+https:\/\/mercasto\.com\/?/i);
 requireMatch('home Open Graph title', home, /<meta[^>]+property=.og:title./i);
@@ -105,6 +121,10 @@ if (sitemap.status === 200) {
     '/cookies',
     '/contacto',
     '/ayuda',
+    '/blog',
+    '/blog/como-vender-mas-rapido',
+    '/blog/comprar-con-seguridad',
+    '/blog/encontrar-grandes-oportunidades',
     '/reembolsos/',
     '/moderacion/',
   ];

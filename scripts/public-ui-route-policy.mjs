@@ -83,9 +83,6 @@ export const redirectExpectations = {
 export const supportedDynamicTemplates = [
   'ads/{id}',
   'blog/{slug}',
-  // `blog/{slug}` is the Golden blog route (main 19616e5d and #1224). Keeping this
-  // list stale made the route-coverage gate fail on EVERY branch rebased onto
-  // current main, which is how it presented as an unrelated PR's red check.
   'share/ads/{id}',
 ];
 

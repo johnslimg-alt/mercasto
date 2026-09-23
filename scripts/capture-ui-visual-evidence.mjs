@@ -202,17 +202,25 @@ async function verifyRedirects() {
 }
 
 const sampleAd = await resolveSampleAd();
-const backendDynamicScreens = sampleAd.id
-  ? supportedDynamicTemplates.map(template => {
-      const path = `/${template.replace('{id}', String(sampleAd.id))}`;
-      const shareRoute = template.startsWith('share/');
-      return {
-        name: shareRoute ? 'share-ad-sample' : 'ad-detail-sample',
-        path,
-        expectedPath: shareRoute ? `/ads/${sampleAd.id}` : path,
-      };
-    })
-  : [];
+const backendDynamicScreens = supportedDynamicTemplates.flatMap(template => {
+  if (template === 'blog/{slug}') {
+    return [{
+      name: 'blog-article-sample',
+      path: '/blog/comprar-con-seguridad',
+      expectedPath: '/blog/comprar-con-seguridad',
+    }];
+  }
+
+  if (!sampleAd.id) return [];
+
+  const path = `/${template.replace('{id}', String(sampleAd.id))}`;
+  const shareRoute = template.startsWith('share/');
+  return [{
+    name: shareRoute ? 'share-ad-sample' : 'ad-detail-sample',
+    path,
+    expectedPath: shareRoute ? `/ads/${sampleAd.id}` : path,
+  }];
+});
 const clientDynamicVisualScreens = sampleAd.id && sampleAd.sellerId
   ? [
       { name: 'ad-alias-sample', path: `/anuncio/${sampleAd.id}` },
