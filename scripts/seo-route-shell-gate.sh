@@ -9,10 +9,13 @@ echo "== SEO route shell gate =="
 grep -qF "class SeoShellController extends Controller" backend/app/Http/Controllers/SeoShellController.php
 grep -qF "Route::get('/listings', [SeoShellController::class, 'listings']);" backend/routes/web.php
 grep -qF "Route::get('/ads/{id}', [SeoShellController::class, 'ad'])->whereNumber('id');" backend/routes/web.php
+grep -qF "Route::get('/blog', [SeoShellController::class, 'blogIndex']);" backend/routes/web.php
+grep -qF "Route::get('/blog/{slug}', [SeoShellController::class, 'blogArticle'])" backend/routes/web.php
 grep -qF "frontend_shell_url" backend/config/app.php
 
 grep -qF "listen 8081;" default.conf
 grep -qF "location = /listings" default.conf
+grep -qF "location ~ ^/blog(?:/[A-Za-z0-9-]+)?/?$" default.conf
 grep -qF "location ~ ^/ads/[0-9]+/?$" default.conf
 
 grep -qF "window.location.pathname !== '/'" index.html
