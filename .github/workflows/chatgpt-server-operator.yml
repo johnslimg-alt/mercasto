@@ -129,29 +129,29 @@ jobs:
               'https://api.github.com/repos/MShneur/ghost-in-the-loop/events?per_page=100' \
               > /tmp/ghost-events.json
             python3 - /tmp/ghost-events.json <<'PY'
-import json, sys
-events = json.load(open(sys.argv[1]))
-target = "tooling/chatgpt-nonstop-loop"
-matches = []
-for e in events:
-    p = e.get("payload") or {}
-    ref = p.get("ref")
-    if ref in (target, "refs/heads/" + target):
-        matches.append({
-            "type": e.get("type"),
-            "created_at": e.get("created_at"),
-            "ref": ref,
-            "before": p.get("before"),
-            "head": p.get("head"),
-            "ref_type": p.get("ref_type"),
-            "size": p.get("size"),
-            "distinct_size": p.get("distinct_size"),
-            "commits": p.get("commits"),
-        })
-print("matching_events=" + str(len(matches)))
-for m in matches:
-    print(json.dumps(m, sort_keys=True))
-PY
+            import json, sys
+            events = json.load(open(sys.argv[1]))
+            target = "tooling/chatgpt-nonstop-loop"
+            matches = []
+            for e in events:
+                p = e.get("payload") or {}
+                ref = p.get("ref")
+                if ref in (target, "refs/heads/" + target):
+                    matches.append({
+                        "type": e.get("type"),
+                        "created_at": e.get("created_at"),
+                        "ref": ref,
+                        "before": p.get("before"),
+                        "head": p.get("head"),
+                        "ref_type": p.get("ref_type"),
+                        "size": p.get("size"),
+                        "distinct_size": p.get("distinct_size"),
+                        "commits": p.get("commits"),
+                    })
+            print("matching_events=" + str(len(matches)))
+            for m in matches:
+                print(json.dumps(m, sort_keys=True))
+            PY
             rm -f /tmp/ghost-events.json
             echo
             echo "== Remote nonstop branch now =="
