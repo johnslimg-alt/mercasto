@@ -71,6 +71,7 @@ const serverOperatorCommands = [
   'RUN:logs_frontend',
   'RUN:logs_backend',
   'RUN:deploy_main:MERCASTO',
+  'RUN:harness_proxy_status',
   'RUN:hermes_install:MERCASTO',
   'RUN:hermes_publish:MERCASTO',
   'RUN:restart_frontend:MERCASTO',
