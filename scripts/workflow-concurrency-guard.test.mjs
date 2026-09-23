@@ -181,10 +181,22 @@ test('MCP HTTPS publish operator is fixed to the read-only plugin and public end
   assert.ok(match, 'mcp_plugin_publish operation must exist');
   const block = match[1];
   assert.match(block, /require_confirm/);
-  assert.ok(block.includes('/etc/letsencrypt/live/mcp.mercasto.com-0001/fullchain.pem'));
-  assert.ok(block.includes('/etc/letsencrypt/live/mcp.mercasto.com-0001/privkey.pem'));
-  assert.ok(block.includes('up -d --build --no-deps mercasto-mcp-plugin'));
-  assert.ok(block.includes('--resolve mcp.mercasto.com:443:127.0.0.1'));
+  assert.match(
+    block,
+    /(?:^|\s)sudo -n test -s \/etc\/letsencrypt\/live\/mcp\.mercasto\.com-0001\/fullchain\.pem(?=\s|$)/,
+  );
+  assert.match(
+    block,
+    /(?:^|\s)sudo -n test -s \/etc\/letsencrypt\/live\/mcp\.mercasto\.com-0001\/privkey\.pem(?=\s|$)/,
+  );
+  assert.match(
+    block,
+    /(?:^|\s)up -d --build --no-deps mercasto-mcp-plugin(?=\s|$)/,
+  );
+  assert.match(
+    block,
+    /(?:^|\s)--resolve mcp\.mercasto\.com:443:127\.0\.0\.1(?=\s|$)/,
+  );
   assert.match(
     block,
     /(?:^|\s)-X POST https:\/\/mcp\.mercasto\.com\/mcp(?=\s|$)/,
