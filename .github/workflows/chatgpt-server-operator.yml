@@ -36,6 +36,7 @@ jobs:
         github.event.comment.body == 'RUN:align_media_caps:MERCASTO' ||
         github.event.comment.body == 'RUN:hermes_install:MERCASTO' ||
         github.event.comment.body == 'RUN:hermes_publish:MERCASTO' ||
+        github.event.comment.body == 'RUN:harness_voice_install:MERCASTO' ||
         github.event.comment.body == 'RUN:cleanup_build_cache:MERCASTO' ||
         github.event.comment.body == 'RUN:cleanup_docker:MERCASTO' ||
         github.event.comment.body == 'RUN:maintenance_reboot:MERCASTO'
@@ -71,6 +72,7 @@ jobs:
               'RUN:align_media_caps:MERCASTO': ['align_media_caps', 'MERCASTO', '160'],
               'RUN:hermes_install:MERCASTO': ['hermes_install', 'MERCASTO', '220'],
               'RUN:hermes_publish:MERCASTO': ['hermes_publish', 'MERCASTO', '220'],
+              'RUN:harness_voice_install:MERCASTO': ['harness_voice_install', 'MERCASTO', '300'],
               'RUN:cleanup_build_cache:MERCASTO': ['cleanup_build_cache', 'MERCASTO', '160'],
               'RUN:cleanup_docker:MERCASTO': ['cleanup_docker', 'MERCASTO', '160'],
               'RUN:maintenance_reboot:MERCASTO': ['maintenance_reboot', 'MERCASTO', '220'],
