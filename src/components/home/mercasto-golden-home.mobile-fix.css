@@ -1,6 +1,69 @@
-/* Mobile visual pass 1 — overrides only. Do not replace the main golden stylesheet. */
+/* Token bridge + mobile layout. Selectors are deeper than mercasto-golden-home.css
+   because that file is imported by the home chunk after this one. */
+
+.mcg-root {
+  --mcg-green: var(--mc-brand, #84cc16);
+  --mcg-green-dark: var(--mc-brand-dark, #65a30d);
+  --mcg-ink: var(--mc-ink, #111827);
+  --mcg-muted: var(--mc-muted, #64748b);
+  --mcg-line: var(--mc-line, #e2e8f0);
+  --mcg-soft: var(--mc-raised-surface, #f1f5f9);
+  --mcg-card: var(--mc-surface, #fff);
+}
+
+html.dark .mcg-root {
+  --mcg-ink: var(--mc-dark-ink, #f8fafc);
+  --mcg-muted: var(--mc-dark-muted, #cbd5e1);
+  --mcg-line: var(--mc-dark-line, #64748b);
+  --mcg-soft: var(--mc-dark-raised-surface, #1f2937);
+  --mcg-card: var(--mc-dark-surface, #111827);
+  background: var(--mc-dark-background, #0f172a);
+  color: var(--mc-dark-ink, #f8fafc);
+}
+
+html.dark .mc-golden-home-active {
+  background: var(--mc-dark-background, #0f172a);
+}
+
+html.dark .mcg-root .mcg-ai,
+html.dark .mcg-root .mcg-mobile-ai,
+html.dark .mcg-root .mcg-device-ai .main,
+html.dark .mcg-root .mcg-device-ai .chat,
+html.dark .mcg-root .mcg-map {
+  background: var(--mc-dark-surface, #111827);
+  border-color: var(--mc-dark-line, #64748b);
+}
+
+.mcg-root .mcg-search > button,
+.mcg-root .mcg-ai > button,
+.mcg-root .mcg-sell button,
+.mcg-root .mcg-dsearch > button,
+.mcg-root .mcg-device-ai .main > button,
+.mcg-root .mcg-device-ai .chat button,
+.mcg-root .mcg-msearch > button.mcg-msearch-go,
+.mcg-root .mcg-bottom-nav .publish i {
+  background: var(--mc-brand, #84cc16);
+  color: var(--mc-ink, #111827);
+}
+
+.mcg-root .mcg-search > button:hover,
+.mcg-root .mcg-ai > button:hover,
+.mcg-root .mcg-sell button:hover,
+.mcg-root .mcg-dsearch > button:hover,
+.mcg-root .mcg-msearch > button.mcg-msearch-go:hover,
+.mcg-root .mcg-bottom-nav .publish i:hover {
+  background: var(--mc-brand-dark, #65a30d);
+  color: #fff;
+}
+
+.mcg-root .mcg-msearch > button:not(.mcg-msearch-go) {
+  background: var(--mcg-card);
+  color: var(--mcg-ink);
+  border: 1px solid var(--mcg-line);
+}
+
 @media (max-width: 767px) {
-  .mcg-responsive-h1 {
+  .mcg-root .mcg-responsive-h1 {
     position: static;
     left: auto;
     top: auto;
@@ -10,12 +73,12 @@
     overflow: hidden;
     clip: rect(0 0 0 0);
   }
-  .mcg-header {
+  .mcg-root .mcg-header {
     height: 56px;
     padding: 0 10px;
     gap: 6px;
   }
-  .mcg-location {
+  .mcg-root .mcg-location {
     height: 40px;
     padding: 0 8px;
     font-size: 12px;
@@ -23,117 +86,110 @@
     flex: 1;
     min-width: 0;
   }
-  .mcg-location > span {
+  .mcg-root .mcg-location > span {
     max-width: none;
     flex: 1;
   }
-  .mcg-lang {
+  .mcg-root .mcg-lang {
     height: 40px;
     min-width: 52px;
     margin-left: auto;
   }
-  .mcg-lang select {
+  .mcg-root .mcg-lang select {
     font-size: 12px;
     max-width: 36px;
   }
-  .mcg-theme {
+  .mcg-root .mcg-theme {
     width: 44px;
     height: 40px;
     background: transparent;
     position: relative;
   }
-  .mcg-theme::after {
+  .mcg-root .mcg-theme::after {
     content: "\2600";
     position: relative;
     z-index: 2;
     font-size: 11px;
     pointer-events: none;
   }
-  .mcg-theme.dark::after {
+  html.dark .mcg-root .mcg-theme::after {
     content: "\263E";
-    color: #ecfccb;
+    color: var(--mc-dark-ink, #f8fafc);
   }
-  .mcg-msearch {
+  .mcg-root .mcg-msearch {
     display: grid;
     grid-template-columns: 1fr 48px 48px;
     gap: 6px;
     margin-top: 8px;
   }
-  .mcg-msearch > div {
+  .mcg-root .mcg-msearch > div {
     height: 48px;
     min-width: 0;
     padding: 0 10px;
   }
-  .mcg-msearch-go {
-    border: 0;
-    border-radius: 12px;
-    background: #0f172a !important;
-    color: #fff !important;
+  .mcg-root .mcg-msearch > button {
+    border-radius: var(--mc-radius-md, 12px);
     display: grid;
     place-items: center;
     min-width: 48px;
     min-height: 48px;
   }
-  .dark .mcg-msearch-go {
-    background: #84cc16 !important;
-    color: #052e16 !important;
-  }
-  .mcg-mobile-ai {
+  .mcg-root .mcg-mobile-ai {
     min-height: 132px;
     height: auto;
     padding: 14px 88px 14px 14px;
   }
-  .mcg-ai-badge {
+  .mcg-root .mcg-ai-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 11px;
     font-weight: 800;
-    color: #166534;
-    background: #dcfce7;
-    border-radius: 999px;
+    color: var(--mc-ink, #111827);
+    background: color-mix(in srgb, var(--mc-brand, #84cc16) 28%, white);
+    border-radius: var(--mc-radius-pill, 999px);
     padding: 4px 9px;
     margin-bottom: 8px;
   }
-  .mcg-ai-badge small {
+  .mcg-root .mcg-ai-badge small {
     font-size: 9px;
-    background: #16a34a;
+    background: var(--mc-brand-dark, #65a30d);
     color: #fff;
-    border-radius: 99px;
+    border-radius: var(--mc-radius-pill, 999px);
     padding: 2px 6px;
   }
-  .mcg-mobile-ai h2 {
+  .mcg-root .mcg-mobile-ai h2 {
     font-size: 18px;
     line-height: 1.25;
     margin: 0;
   }
-  .mcg-mactions {
+  .mcg-root .mcg-mactions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .mcg-mactions button {
+  .mcg-root .mcg-mactions button {
     min-height: 76px;
     height: auto;
     padding: 10px 10px 12px;
     align-items: flex-start;
     text-align: left;
-    border-radius: 14px;
+    border-radius: var(--mc-radius-lg, 14px);
   }
-  .mcg-mactions span {
+  .mcg-root .mcg-mactions span {
     width: 36px;
     height: 36px;
     border-radius: 11px;
   }
-  .mcg-mactions b {
+  .mcg-root .mcg-mactions b {
     font-size: 13px;
     font-weight: 800;
   }
-  .mcg-mactions small {
+  .mcg-root .mcg-mactions small {
     font-size: 11px;
     color: var(--mcg-muted);
   }
-  .mcg-bottom-nav .publish b {
+  .mcg-root .mcg-bottom-nav .publish b {
     font-size: 10px;
   }
 }
