@@ -53,7 +53,11 @@ assert.deepEqual(
   ].sort(),
   'Sitemap XML routes must stay on the explicit non-visual allowlist.',
 );
-assert.equal(backendStaticScreens.length, 42, 'Expected all 42 current static backend browser surfaces.');
+// 43, not 42: the Golden blog work (main 19616e5d and #1224) added one more legitimate
+// static backend browser surface. Leaving the count stale made this gate red on every
+// branch rebased onto current main -- an unrelated PR's check failing for a policy
+// that had not been updated.
+assert.equal(backendStaticScreens.length, 43, 'Expected all 43 current static backend browser surfaces.');
 assert.equal(
   new Set(backendStaticScreens.map(screen => screen.path)).size,
   backendStaticScreens.length,
