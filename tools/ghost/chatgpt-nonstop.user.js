@@ -61,7 +61,8 @@ const NS = Object.freeze({
   repeatRecoveryCount: 'v9.nonstop.repeatRecoveryCount',
   auditPending: 'v9.nonstop.auditPending',
   awaitingFrom: 'v9.nonstop.awaitingFrom',
-  awaitingAssistantCount: 'v9.nonstop.awaitingAssistantCount'
+  awaitingAssistantCount: 'v9.nonstop.awaitingAssistantCount',
+  sendFence: 'v9.nonstop.sendFence'
 });
 
 const G = Object.freeze({
@@ -367,6 +368,19 @@ function persistNonStop() {
 }
 function setNonStopActive(active) { GM_setValue(NS.active, !!active); }
 function nonStopActive() { return !!GM_getValue(NS.active, false); }
+function readSendFence() {
+  try {
+    const raw = GM_getValue(NS.sendFence, '');
+    if (!raw) return null;
+    const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return value && typeof value === 'object' ? value : null;
+  } catch (_) { return null; }
+}
+function writeSendFence(value) {
+  if (!value) { GM_setValue(NS.sendFence, ''); return; }
+  GM_setValue(NS.sendFence, JSON.stringify(value));
+}
+function clearSendFence() { writeSendFence(null); }
 function fail(code, detail, data = {}) {
   S.lastError = { code, detail, at: new Date().toISOString(), ...data };
   log('error', { code, ...data }); pause(`${code}: ${detail}`);
@@ -629,6 +643,7 @@ async function sendOnce(text, reason) {
     S.sending = false; fail('PLAY-SEND', 'Prompt is staged, but the current host Send control did not become available.', { host: HOST.id }); return false;
   }
   const beforeComposer = semanticText(nodeText(composer()));
+  writeSendFence({ at: now(), beforeUsers, beforeAssistantHash, beforeAssistantCount, reason: String(reason || '') });
   log('send-click', { reason, round: S.round + 1, host: HOST.id });
   try { button.click(); }
   catch (error) {
@@ -640,6 +655,7 @@ async function sendOnce(text, reason) {
   if (!confirmed.ok) {
     S.uncertain = true; fail('PLAY-SEND-UNCERTAIN', 'Send was attempted but host acceptance could not be confirmed. Ghost will not resend.'); return false;
   }
+  clearSendFence();
   S.round += 1; S.awaitingFrom = beforeAssistantHash; S.awaitingAssistantCount = beforeAssistantCount; S.stableHash = ''; S.stableSince = 0;
   persistNonStop();
   clearGenerationWatchdog();
@@ -829,14 +845,38 @@ async function tick() {
   if (quiet >= DRIFT_QUIET_MS) { S.lastHandled = assistantTurnKey(text); persistNonStop(); await handleDrift(parsed.raw); }
 }
 
+function resolveSendFence() {
+  const fence = readSendFence();
+  if (!fence) return true;
+  const accepted = generating()
+    || userCount() > Number(fence.beforeUsers || 0)
+    || assistantCount() > Number(fence.beforeAssistantCount || 0);
+  if (accepted) {
+    clearSendFence();
+    log('send-fence-resolved', { reason: fence.reason || '', ageMs: Math.max(0, now() - Number(fence.at || now())) });
+    return true;
+  }
+  S.uncertain = true;
+  setNonStopActive(false);
+  S.mode = 'PAUSED';
+  S.detail = 'Previous Send crossed a reload and cannot be proven safe to repeat. Inspect the chat, then press Continue.';
+  log('send-fence-uncertain', { reason: fence.reason || '', ageMs: Math.max(0, now() - Number(fence.at || now())) });
+  render();
+  return false;
+}
 async function play(options = {}) {
   const resuming = !!options.resume;
+  if (!resuming && S.uncertain) {
+    clearSendFence();
+    S.uncertain = false;
+    S.detail = 'Send fence cleared by explicit Continue.';
+  }
   if (S.mode === 'RUNNING') {
     setNonStopActive(true);
     if (!S.timer) S.timer = setInterval(() => { tick().catch(error => fail('PLAY-TICK', String(error?.message || error))); }, TICK_MS);
     return;
   }
-  if (S.uncertain) { S.detail = 'Prior Send is uncertain. Inspect the chat or use Page Reload before resuming.'; render(); return; }
+  if (S.uncertain) { S.detail = 'Prior Send is uncertain. Inspect the chat, then use explicit Continue.'; render(); return; }
   const input = composer();
   if (!input) { fail('PLAY-INPUT', 'Current chat composer was not found.', { host: HOST.id }); return; }
 
@@ -878,6 +918,7 @@ function userPause() {
 }
 function stop() {
   setNonStopActive(false);
+  clearSendFence();
   S.mode = 'IDLE'; S.detail = 'Stopped'; S.sending = false; S.uncertain = false;
   S.lastHandled = ''; S.awaitingFrom = ''; S.awaitingAssistantCount = 0; S.stableHash = ''; S.stableSince = 0;
   S.drift = 0; S.recoveryCount = 0; S.watchdogBusy = false; S.auditPending = false;
@@ -894,6 +935,7 @@ function complete(detail) {
 }
 function resumeNonStop(reason = 'boot') {
   if (!nonStopActive() || S.mode === 'RUNNING' || S.sending || S.uncertain) return;
+  if (!resolveSendFence()) return;
   S.detail = `Non-stop wake · ${reason}`; render();
   setTimeout(() => {
     if (!nonStopActive() || S.mode === 'RUNNING' || S.sending || S.uncertain) return;
@@ -1262,7 +1304,8 @@ function render() {
 render();
 window.__GITL_V9__ = true;
 try { delete window.__GITL_V9_BOOTING__; } catch (_) { window.__GITL_V9_BOOTING__ = 0; }
-log('boot', { version: VER, host: HOST.id, nonStopActive: nonStopActive() });
+log('boot', { version: VER, host: HOST.id, nonStopActive: nonStopActive(), sendFence: !!readSendFence() });
+if (readSendFence()) resolveSendFence();
 window.addEventListener('focus', () => wakeNonStop('focus'));
 window.addEventListener('pageshow', () => wakeNonStop('pageshow'));
 window.addEventListener('online', () => wakeNonStop('online'));
