@@ -47,6 +47,9 @@ Route::redirect('/acerca-de', '/sobre-mercasto', 301);
 Route::redirect('/terms', '/terminos', 301);
 Route::redirect('/privacy', '/privacidad', 301);
 Route::redirect('/help', '/ayuda', 301);
+Route::get('/blog', [SeoShellController::class, 'blogIndex']);
+Route::get('/blog/{slug}', [SeoShellController::class, 'blogArticle'])
+    ->where('slug', '[A-Za-z0-9-]+');
 Route::get('/ads/{id}', [SeoShellController::class, 'ad'])->whereNumber('id');
 
 Route::get('/', function () {
