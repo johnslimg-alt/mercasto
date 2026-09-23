@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plain text for Atlassian Document Format, including a table inside a cell."""
+"""Plain text for Atlassian Document Format, including nested tables and Confluence macros."""
 
 from __future__ import annotations
 
@@ -26,6 +26,10 @@ def _blocks(nodes, depth: int) -> str:
         kind = node.get("type")
         if kind == "table":
             parts.append(_table(node, depth))
+        elif kind in {"extension", "inlineExtension", "bodiedExtension"}:
+            parts.append(_macro(node, depth))
+        elif kind in {"expand", "nestedExpand"}:
+            parts.append(_expand(node, depth))
         elif kind in {"paragraph", "heading", "codeBlock", "blockquote"}:
             parts.append(_inline(node.get("content") or [], depth).strip())
         elif kind in {"bulletList", "orderedList"}:
@@ -56,6 +60,8 @@ def _inline(nodes, depth: int) -> str:
             out.append((node.get("attrs") or {}).get("text") or "")
         elif kind == "emoji":
             out.append((node.get("attrs") or {}).get("shortName") or "")
+        elif kind in {"extension", "inlineExtension", "bodiedExtension"}:
+            out.append(_macro(node, depth))
         elif kind == "table":
             out.append("\n" + _table(node, depth + 1))
         elif node.get("content"):
@@ -111,6 +117,48 @@ def _table(table: dict, depth: int) -> str:
     return "\n".join(lines)
 
 
+def _macro(node: dict, depth: int) -> str:
+    attrs = node.get("attrs") or {}
+    key = attrs.get("extensionKey") or "macro"
+    label = _macro_label(attrs)
+    if node.get("type") != "bodiedExtension":
+        return label
+    body = _blocks(node.get("content") or [], depth + 1).strip()
+    if not body:
+        return label
+    indented = "\n".join(f"  {line}" if line else "" for line in body.split("\n"))
+    return f"{label}\n{indented}\n[/macro:{key}]"
+
+
+def _expand(node: dict, depth: int) -> str:
+    title = str((node.get("attrs") or {}).get("title") or "").replace("\n", " ").strip()[:120]
+    label = f"[expand:{title}]" if title else "[expand]"
+    body = _blocks(node.get("content") or [], depth + 1).strip()
+    if not body:
+        return label
+    indented = "\n".join(f"  {line}" if line else "" for line in body.split("\n"))
+    return f"{label}\n{indented}\n[/expand]"
+
+
+def _macro_label(attrs: dict) -> str:
+    key = attrs.get("extensionKey") or "macro"
+    params = (attrs.get("parameters") or {}).get("macroParams") or {}
+    shown = []
+    for name in ("title", "colour", "color", "key", "jqlQuery", "language"):
+        value = _param_value(params.get(name))
+        if value:
+            shown.append(f"{name}={value}")
+    return f"[macro:{key}]" if not shown else f"[macro:{key} {' '.join(shown)}]"
+
+
+def _param_value(value) -> str:
+    if isinstance(value, dict):
+        value = value.get("value")
+    if isinstance(value, (str, int, float)):
+        return str(value).replace("\n", " ").strip()[:120]
+    return ""
+
+
 def _span(value) -> int:
     try:
         return max(1, int(value or 1))
@@ -159,6 +207,46 @@ def _check() -> None:
     limited = adf_to_text(node)
     assert "[…]" in limited, limited
     assert limited.count("[table]") <= MAX_DEPTH + 1
+
+    macro = {
+        "type": "bodiedExtension",
+        "attrs": {
+            "extensionType": "com.atlassian.confluence.macro.core",
+            "extensionKey": "info",
+            "parameters": {
+                "macroParams": {"title": {"value": "Релиз"}},
+                "macroMetadata": {"macroId": {"value": "uuid-should-not-appear"}},
+            },
+        },
+        "content": [
+            {"type": "paragraph", "content": [
+                {"type": "text", "text": "Статус "},
+                {"type": "inlineExtension", "attrs": {
+                    "extensionKey": "status",
+                    "parameters": {"macroParams": {"title": {"value": "Done"}, "colour": {"value": "Green"}}},
+                }},
+            ]},
+            {"type": "bodiedExtension", "attrs": {
+                "extensionKey": "expand",
+                "parameters": {"macroParams": {"title": {"value": "Детали"}}},
+            }, "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": "внутри"}]},
+                inner,
+            ]},
+            {"type": "extension", "attrs": {
+                "extensionKey": "jira",
+                "parameters": {"macroParams": {"key": {"value": "MER-42"}}},
+            }},
+        ],
+    }
+    rendered = adf_to_text(macro)
+    assert "[macro:info title=Релиз]" in rendered, rendered
+    assert "[macro:status title=Done colour=Green]" in rendered, rendered
+    assert "[macro:expand title=Детали]" in rendered and "внутри" in rendered, rendered
+    assert "| Дата | 12 сен |" in rendered, rendered
+    assert "[macro:jira key=MER-42]" in rendered, rendered
+    assert "uuid-should-not-appear" not in rendered, rendered
+    assert rendered.index("[/macro:expand]") < rendered.index("[macro:jira"), rendered
     print("adf nested tables ok")
 
 
