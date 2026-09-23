@@ -59,7 +59,9 @@ const NS = Object.freeze({
   lastHandled: 'v9.nonstop.lastHandled',
   lastAssistantHash: 'v9.nonstop.lastAssistantHash',
   repeatRecoveryCount: 'v9.nonstop.repeatRecoveryCount',
-  auditPending: 'v9.nonstop.auditPending'
+  auditPending: 'v9.nonstop.auditPending',
+  awaitingFrom: 'v9.nonstop.awaitingFrom',
+  awaitingAssistantCount: 'v9.nonstop.awaitingAssistantCount'
 });
 
 const G = Object.freeze({
@@ -238,7 +240,7 @@ const HOST = PROFILES.find(p => p.host.test(location.hostname)) || PROFILES[2];
 const S = {
   mode: 'IDLE', detail: 'Ready', round: Math.max(0, Number(GM_getValue(NS.round, 0)) || 0),
   max: Math.max(1, Math.min(NONSTOP_HARD_MAX, Number(GM_getValue('v9.max', NONSTOP_DEFAULT_MAX)) || NONSTOP_DEFAULT_MAX)),
-  sending: false, uncertain: false, lastHandled: String(GM_getValue(NS.lastHandled, '') || ''), awaitingFrom: '', stableHash: '', stableSince: 0,
+  sending: false, uncertain: false, lastHandled: String(GM_getValue(NS.lastHandled, '') || ''), awaitingFrom: String(GM_getValue(NS.awaitingFrom, '') || ''), awaitingAssistantCount: Math.max(0, Number(GM_getValue(NS.awaitingAssistantCount, 0)) || 0), stableHash: '', stableSince: 0,
   drift: 0, bootstrapped: false, relay: '', timer: null,
   generationStartedAt: 0, lastProgressAt: 0, lastProgressFingerprint: '',
   stallState: 'IDLE', stopAttempts: 0, recoveryCount: 0, watchdogBusy: false,
@@ -305,6 +307,8 @@ function assistantText() {
   const nodes = queryAll(HOST.assistant).filter(el => el.isConnected && nodeText(el));
   return nodes.length ? nodeText(nodes[nodes.length - 1]) : '';
 }
+function assistantCount() { return queryAll(HOST.assistant).filter(el => el.isConnected && nodeText(el)).length; }
+function assistantTurnKey(text = assistantText()) { return `${assistantCount()}:${hash(text)}`; }
 function userCount() { return queryAll(HOST.user).filter(el => el.isConnected).length; }
 function generating() { return !!queryFirst(HOST.stop); }
 function visibleStopButtons() { return queryAll(HOST.stop).filter(visible); }
@@ -358,6 +362,8 @@ function persistNonStop() {
   GM_setValue(NS.lastAssistantHash, S.lastAssistantHash || '');
   GM_setValue(NS.repeatRecoveryCount, S.repeatRecoveryCount || 0);
   GM_setValue(NS.auditPending, !!S.auditPending);
+  GM_setValue(NS.awaitingFrom, S.awaitingFrom || '');
+  GM_setValue(NS.awaitingAssistantCount, S.awaitingAssistantCount || 0);
 }
 function setNonStopActive(active) { GM_setValue(NS.active, !!active); }
 function nonStopActive() { return !!GM_getValue(NS.active, false); }
@@ -613,6 +619,7 @@ async function sendOnce(text, reason) {
   S.sending = true; S.detail = `Staging ${reason}...`; render();
   const beforeUsers = userCount();
   const beforeAssistantHash = hash(assistantText());
+  const beforeAssistantCount = assistantCount();
   const staged = await setComposerText(text);
   if (!staged.ok) {
     S.sending = false; fail('PLAY-WRITE', `Could not reliably stage the prompt (${staged.why}).`, staged); return false;
@@ -633,7 +640,7 @@ async function sendOnce(text, reason) {
   if (!confirmed.ok) {
     S.uncertain = true; fail('PLAY-SEND-UNCERTAIN', 'Send was attempted but host acceptance could not be confirmed. Ghost will not resend.'); return false;
   }
-  S.round += 1; S.awaitingFrom = beforeAssistantHash; S.stableHash = ''; S.stableSince = 0;
+  S.round += 1; S.awaitingFrom = beforeAssistantHash; S.awaitingAssistantCount = beforeAssistantCount; S.stableHash = ''; S.stableSince = 0;
   persistNonStop();
   clearGenerationWatchdog();
   if (reason !== 'stall recovery') S.recoveryCount = 0;
@@ -696,20 +703,32 @@ async function recoverStall() {
 
 async function handleTerminal(text, parsed) {
   const fp = hash(text);
-  if (!text || fp === S.lastHandled || S.mode !== 'RUNNING' || S.sending) return;
+  const turnKey = assistantTurnKey(text);
+  if (!text || turnKey === S.lastHandled || S.mode !== 'RUNNING' || S.sending) return;
   if (parsed.normalized) log('terminal-normalized', { type: parsed.type });
+
+  // A second HALT produced by the dedicated final-audit turn is authoritative,
+  // even if its visible text happens to match the first HALT.
+  if (parsed.type === 'halt' && S.auditPending) {
+    S.drift = 0; S.recoveryCount = 0; S.lastHandled = turnKey;
+    S.lastAssistantHash = fp; S.repeatRecoveryCount = 0;
+    persistNonStop();
+    complete('Task complete after final audit');
+    notify('Ghost complete', 'The AI returned audited HALT.', 'complete');
+    return;
+  }
 
   if (S.lastAssistantHash && fp === S.lastAssistantHash) {
     if (S.repeatRecoveryCount < 1) {
       const sent = await sendOnce(repeatRecoveryPrompt(), 'repeat recovery');
       if (sent) {
         S.repeatRecoveryCount = 1;
-        S.lastHandled = fp;
+        S.lastHandled = turnKey;
         persistNonStop();
       }
       return;
     }
-    S.lastHandled = fp;
+    S.lastHandled = turnKey;
     persistNonStop();
     pause('Repeated answer persisted after one recovery. Human review required.', { keepActive: false });
     notify('Ghost paused', 'The assistant repeated the same answer after recovery.', 'error');
@@ -721,29 +740,22 @@ async function handleTerminal(text, parsed) {
 
   if (parsed.type === 'halt') {
     S.drift = 0; S.recoveryCount = 0;
-    if (!S.auditPending) {
-      const sent = await sendOnce(finalCompletionAuditPrompt(), 'final completion audit');
-      if (sent) {
-        S.auditPending = true;
-        S.lastHandled = fp;
-        persistNonStop();
-      }
-      return;
+    const sent = await sendOnce(finalCompletionAuditPrompt(), 'final completion audit');
+    if (sent) {
+      S.auditPending = true;
+      S.lastHandled = turnKey;
+      persistNonStop();
     }
-    S.lastHandled = fp;
-    persistNonStop();
-    complete('Task complete after final audit');
-    notify('Ghost complete', 'The AI returned audited HALT.', 'complete');
     return;
   }
   if (parsed.type === 'human') {
-    S.drift = 0; S.lastHandled = fp; persistNonStop();
+    S.drift = 0; S.lastHandled = turnKey; persistNonStop();
     pause('Human decision requested by the AI.', { keepActive: false });
     notify('Ghost paused', 'The AI requested a human decision.', 'human');
     return;
   }
   if (parsed.type === 'relay') {
-    S.drift = 0; S.relay = parsed.model; S.lastHandled = fp; persistNonStop();
+    S.drift = 0; S.relay = parsed.model; S.lastHandled = turnKey; persistNonStop();
     pause(`Model Relay requested: ${parsed.model}.`, { keepActive: false });
     notify('Model Relay requested', parsed.model, 'human');
     return;
@@ -751,20 +763,15 @@ async function handleTerminal(text, parsed) {
   if (parsed.type === 'proceed') {
     S.drift = 0;
     if (S.round >= S.max) {
-      S.lastHandled = fp; persistNonStop();
+      S.lastHandled = turnKey; persistNonStop();
       pause('Round safety limit reached.', { keepActive: false });
       return;
     }
     if (S.auditPending) S.auditPending = false;
-    const prompt = S.round > 0 && S.round % GOAL_RECHECK_EVERY === 0
-      ? sourceGoalRecheckPrompt()
-      : continuationPrompt();
-    const reason = S.round > 0 && S.round % GOAL_RECHECK_EVERY === 0
-      ? 'source-goal recheck'
-      : 'continue';
-    const sent = await sendOnce(prompt, reason);
+    const recheck = S.round > 0 && S.round % GOAL_RECHECK_EVERY === 0;
+    const sent = await sendOnce(recheck ? sourceGoalRecheckPrompt() : continuationPrompt(), recheck ? 'source-goal recheck' : 'continue');
     if (sent) {
-      S.lastHandled = fp;
+      S.lastHandled = turnKey;
       persistNonStop();
     }
   }
@@ -804,8 +811,9 @@ async function tick() {
   if (parsedStage) S.stageProgress = parsedStage;
   const fp = hash(text);
   if (S.awaitingFrom) {
-    if (fp === S.awaitingFrom) { S.detail = 'Waiting for the next answer...'; render(); return; }
-    S.awaitingFrom = ''; S.stableHash = ''; S.stableSince = 0;
+    const count = assistantCount();
+    if (count <= S.awaitingAssistantCount && fp === S.awaitingFrom) { S.detail = 'Waiting for the next answer...'; render(); return; }
+    S.awaitingFrom = ''; S.awaitingAssistantCount = 0; S.stableHash = ''; S.stableSince = 0; persistNonStop();
   }
   if (fp !== S.stableHash) {
     S.stableHash = fp; S.stableSince = now(); S.detail = 'Output changed · waiting for stability'; render(); return;
@@ -818,7 +826,7 @@ async function tick() {
     return;
   }
   S.detail = quiet < DRIFT_QUIET_MS ? 'Output quiet · waiting for terminal' : 'Terminal missing · regrounding'; render();
-  if (quiet >= DRIFT_QUIET_MS) { S.lastHandled = fp; await handleDrift(parsed.raw); }
+  if (quiet >= DRIFT_QUIET_MS) { S.lastHandled = assistantTurnKey(text); persistNonStop(); await handleDrift(parsed.raw); }
 }
 
 async function play(options = {}) {
@@ -871,7 +879,7 @@ function userPause() {
 function stop() {
   setNonStopActive(false);
   S.mode = 'IDLE'; S.detail = 'Stopped'; S.sending = false; S.uncertain = false;
-  S.lastHandled = ''; S.awaitingFrom = ''; S.stableHash = ''; S.stableSince = 0;
+  S.lastHandled = ''; S.awaitingFrom = ''; S.awaitingAssistantCount = 0; S.stableHash = ''; S.stableSince = 0;
   S.drift = 0; S.recoveryCount = 0; S.watchdogBusy = false; S.auditPending = false;
   S.repeatRecoveryCount = 0; S.lastAssistantHash = ''; S.round = 0;
   clearGenerationWatchdog(); clearInterval(S.timer); S.timer = null;
