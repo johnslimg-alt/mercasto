@@ -24,8 +24,8 @@
 // @grant        GM_notification
 // @run-at       document-idle
 // @noframes
-// @updateURL     https://raw.githubusercontent.com/MShneur/ghost-in-the-loop/refs/heads/tooling/chatgpt-nonstop-loop/tools/chatgpt-nonstop.user.js
-// @downloadURL   https://raw.githubusercontent.com/MShneur/ghost-in-the-loop/refs/heads/tooling/chatgpt-nonstop-loop/tools/chatgpt-nonstop.user.js
+// @updateURL     https://raw.githubusercontent.com/johnslimg-alt/mercasto/main/tools/ghost/chatgpt-nonstop.user.js
+// @downloadURL   https://raw.githubusercontent.com/johnslimg-alt/mercasto/main/tools/ghost/chatgpt-nonstop.user.js
 // @license      AGPL-3.0
 // ==/UserScript==
 
