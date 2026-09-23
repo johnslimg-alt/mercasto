@@ -925,6 +925,118 @@ rm -f /tmp/hermes-web-sync.log \
 ROOT
     ;;
 
+  harness_voice_install)
+    require_confirm
+    print_header "Install Harness voice dictation (dsh-talk)"
+    sudo -n env HOME=/root DSH_HOME=/root/.dsh bash <<'ROOT'
+set -euo pipefail
+
+DSH_HOME=/root/.dsh
+PROFILE="$DSH_HOME/profiles/web"
+CLI=(/usr/bin/node /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js)
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP="/root/harness-backups/voice-$STAMP"
+
+test -x /usr/bin/node
+test -f /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js
+test -d "$PROFILE"
+test -f "$PROFILE/cordis.patch.yml"
+test -f "$PROFILE/package.json"
+
+install -d -m 0700 "$BACKUP"
+cp -a "$PROFILE/cordis.patch.yml" "$BACKUP/cordis.patch.yml"
+cp -a "$PROFILE/package.json" "$BACKUP/package.json"
+[ ! -f "$PROFILE/pnpm-lock.yaml" ] || cp -a "$PROFILE/pnpm-lock.yaml" "$BACKUP/pnpm-lock.yaml"
+[ ! -f "$PROFILE/pnpm-workspace.yaml" ] || cp -a "$PROFILE/pnpm-workspace.yaml" "$BACKUP/pnpm-workspace.yaml"
+
+echo "backup=$BACKUP"
+echo "harness_version=$(/usr/bin/node -p "require('/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/package.json').version")"
+
+if grep -q '"dsh-talk"' "$PROFILE/package.json"; then
+  echo "dsh_talk_dependency=already_present"
+else
+  "${CLI[@]}" plugin --profile web add dsh-talk
+  echo "dsh_talk_dependency=installed"
+fi
+
+grep -q '"dsh-talk"' "$PROFILE/package.json"
+
+VOICE_BEGIN="# HARNESS_VOICE_DICTATION_BEGIN"
+if ! grep -qF "$VOICE_BEGIN" "$PROFILE/cordis.patch.yml"; then
+  cat >>"$PROFILE/cordis.patch.yml" <<'YAML'
+
+# HARNESS_VOICE_DICTATION_BEGIN
+# Dictation-only defaults: microphone enabled, recognized text remains in draft,
+# browser Web Speech selected automatically, spoken event announcements disabled.
+- id: talk
+  config:
+    record:
+      enabled: true
+      autoSubmit: false
+    stt:
+      engine: auto
+      language: auto
+      interim: true
+    announce:
+      enabled: false
+# HARNESS_VOICE_DICTATION_END
+YAML
+fi
+
+"${CLI[@]}" --profile web --dump-config > /tmp/harness-dsh-talk-config.txt
+grep -A40 -B3 -n 'id: talk' /tmp/harness-dsh-talk-config.txt | head -80
+grep -q 'id: talk' /tmp/harness-dsh-talk-config.txt
+grep -q 'enabled: false' /tmp/harness-dsh-talk-config.txt
+echo "dsh_talk_config=resolved"
+
+systemctl restart deepseek-harness.service
+
+ready=0
+for attempt in $(seq 1 180); do
+  if systemctl is-active --quiet deepseek-harness.service && ss -ltnH 2>/dev/null | grep -qE '[:.]3080[[:space:]]'; then
+    ready=1
+    break
+  fi
+  sleep 2
+done
+if [ "$ready" -ne 1 ]; then
+  systemctl status deepseek-harness.service --no-pager -l || true
+  journalctl -u deepseek-harness.service -n 120 --no-pager || true
+  echo "HARNESS_VOICE_INSTALL_NOT_READY" >&2
+  exit 74
+fi
+
+systemctl restart deepseek-harness-proxy.service
+sleep 2
+
+systemctl is-active --quiet deepseek-harness.service
+systemctl is-active --quiet deepseek-harness-proxy.service
+grep -q '"dsh-talk"' "$PROFILE/package.json"
+grep -qF "$VOICE_BEGIN" "$PROFILE/cordis.patch.yml"
+
+PUBLIC_CODE="$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 20 https://harness.flyaicrm.com/ || true)"
+case "$PUBLIC_CODE" in
+  200|401) ;;
+  *)
+    echo "Unexpected Harness public HTTP code: $PUBLIC_CODE" >&2
+    exit 75
+    ;;
+esac
+
+echo "harness_service=$(systemctl is-active deepseek-harness.service)"
+echo "harness_proxy=$(systemctl is-active deepseek-harness-proxy.service)"
+echo "harness_public_http=$PUBLIC_CODE"
+echo "dsh_talk_package=$(/usr/bin/node -p "require('/root/.dsh/profiles/web/node_modules/dsh-talk/package.json').version" 2>/dev/null || echo installed)"
+echo "voice_record_enabled=true"
+echo "voice_auto_submit=false"
+echo "voice_language=auto"
+echo "voice_announcements=false"
+echo "HARNESS_VOICE_INSTALL_OK"
+
+rm -f /tmp/harness-dsh-talk-config.txt
+ROOT
+    ;;
+
   cleanup_build_cache)
     require_confirm
     print_header "Bounded Docker build-cache cleanup"
