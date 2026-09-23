@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Ghost in the Loop — Non-Stop
+// @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
 // @version      9.0.0-alpha.2-nonstop.5
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
