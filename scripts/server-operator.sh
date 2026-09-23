@@ -554,11 +554,11 @@ def choose_and_patch(path, kind):
             if "server_name harness.flyaicrm.com;" in block and "proxy_pass" in block
         ]
     else:
-        named = [
+        candidates = [
             idx for idx, block in enumerate(rendered)
-            if "server_name harness.flyaicrm.com;" in block and "proxy_pass" in block
+            if re.search(r"^\\s*listen\\s+172\\.19\\.0\\.1:13080\\s*;", block, re.M)
+            and "proxy_pass" in block
         ]
-        candidates = named or [idx for idx, block in enumerate(rendered) if "proxy_pass" in block]
 
     if len(candidates) != 1:
         raise SystemExit(f"{path}: expected exactly one Harness proxy server block, found {len(candidates)}")
