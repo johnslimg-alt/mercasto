@@ -1,0 +1,31 @@
+name: Jira webhook
+
+on:
+  repository_dispatch:
+    types: [jira_issue]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: jira-webhook-${{ github.event.client_payload.issue || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  comment:
+    name: Comment on the matching pull request
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Apply the Jira status to open pull requests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JIRA_ISSUE: ${{ github.event.client_payload.issue }}
+          JIRA_STATUS: ${{ github.event.client_payload.status }}
+          JIRA_SUMMARY: ${{ github.event.client_payload.summary }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+        run: bash scripts/jira-webhook-pr-comment.sh
