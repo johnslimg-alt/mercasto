@@ -106,70 +106,12 @@ elif ! printf '%s' "$JIRA_PROJECT_KEY" | grep -Eq '^[A-Z][A-Z0-9]{1,9}$'; then
   echo "JIRA_PROJECT_KEY is not a project key; Jira was not updated." >&2
   exit 1
 else
-  jira_base="${JIRA_BASE_URL%/}"
   api "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" > "$tmp/pr-status-pull.json"
-  JIRA_BASE_URL="$jira_base" python3 - "$tmp" << 'PY'
-import base64, json, os, re, sys, urllib.request
-from pathlib import Path
+  JIRA_BASE_URL="${JIRA_BASE_URL%/}" python3 scripts/jira_cloud.py notify \
+    --pull "$tmp/pr-status-pull.json" \
+    --summary "$tmp/pr-status-slack.json" \
+    --keys-out "$tmp/pr-status-jira-keys"
 
-root = Path(sys.argv[1])
-pull = json.loads((root / "pr-status-pull.json").read_text())
-summary = json.loads((root / "pr-status-slack.json").read_text())["text"]
-project = os.environ["JIRA_PROJECT_KEY"]
-blob = "\n".join([
-    pull.get("title") or "",
-    pull.get("body") or "",
-    ((pull.get("head") or {}).get("ref") or ""),
-])
-keys = []
-for key in re.findall(rf"\b{re.escape(project)}-\d+\b", blob):
-    if key not in keys:
-        keys.append(key)
-(root / "pr-status-jira-keys").write_text("\n".join(keys))
-if not keys:
-    raise SystemExit(0)
-marker = f"mercasto-pr-{pull['number']}-{os.environ['GITHUB_SHA'][:7]}"
-pr_url = pull.get("html_url") or ""
-auth = base64.b64encode(f"{os.environ['JIRA_EMAIL']}:{os.environ['JIRA_API_TOKEN']}".encode()).decode()
-base = os.environ["JIRA_BASE_URL"]
-
-def jira(method, path, payload=None):
-    data = None if payload is None else json.dumps(payload).encode()
-    req = urllib.request.Request(
-        base + path,
-        data=data,
-        method=method,
-        headers={
-            "Authorization": f"Basic {auth}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        },
-    )
-    with urllib.request.urlopen(req) as response:
-        raw = response.read().decode()
-    return json.loads(raw) if raw else {}
-
-for key in keys:
-    comments = jira("GET", f"/rest/api/3/issue/{key}/comment?maxResults=50")
-    already = marker in json.dumps(comments)
-    if not already:
-        jira("POST", f"/rest/api/3/issue/{key}/comment", {
-            "body": {
-                "type": "doc",
-                "version": 1,
-                "content": [{
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": f"{marker}\n{summary}"}],
-                }],
-            }
-        })
-    links = jira("GET", f"/rest/api/3/issue/{key}/remotelink")
-    if pr_url and not any((link.get("object") or {}).get("url") == pr_url for link in links):
-        jira("POST", f"/rest/api/3/issue/{key}/remotelink", {
-            "object": {"url": pr_url, "title": f"GitHub PR #{pull['number']}"}
-        })
-    print(f"Updated Jira issue {key}.")
-PY
   if [ ! -s "$tmp/pr-status-jira-keys" ]; then
     echo "No ${JIRA_PROJECT_KEY} issue key in the PR title, body, or branch."
   fi
