@@ -98,6 +98,68 @@ def issue_keys(pull: dict, project: str) -> list[str]:
     return found
 
 
+def keys_in_text(blob: str, project: str) -> list[str]:
+    return issue_keys({"title": blob, "body": "", "head": {"ref": ""}}, project)
+
+
+def report_ci(client: JiraCloud, project: str, blob: str, name: str, status: str, sha: str, url: str) -> list[str]:
+    keys = keys_in_text(blob, project)
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") or "workflow"
+    marker = f"mercasto-ci-{safe}-{sha[:7]}"
+    summary = "\n".join(part for part in (f"CI {name}: {status}", sha[:7], url) if part)
+    body = text_to_adf(marker, summary)
+    for key in keys:
+        if any(marker in json.dumps(comment) for comment in client.comments(key)):
+            print(f"Jira {key} already has {marker}.")
+            continue
+        client.add_comment(key, body)
+        if url and not any((link.get("object") or {}).get("url") == url for link in client.remote_links(key)):
+            client.add_remote_link(key, url, f"CI {name}")
+        print(f"Reported {name} {status} to {key}.")
+    return keys
+
+
+def _configured() -> bool:
+    return all(os.environ.get(name) for name in ("JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_PROJECT_KEY"))
+
+
+def _github_json(url: str, token: str):
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    })
+    with urllib.request.urlopen(req) as response:
+        return json.loads(response.read().decode())
+
+
+def ci_blob(token: str, repo: str, sha: str, event: str) -> str:
+    texts = []
+    if event == "pull_request":
+        pulls = _github_json(f"https://api.github.com/repos/{repo}/commits/{sha}/pulls", token)
+        for pull in pulls if isinstance(pulls, list) else []:
+            texts.extend([
+                pull.get("title") or "",
+                pull.get("body") or "",
+                ((pull.get("head") or {}).get("ref") or ""),
+            ])
+    commit = _github_json(f"https://api.github.com/repos/{repo}/commits/{sha}", token)
+    texts.append(((commit.get("commit") or {}).get("message") or ""))
+    return "\n".join(texts)
+    if not re.fullmatch(r"[A-Z][A-Z0-9]{1,9}", project):
+        raise ValueError("JIRA_PROJECT_KEY is not a project key")
+    blob = "\n".join([
+        pull.get("title") or "",
+        pull.get("body") or "",
+        ((pull.get("head") or {}).get("ref") or ""),
+    ])
+    found = []
+    for key in re.findall(rf"\b{re.escape(project)}-\d+\b", blob):
+        if key not in found:
+            found.append(key)
+    return found
+
+
 def notify(pull: dict, summary: str, client: JiraCloud, project: str, sha: str) -> list[str]:
     keys = issue_keys(pull, project)
     if not keys:
@@ -136,23 +198,45 @@ def _check() -> None:
         "MER",
     )
     assert keys == ["MER-42", "MER-7", "MER-9"], keys
+    reported = text_to_adf("mercasto-ci-Frontend-build-abc1234", "CI Frontend build: success\nabc1234")
+    assert reported["content"][0]["content"][0]["text"].startswith("mercasto-ci-")
+    assert any(item["content"][0]["text"].startswith("CI Frontend build:") for item in reported["content"])
     print("jira cloud api ok")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("notify",))
-    parser.add_argument("--pull", required=True)
-    parser.add_argument("--summary", required=True)
-    parser.add_argument("--keys-out", required=True)
+    commands = parser.add_subparsers(dest="command", required=True)
+    notify_parser = commands.add_parser("notify")
+    notify_parser.add_argument("--pull", required=True)
+    notify_parser.add_argument("--summary", required=True)
+    notify_parser.add_argument("--keys-out", required=True)
+    commands.add_parser("ci")
     args = parser.parse_args()
+    if args.command == "ci":
+        if not _configured():
+            print("Jira Cloud is not configured; CI report skipped.")
+            return 0
+        client = JiraCloud(os.environ["JIRA_BASE_URL"], os.environ["JIRA_EMAIL"], os.environ["JIRA_API_TOKEN"])
+        blob = ci_blob(
+            os.environ["GITHUB_TOKEN"],
+            os.environ["GITHUB_REPOSITORY"],
+            os.environ["CI_SHA"],
+            os.environ.get("CI_EVENT", ""),
+        )
+        report_ci(
+            client,
+            os.environ["JIRA_PROJECT_KEY"],
+            blob,
+            os.environ.get("CI_NAME", "workflow"),
+            os.environ.get("CI_STATUS", "completed"),
+            os.environ["CI_SHA"],
+            os.environ.get("CI_URL", ""),
+        )
+        return 0
     pull = json.loads(Path(args.pull).read_text())
     summary = json.loads(Path(args.summary).read_text())["text"]
-    client = JiraCloud(
-        os.environ["JIRA_BASE_URL"],
-        os.environ["JIRA_EMAIL"],
-        os.environ["JIRA_API_TOKEN"],
-    )
+    client = JiraCloud(os.environ["JIRA_BASE_URL"], os.environ["JIRA_EMAIL"], os.environ["JIRA_API_TOKEN"])
     keys = notify(pull, summary, client, os.environ["JIRA_PROJECT_KEY"], os.environ["GITHUB_SHA"])
     Path(args.keys_out).write_text("\n".join(keys))
     return 0
