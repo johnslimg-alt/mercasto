@@ -1395,7 +1395,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
         {/* Upgrade to PRO Banner */}
         {accountType === 'particular' && (
-          <div className="mt-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-2xl border border-slate-700">
+          <div data-testid="dashboard-pro-upgrade" className="mt-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-2xl border border-slate-700">
             <div className="mb-6 md:mb-0 md:mr-8 text-center md:text-left">
               <h3 className="text-2xl md:text-3xl font-bold mb-2 text-white">{t.upgrade_pro_btn || 'Actualiza a PRO'}</h3>
               <p className="text-base text-white/80">{t.upgrade_pro_hint || 'Desbloquea todas las funciones y vende más en Mercasto'}</p>
