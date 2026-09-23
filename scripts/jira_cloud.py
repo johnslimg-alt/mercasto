@@ -71,6 +71,59 @@ class JiraCloud:
             raise ValueError(f"Not a Jira issue key: {issue}")
 
 
+def parse_webhook(payload) -> dict:
+    if isinstance(payload, str):
+        payload = json.loads(payload) if payload.strip() else {}
+    if not isinstance(payload, dict):
+        return {"issue": "", "status": "", "summary": ""}
+    issue = payload.get("issue_key") or payload.get("issue")
+    status = str(payload.get("status") or "")
+    summary = str(payload.get("summary") or "")
+    if isinstance(issue, dict):
+        fields = issue.get("fields") or {}
+        status_field = fields.get("status") or {}
+        summary = summary or str(fields.get("summary") or "")
+        if isinstance(status_field, dict) and status_field.get("name"):
+            status = status or str(status_field.get("name"))
+        for item in (payload.get("changelog") or {}).get("items") or []:
+            if item.get("field") == "status" and item.get("toString"):
+                status = str(item["toString"])
+        issue = issue.get("key")
+    issue = str(issue or "").strip()
+    if not ISSUE_KEY.fullmatch(issue):
+        return {"issue": "", "status": "", "summary": ""}
+    return {"issue": issue, "status": status.replace("\n", " ").strip()[:80], "summary": summary.replace("\n", " ").strip()[:180]}
+
+
+def register_webhook(client: JiraCloud, project: str, callback: str) -> bool:
+    if not callback.startswith("https://"):
+        raise ValueError("JIRA_WEBHOOK_URL must start with https://")
+    if not re.fullmatch(r"[A-Z][A-Z0-9]{1,9}", project):
+        raise ValueError("JIRA_PROJECT_KEY is not a project key")
+    jql = f"project = {project}"
+    events = ["jira:issue_created", "jira:issue_updated"]
+    try:
+        existing = client.request("GET", "/rest/api/3/webhook")
+    except RuntimeError as error:
+        message = str(error)
+        if " 401 " in message or " 403 " in message:
+            print("Jira Cloud rejected webhook registration. A basic API token cannot call /rest/api/3/webhook. Use an Automation rule that posts repository_dispatch.")
+            return False
+        raise
+    values = existing.get("values") if isinstance(existing, dict) else []
+    for item in values or []:
+        if item.get("jqlFilter") == jql and set(events).issubset(set(item.get("events") or [])):
+            client.request("PUT", "/rest/api/3/webhook/refresh", {"webhookIds": [item["id"]]})
+            print(f"Refreshed Jira webhook {item['id']} for {jql}.")
+            return True
+    created = client.request("POST", "/rest/api/3/webhook", {
+        "url": callback,
+        "webhooks": [{"events": events, "jqlFilter": jql}],
+    })
+    print(f"Registered Jira webhook for {jql}: {created.get('webhookRegistrationResult', created)}")
+    return True
+
+
 def text_to_adf(marker: str, text: str) -> dict:
     lines = [marker, *[line.strip() for line in text.splitlines() if line.strip()]]
     return {
@@ -201,6 +254,11 @@ def _check() -> None:
     reported = text_to_adf("mercasto-ci-Frontend-build-abc1234", "CI Frontend build: success\nabc1234")
     assert reported["content"][0]["content"][0]["text"].startswith("mercasto-ci-")
     assert any(item["content"][0]["text"].startswith("CI Frontend build:") for item in reported["content"])
+    card = {"issue": {"key": "MER-42", "fields": {"summary": "Поиск", "status": {"name": "In Progress"}}}, "changelog": {"items": [{"field": "status", "toString": "Done"}]}}
+    parsed = parse_webhook(card)
+    assert parsed == {"issue": "MER-42", "status": "Done", "summary": "Поиск"}, parsed
+    assert parse_webhook({"issue": "MER-7", "status": "Done", "summary": "Кнопка"})["issue"] == "MER-7"
+    assert parse_webhook({"issue": "not a key"})["issue"] == ""
     print("jira cloud api ok")
 
 
@@ -212,7 +270,22 @@ def main() -> int:
     notify_parser.add_argument("--summary", required=True)
     notify_parser.add_argument("--keys-out", required=True)
     commands.add_parser("ci")
+    commands.add_parser("webhook-fields")
+    commands.add_parser("register-webhook")
     args = parser.parse_args()
+    if args.command == "webhook-fields":
+        import shlex
+        fields = parse_webhook(os.environ.get("JIRA_PAYLOAD", ""))
+        for name in ("issue", "status", "summary"):
+            print(f"{name}={shlex.quote(fields[name])}")
+        return 0
+    if args.command == "register-webhook":
+        if not _configured() or not os.environ.get("JIRA_WEBHOOK_URL"):
+            print("Jira webhook registration needs JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY and JIRA_WEBHOOK_URL.")
+            return 0
+        client = JiraCloud(os.environ["JIRA_BASE_URL"], os.environ["JIRA_EMAIL"], os.environ["JIRA_API_TOKEN"])
+        register_webhook(client, os.environ["JIRA_PROJECT_KEY"], os.environ["JIRA_WEBHOOK_URL"])
+        return 0
     if args.command == "ci":
         if not _configured():
             print("Jira Cloud is not configured; CI report skipped.")
