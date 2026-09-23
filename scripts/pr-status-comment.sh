@@ -70,6 +70,17 @@ body = "\n".join(lines) + "\n"
 (root / "pr-status-payload.json").write_text(json.dumps({"body": body}))
 comment_id = next((str(comment["id"]) for comment in comments if marker in (comment.get("body") or "")), "")
 (root / "pr-status-comment-id").write_text(comment_id)
+if failed or not pending:
+    notable = [run for run in rows if run.get("conclusion") in {"failure", "timed_out", "cancelled"}] or rows
+    bits = []
+    for run in notable[:12]:
+        state = "идёт" if run.get("status") != "completed" else labels.get(run.get("conclusion"), run.get("conclusion") or "")
+        bits.append(f"• {run['name']}: {state}")
+    pr_url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/pull/{os.environ['PR_NUMBER']}"
+    text = f"{title}: {pr_url} ({os.environ['GITHUB_SHA'][:7]})\n" + "\n".join(bits)
+    (root / "pr-status-slack.json").write_text(json.dumps({"text": text}))
+else:
+    (root / "pr-status-slack.json").write_text("")
 PY
 
 payload="$tmp/pr-status-payload.json"
@@ -80,3 +91,9 @@ else
   api -X POST "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments" --data-binary @"$payload"
 fi
 echo "Updated PR #${pr_number} status comment."
+if [ -n "${SLACK_WEBHOOK_URL:-}" ] && [ -s "$tmp/pr-status-slack.json" ]; then
+  curl -fsS -X POST -H "Content-type: application/json" --data-binary @"$tmp/pr-status-slack.json" "$SLACK_WEBHOOK_URL" >/dev/null
+  echo "Sent Slack notification for PR #${pr_number}."
+else
+  echo "Slack webhook is not configured or checks are still running; Slack was not notified."
+fi
