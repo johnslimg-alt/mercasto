@@ -147,6 +147,21 @@ jobs:
             echo "== Runner history for deleted Ghost branch =="
             grep -RInE --binary-files=without-match 'b53f580|tooling/chatgpt-nonstop-loop|chatgpt-nonstop.user.js|raw.githubusercontent.com/.*/ghost-in-the-loop' /opt/actions-runner/_diag 2>/dev/null | tail -200 || true
             echo
+            echo "== Ghost GitHub event history =="
+            curl -fsSL --max-time 20 'https://api.github.com/repos/MShneur/ghost-in-the-loop/events?per_page=100' |
+              python3 -c 'import json,sys; events=json.load(sys.stdin); target="tooling/chatgpt-nonstop-loop"; found=0
+for e in events:
+ p=e.get("payload") or {}; ref=p.get("ref")
+ if ref==target or ref=="refs/heads/"+target:
+  found+=1
+  print("event_type="+str(e.get("type")))
+  print("event_created_at="+str(e.get("created_at")))
+  print("event_ref="+str(ref))
+  print("event_before="+str(p.get("before")))
+  print("event_head="+str(p.get("head")))
+  print("event_ref_type="+str(p.get("ref_type")))
+print("matching_events="+str(found))' || true
+            echo
             echo "== Remote nonstop branch =="
             git ls-remote https://github.com/MShneur/ghost-in-the-loop.git 'refs/heads/tooling/chatgpt-nonstop-loop' 2>/dev/null || true
           else
