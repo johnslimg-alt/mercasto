@@ -41,14 +41,15 @@ test('listing pages only claim a head the client can actually back with data', (
   assert.match(app, /const serverOwnsListingHead = routeSeoOwner === 'listing';/);
   assert.match(app, /const clientMayRewriteHead = hasListingPayload \|\| !serverOwnsListingHead;/);
   assert.match(app, /const listingDecisionUnresolved = isListingPath && !hasListingPayload;/);
-  assert.match(app, /if \(!listingDecisionUnresolved\) \{\n\s+canonicalEl\.setAttribute\('href', canonicalHref\);/);
-  assert.match(app, /if \(routeSeoOwner !== 'not-found' && !listingDecisionUnresolved\) \{/);
+  assert.match(app, /const routeOwnsSeo = sellerProfileOwnsSeo \|\| geoSourceOwnsSeo \|\| blogOwnsSeo \|\| routeSeoOwner === 'blog' \|\| routeSeoOwner === 'not-found';/);
+  assert.match(app, /if \(!routeOwnsSeo && !listingDecisionUnresolved\) \{\n\s+canonicalEl\.setAttribute\('href', canonicalHref\);/);
+  assert.match(app, /if \(!routeOwnsSeo && !listingDecisionUnresolved\) \{\n\s+robotsEl\.setAttribute\('content', robotsContent\);/);
 
   // The schema the SEO shell rendered for a listing may only be replaced when the client has
   // schema data of its own; everywhere else the client still owns the slot. Cleanup may only
   // remove what the client itself wrote.
   assert.match(app, /const existingScript = document\.getElementById\('schema-ld-json'\);/);
-  assert.match(app, /else if \(!serverOwnsListingHead && existingScript\) \{/);
+  assert.match(app, /else if \(!routeOwnsSeo && !serverOwnsListingHead && existingScript\) \{/);
   assert.match(app, /script\.dataset\.mercastoOwner = 'client';/);
   assert.match(app, /if \(cleanupScript\?\.dataset\?\.mercastoOwner === 'client'\) \{/);
 });

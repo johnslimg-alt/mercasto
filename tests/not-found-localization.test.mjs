@@ -34,5 +34,6 @@ test('404 route owns robots metadata while it is mounted', () => {
   assert.match(screen, /mercastoSeoOwner = 'not-found'/);
   assert.match(screen, /meta\.content = 'noindex, nofollow'/);
   assert.match(app, /routeSeoOwner === 'not-found'/);
-  assert.match(app, /routeSeoOwner !== 'not-found'/);
+  assert.match(app, /const routeOwnsSeo = .*routeSeoOwner === 'not-found'/);
+  assert.match(app, /if \(!routeOwnsSeo && !listingDecisionUnresolved\) \{\n\s+robotsEl\.setAttribute\('content', robotsContent\);/);
 });

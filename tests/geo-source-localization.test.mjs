@@ -115,6 +115,7 @@ test('GeoSourcePage consumes active language for copy and JSON-LD', () => {
 
   const app = fs.readFileSync('src/App.jsx', 'utf8');
   assert.match(app, /const geoSourceOwnsSeo =/);
-  assert.match(app, /const routeOwnsSeo = sellerProfileOwnsSeo \|\| geoSourceOwnsSeo \|\| routeSeoOwner === 'not-found'/);
+  assert.match(app, /const blogOwnsSeo = \/\^\\\/blog/);
+  assert.match(app, /const routeOwnsSeo = sellerProfileOwnsSeo \|\| geoSourceOwnsSeo \|\| blogOwnsSeo \|\| routeSeoOwner === 'blog' \|\| routeSeoOwner === 'not-found'/);
   assert.match(app, /if \(!routeOwnsSeo\)/);
 });
