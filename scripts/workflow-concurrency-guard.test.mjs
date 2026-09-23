@@ -185,9 +185,16 @@ test('MCP HTTPS publish operator is fixed to the read-only plugin and public end
   assert.ok(block.includes('/etc/letsencrypt/live/mcp.mercasto.com-0001/privkey.pem'));
   assert.ok(block.includes('up -d --build --no-deps mercasto-mcp-plugin'));
   assert.ok(block.includes('--resolve mcp.mercasto.com:443:127.0.0.1'));
-  assert.ok(block.includes('mcp.mercasto.com'));
-  assert.ok(block.includes('/mcp'));
-  assert.ok(block.includes("-X POST"));
+  assert.match(
+    block,
+    /(?:^|\s)-X POST https:\/\/mcp\.mercasto\.com\/mcp(?=\s|$)/,
+    'public MCP initialize must use the exact reviewed HTTPS endpoint',
+  );
+  assert.match(
+    block,
+    /(?:^|\s)https:\/\/mcp\.mercasto\.com\/healthz(?=\s|$)/,
+    'public MCP health smoke must use the exact reviewed HTTPS endpoint',
+  );
   assert.ok(block.includes('Mercasto Server Status'));
   assert.ok(block.includes('mcp_https_publish=ok'));
   assert.doesNotMatch(block, /docker system prune|php artisan migrate|restart_stack|--dns-|bash-mcp|supergateway|mcp-sse-bridge/);
