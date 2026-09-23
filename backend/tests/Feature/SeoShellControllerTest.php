@@ -117,6 +117,46 @@ class SeoShellControllerTest extends TestCase
         }
     }
 
+    public function test_blog_index_returns_canonical_server_decorated_shell(): void
+    {
+        $response = $this->get('https://mercasto.test/blog');
+
+        $response->assertOk();
+        $response->assertSee('<title>Consejos y novedades | Mercasto</title>', false);
+        $response->assertSee('<link rel="canonical" href="https://mercasto.test/blog" />', false);
+        $response->assertSee('content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"', false);
+        $response->assertSee('"@type":"CollectionPage"', false);
+        $response->assertSee('"@type":"ItemList"', false);
+        $response->assertSee('data-mercasto-seo-owner="blog"', false);
+    }
+
+    public function test_blog_article_returns_canonical_article_schema_server_side(): void
+    {
+        $response = $this->get('https://mercasto.test/blog/comprar-con-seguridad');
+
+        $response->assertOk();
+        $response->assertSee('<title>Guía para comprar con seguridad | Mercasto</title>', false);
+        $response->assertSee('<link rel="canonical" href="https://mercasto.test/blog/comprar-con-seguridad" />', false);
+        $response->assertSee('content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"', false);
+        $response->assertSee('"@type":"Article"', false);
+        $response->assertSee('"headline":"Guía para comprar con seguridad"', false);
+        $response->assertSee('"mainEntityOfPage":"https://mercasto.test/blog/comprar-con-seguridad"', false);
+        $response->assertSee('data-mercasto-seo-owner="blog"', false);
+    }
+
+    public function test_unknown_blog_article_returns_branded_noindex_404_shell(): void
+    {
+        $response = $this->get('https://mercasto.test/blog/no-existe');
+
+        $response->assertNotFound();
+        $response->assertSee('<title>Artículo no encontrado | Mercasto</title>', false);
+        $response->assertSee('<link rel="canonical" href="https://mercasto.test/blog/no-existe" />', false);
+        $response->assertSee('content="noindex,nofollow"', false);
+        $response->assertSee('"@type":"WebPage"', false);
+        $response->assertSee('data-mercasto-seo-owner="blog"', false);
+        $response->assertSee('<script type="module" src="/assets/app-current.js"></script>', false);
+    }
+
     public function test_seller_landing_returns_ads_ready_canonical_metadata(): void
     {
         $response = $this->get('https://mercasto.test/vendedores');
