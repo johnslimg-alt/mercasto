@@ -9,6 +9,21 @@
   --mcg-line: var(--mc-line, #e2e8f0);
   --mcg-soft: var(--mc-raised-surface, #f1f5f9);
   --mcg-card: var(--mc-surface, #fff);
+  font-family: var(--font-sans, 'Inter Variable', Inter, system-ui, sans-serif);
+}
+.mcg-root .mcg-brand > span {
+  background: var(--mc-brand, #84cc16);
+  color: var(--mc-ink, #111827);
+}
+.mcg-root .mcg-ad-body strong,
+.mcg-root .mcg-device-head a,
+.mcg-root .mcg-section-head a {
+  color: #4d7c0f;
+}
+html.dark .mcg-root .mcg-ad-body strong,
+html.dark .mcg-root .mcg-device-head a,
+html.dark .mcg-root .mcg-section-head a {
+  color: var(--mc-brand, #84cc16);
 }
 
 html.dark .mcg-root {
@@ -67,11 +82,16 @@ html.dark .mcg-root .mcg-map {
     position: static;
     left: auto;
     top: auto;
-    font-size: 0;
-    line-height: 0;
-    height: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
+    height: auto;
+    margin: 0;
+    padding: 12px 14px 0;
+    overflow: visible;
+    clip: auto;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: var(--mc-ink, #111827);
   }
   .mcg-root .mcg-header {
     height: 56px;
@@ -99,23 +119,7 @@ html.dark .mcg-root .mcg-map {
     font-size: 12px;
     max-width: 36px;
   }
-  .mcg-root .mcg-theme {
-    width: 44px;
-    height: 40px;
-    background: transparent;
-    position: relative;
-  }
-  .mcg-root .mcg-theme::after {
-    content: "\2600";
-    position: relative;
-    z-index: 2;
-    font-size: 11px;
-    pointer-events: none;
-  }
-  html.dark .mcg-root .mcg-theme::after {
-    content: "\263E";
-    color: var(--mc-dark-ink, #f8fafc);
-  }
+
   .mcg-root .mcg-msearch {
     display: grid;
     grid-template-columns: 1fr 48px 48px;
@@ -138,6 +142,13 @@ html.dark .mcg-root .mcg-map {
     min-height: 132px;
     height: auto;
     padding: 14px 88px 14px 14px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--mc-brand, #84cc16) 16%, white), var(--mc-surface, #fff));
+    border-color: color-mix(in srgb, var(--mc-brand, #84cc16) 42%, var(--mc-line, #e2e8f0));
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+  html.dark .mcg-root .mcg-mobile-ai {
+    background: var(--mc-dark-surface, #111827);
+    box-shadow: none;
   }
   .mcg-root .mcg-ai-badge {
     display: inline-flex;
@@ -168,6 +179,11 @@ html.dark .mcg-root .mcg-map {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+  .mcg-root .mcg-mactions button,
+  .mcg-root .mcg-mobile .mcg-ad,
+  .mcg-root .mcg-mobile-chat {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  }
   .mcg-root .mcg-mactions button {
     min-height: 76px;
     height: auto;
@@ -175,6 +191,16 @@ html.dark .mcg-root .mcg-map {
     align-items: flex-start;
     text-align: left;
     border-radius: var(--mc-radius-lg, 14px);
+  }
+  .mcg-root .mcg-mobile .mcg-device-categories span,
+  .mcg-root .mcg-mactions span {
+    background: color-mix(in srgb, var(--mc-brand, #84cc16) 22%, white);
+    color: #4d7c0f;
+  }
+  html.dark .mcg-root .mcg-mobile .mcg-device-categories span,
+  html.dark .mcg-root .mcg-mactions span {
+    background: #1a2e05;
+    color: var(--mc-brand, #84cc16);
   }
   .mcg-root .mcg-mactions span {
     width: 36px;
