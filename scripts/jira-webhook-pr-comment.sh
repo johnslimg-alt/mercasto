@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -n "${JIRA_PAYLOAD:-}" ]; then
+  eval "$(python3 scripts/jira_cloud.py webhook-fields)"
+  JIRA_ISSUE="${issue}"
+  JIRA_STATUS="${status}"
+  JIRA_SUMMARY="${summary}"
+fi
+
 issue="${JIRA_ISSUE:-}"
 if ! printf '%s' "$issue" | grep -Eq '^[A-Z][A-Z0-9]{1,9}-[0-9]+$'; then
   echo "Ignoring payload without a Jira issue key."
