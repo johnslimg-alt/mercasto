@@ -300,6 +300,21 @@ case "$OPERATION" in
     echo "mcp_acme_probe=ok"
     sudo -n rm -f "$acme_probe"
 
+    print_header "Repair stale MCP Certbot archive if safe"
+    mcp_renewal="/etc/letsencrypt/renewal/mcp.mercasto.com.conf"
+    mcp_live="/etc/letsencrypt/live/mcp.mercasto.com"
+    mcp_archive="/etc/letsencrypt/archive/mcp.mercasto.com"
+    if sudo -n test -e "$mcp_archive" && ! sudo -n test -e "$mcp_renewal" && ! sudo -n test -e "$mcp_live"; then
+      stale_root="/etc/letsencrypt/mercasto-stale"
+      stale_target="$stale_root/mcp.mercasto.com-$(date -u +%Y%m%dT%H%M%SZ)"
+      sudo -n install -d -m 0700 "$stale_root"
+      sudo -n mv "$mcp_archive" "$stale_target"
+      echo "mcp_stale_archive_quarantined=$stale_target"
+    elif sudo -n test -e "$mcp_archive" && { ! sudo -n test -e "$mcp_renewal" || ! sudo -n test -e "$mcp_live"; }; then
+      echo "Refusing automatic Certbot repair: partial MCP lineage has mixed live/renewal/archive state." >&2
+      exit 70
+    fi
+
     print_header "Issue or refresh MCP TLS certificate"
     "${COMPOSE_PROD[@]}" run --rm --no-deps --entrypoint certbot certbot \
       certonly \
