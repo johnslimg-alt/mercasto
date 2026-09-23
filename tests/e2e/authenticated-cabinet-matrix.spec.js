@@ -330,6 +330,7 @@ for (const viewport of viewports) {
       const button = page.getByTestId(`dashboard-tab-${tabId}`);
       await activateCabinetTab(button);
       await expectNoHorizontalOverflow(page);
+      await expect(page.getByTestId('dashboard-pro-upgrade')).toHaveCount(1);
       await capture(page, viewport, 'seller', tabId, testInfo.project.name);
     }
     expect(errors).toEqual([]);

@@ -82,9 +82,7 @@ export default function MyAdsScreen({
   handleRenewAd,
   t,
   lang,
-  accountType,
   setCurrentTab,
-  setShowPricingModal,
   onRefreshAds,
   handleBulkUpload,
   fileInputRef,
@@ -474,15 +472,6 @@ export default function MyAdsScreen({
         </div>
       )}
 
-      {accountType === 'particular' && (
-        <div className="bg-[#0F172A] rounded-3xl p-6 md:p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-lg ring-1 ring-[#0F172A] mt-6">
-          <div className="mb-6 md:mb-0 md:mr-8 text-center md:text-left">
-            <h3 className="text-[20px] md:text-[22px] font-bold mb-2 text-white">{t.upgrade_pro}</h3>
-            <p className="text-[14px] text-white/80">{t.upgrade_pro_desc}</p>
-          </div>
-          <button onClick={() => setShowPricingModal(true)} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 whitespace-nowrap w-full md:w-auto text-center shadow-md">{t.tariffs}</button>
-        </div>
-      )}
     </>
   );
 }
