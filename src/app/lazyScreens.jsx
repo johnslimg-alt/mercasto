@@ -46,3 +46,5 @@ export const ContactoScreen = React.lazy(() => import('../components/screens/Con
 export const AyudaScreen = React.lazy(() => import('../components/screens/AyudaScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 export const GeoSourcePage = React.lazy(() => import('../components/screens/GeoSourcePage').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 export const ReferralScreen = React.lazy(() => import('../components/screens/ReferralScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="referral_load_error" /> })));
+export const BlogScreen = React.lazy(() => import('../components/screens/BlogScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+export const BlogArticleScreen = React.lazy(() => import('../components/screens/BlogArticleScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));

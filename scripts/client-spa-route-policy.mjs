@@ -8,6 +8,7 @@ export const protectedClientScreens = [
 
 export const publicClientScreens = [
   { name: 'verify-email', path: '/verificar-email' },
+  { name: 'blog-index', path: '/blog' },
 ];
 
 export const staticClientRedirects = {
@@ -26,6 +27,7 @@ export const clientDynamicPatterns = [
   '/anuncio/:id',
   '/anuncio/:id/editar',
   '/vendedor/:id',
+  '/blog/:slug',
   '/r/:code',
 ];
 

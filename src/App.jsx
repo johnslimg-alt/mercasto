@@ -37,6 +37,7 @@ import {
   EmpleosLanding, ServiciosLanding, CategoryLanding, ProductosLanding, TurismoLanding, ProfileEditScreen,
   TerminosScreen, PrivacidadScreen, CookiesScreen, ModeracionScreen, ReembolsosScreen, NotFoundScreen, VerificarEmailScreen, StoresScreen,
   NotificationsScreen, ChatScreen, ContactoScreen, AyudaScreen, GeoSourcePage, ReferralScreen,
+  BlogScreen, BlogArticleScreen,
 } from './app/lazyScreens';
 import AppFooter from './components/shell/AppFooter';
 import AppHeader from './components/shell/AppHeader';
@@ -1710,8 +1711,9 @@ function App() {
 
     const sellerProfileOwnsSeo = /^\/vendedor\/\d+\/?$/.test(location.pathname);
     const geoSourceOwnsSeo = /^\/(?:como-funciona|seguridad|tarifas|sobre-mercasto|ayuda\/(?:publicar-anuncio|comprar-y-contactar))\/?$/.test(location.pathname);
+    const blogOwnsSeo = /^\/blog(?:\/[^/]+)?\/?$/.test(location.pathname);
     const routeSeoOwner = document.documentElement.dataset.mercastoSeoOwner;
-    const routeOwnsSeo = sellerProfileOwnsSeo || geoSourceOwnsSeo || routeSeoOwner === 'not-found';
+    const routeOwnsSeo = sellerProfileOwnsSeo || geoSourceOwnsSeo || blogOwnsSeo || routeSeoOwner === 'blog' || routeSeoOwner === 'not-found';
     // The SEO shell marks the listing pages it already rendered with
     // `data-mercasto-seo-owner="listing"` (SeoShellController::ad). The server is the authority
     // on such a page's identity and indexability, so hydration may only rewrite that head once
@@ -1738,7 +1740,7 @@ function App() {
         document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', desc);
       }
     }
-    if (clientMayRewriteHead) {
+    if (clientMayRewriteHead && !routeOwnsSeo) {
       document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
       document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
     }
@@ -1749,7 +1751,7 @@ function App() {
         : verticalCanonicalAlias
           ? `${window.location.origin}${verticalCanonicalAlias}`
           : `${window.location.origin}${window.location.pathname}`;
-    if (clientMayRewriteHead) {
+    if (clientMayRewriteHead && !routeOwnsSeo) {
       document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalHref);
       document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
     }
@@ -1781,7 +1783,7 @@ function App() {
       robotsEl.setAttribute('name', 'robots');
       document.head.appendChild(robotsEl);
     }
-    if (routeSeoOwner !== 'not-found' && !listingDecisionUnresolved) {
+    if (!routeOwnsSeo && !listingDecisionUnresolved) {
       robotsEl.setAttribute('content', robotsContent);
     }
 
@@ -1791,7 +1793,7 @@ function App() {
       canonicalEl.setAttribute('rel', 'canonical');
       document.head.appendChild(canonicalEl);
     }
-    if (!listingDecisionUnresolved) {
+    if (!routeOwnsSeo && !listingDecisionUnresolved) {
       canonicalEl.setAttribute('href', canonicalHref);
     }
 
@@ -1893,7 +1895,7 @@ function App() {
       script.dataset.mercastoOwner = 'client';
       script.text = JSON.stringify(schemaData);
       document.head.appendChild(script);
-    } else if (!serverOwnsListingHead && existingScript) {
+    } else if (!routeOwnsSeo && !serverOwnsListingHead && existingScript) {
       // The client owns the schema slot on every page the SEO shell did not render for a
       // listing (SPA navigation must not leave a previous page's schema behind).
       existingScript.remove();
@@ -4475,6 +4477,8 @@ function App() {
   <Route path="/tarifas" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="tarifas" shellProps={publicShellProps} /></React.Suspense>} />
   <Route path="/sobre-mercasto" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><GeoSourcePage slug="sobre-mercasto" shellProps={publicShellProps} /></React.Suspense>} />
   <Route path="/ayuda"     element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AyudaScreen shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/blog" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><BlogScreen shellProps={publicShellProps} /></React.Suspense>} />
+  <Route path="/blog/:slug" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><BlogArticleScreen shellProps={publicShellProps} /></React.Suspense>} />
   <Route path="/verificar-email" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><VerificarEmailScreen shellProps={publicShellProps} /></React.Suspense>} />
 
   <Route path="/referidos" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReferralScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
