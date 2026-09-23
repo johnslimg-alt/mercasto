@@ -29,6 +29,21 @@ Web and mobile share the same product primitives. Platform components may compos
 
 `lime-primary` and `lime-dark` remain compatibility aliases for the brand colors. The former turquoise values are forbidden.
 
+## Spacing
+
+Base step is 4px, identical to the Tailwind v4 default (`--spacing: 0.25rem`). Do not change that base: `p-*`, `m-*`, `gap-*` already use it. Product CSS uses the named tokens in `src/design-spacing.css`.
+
+| Token | Value | Tailwind equivalent | Purpose |
+| --- | --- | --- | --- |
+| `--mc-space-1` | `4px` | `1` | Hairline stacks |
+| `--mc-space-2` / `--mc-space-stack` | `8px` | `2` | Tight stacks |
+| `--mc-space-3` / `--mc-space-gutter` | `12px` | `3` | In-card padding |
+| `--mc-space-4` / `--mc-space-page` | `16px` | `4` | Phone page inset |
+| `--mc-space-5` / `--mc-space-section` | `24px` | `6` | Space between blocks |
+| `--mc-space-6` | `32px` | `8` | Large stacks |
+| `--mc-space-page-lg` | `40px` | `10` | Desktop page inset |
+| `--mc-space-touch` | `48px` | `12` | Same length as the touch target |
+
 ## Revision 2026-09-12 — dark line raised for WCAG 1.4.11
 
 `Dark line` changed from `#334155` to `#64748B`. `#334155` measured 1.41:1 against
