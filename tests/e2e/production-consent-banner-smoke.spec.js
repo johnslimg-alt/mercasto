@@ -15,9 +15,8 @@ import { test, expect } from '@playwright/test';
  *   - visibility is asserted by POLLING (`toBeVisible({ timeout })`), never by a
  *     one-shot isVisible() read that can sample before the banner's 800ms
  *     show-timer commits;
- *   - the banner module that actually ran must be the real component, not
- *     `StaleModuleFallback` -- nginx answers any missing hashed asset in /assets/
- *     with HTTP 200 application/javascript, so a 200 response proves nothing;
+ *   - the dialog is part of the eager application bundle and must not own a
+ *     separate CookieBanner chunk that can fail independently;
  *   - the stale-module fallback sentinel must never have fired;
  *   - no decision may have been written for the visitor (a "fix" must never
  *     suppress the banner by silently accepting consent).
@@ -51,18 +50,12 @@ test.describe('consent banner for a first-time visitor', () => {
     //    800ms timer, so a sample taken earlier reports a false negative.
     await expect(page.getByTestId('cookie-banner')).toBeVisible({ timeout: 15000 });
 
-    // 2. The module that rendered it must be the real component. A missing
-    //    hashed asset is answered 200 with StaleModuleFallback, which renders
-    //    null and raises no error -- so "chunk loaded OK" must not be trusted.
-    expect(bannerResponses.length, 'the CookieBanner chunk was never requested').toBeGreaterThan(0);
-    const bannerBody = await bannerResponses[0].text();
-    expect(
-      bannerBody,
-      'the banner chunk served is StaleModuleFallback (a missing asset answered HTTP 200)',
-    ).not.toContain('StaleModuleFallback');
-    expect(bannerBody, 'the banner module does not render the cookie-banner testid').toContain('cookie-banner');
+    // 2. The dialog is eager by design. A CookieBanner chunk here would
+    //    reintroduce the network-failure boundary that previously could replace
+    //    the whole application for a first-time visitor.
+    expect(bannerResponses, 'the eager consent dialog must not own a separate chunk').toEqual([]);
 
-    // 3. The fallback's own sentinel must not have fired in this session.
+    // 3. The stale-module fallback sentinel must not have fired in this session.
     const sentinel = await page.evaluate(() => {
       try {
         return sessionStorage.getItem('mercasto.stale_module_fallback.v2');
