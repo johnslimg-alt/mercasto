@@ -31,6 +31,8 @@ def _blocks(nodes, depth: int) -> str:
             parts.append(_macro(node, depth))
         elif kind in {"expand", "nestedExpand"}:
             parts.append(_expand(node, depth))
+        elif kind in {"inlineCard", "blockCard"}:
+            parts.append(_card(node))
         elif kind in {"paragraph", "heading", "codeBlock", "blockquote"}:
             parts.append(_inline(node.get("content") or [], depth).strip())
         elif kind in {"bulletList", "orderedList"}:
