@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.5
+// @version      9.0.0-alpha.2-nonstop.6
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.5';
+const VER = '9.0.0-alpha.2-nonstop.6';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -1191,10 +1191,46 @@ function copyReport() {
   S.detail = 'Diagnostic report copied.'; render();
 }
 
+function legacyGhostCandidates() {
+  return [...document.querySelectorAll('#gitl9, #gitl8, #gitl-panel, [data-gitl-root]')];
+}
+let canonicalPanel = null;
+function retireLegacyGhostPanel(node) {
+  if (!node || node === canonicalPanel || node.dataset?.gitlOwner === VER) return false;
+  try {
+    const stop = node.querySelector?.('[data-a="stop"], [data-action="stop"], button.stop');
+    if (stop) stop.click();
+  } catch (_) {}
+  try { node.remove(); } catch (_) {}
+  log('legacy-instance-retired', { id: node.id || '', owner: node.dataset?.gitlOwner || 'legacy' });
+  return true;
+}
+function retireLegacyGhostPanels() {
+  let retired = 0;
+  for (const node of legacyGhostCandidates()) if (node !== canonicalPanel) retired += retireLegacyGhostPanel(node) ? 1 : 0;
+  return retired;
+}
+
+// Retire any already-mounted legacy Ghost before creating this version's panel.
+for (const node of legacyGhostCandidates()) {
+  try {
+    const stop = node.querySelector?.('[data-a="stop"], [data-action="stop"], button.stop');
+    if (stop) stop.click();
+  } catch (_) {}
+  try { node.remove(); } catch (_) {}
+}
+
 const style = document.createElement('style');
 style.textContent = `#gitl9{position:fixed;z-index:2147483646;top:70px;right:8px;width:min(270px,calc(100vw - 16px));background:var(--g-bg);color:var(--g-text);border:1px solid var(--g-border);border-radius:var(--g-radius);box-shadow:var(--g-shadow);font:12px/1.35 system-ui,sans-serif;padding:8px}#gitl9 *{box-sizing:border-box}#gitl9 .head{display:flex;align-items:center;justify-content:space-between;gap:6px}#gitl9 .brand{font-weight:750}#gitl9 .meta{font-size:10px;opacity:.65}#gitl9 .tabs{display:flex;gap:4px;margin:7px 0}#gitl9 button{border:1px solid #494550;background:var(--g-surface);color:var(--g-text);border-radius:8px;padding:7px 6px;font:inherit}#gitl9 button.on{background:var(--g-accent-bg);border-color:var(--g-accent);color:var(--g-text)}#gitl9 button.stop{background:#46191d;border-color:#85333a}#gitl9 button:disabled{opacity:.45;cursor:not-allowed}#gitl9 .tabs button{flex:1;padding:5px 3px}#gitl9 .status{background:var(--g-panel);border-radius:8px;padding:7px;min-height:42px;margin:5px 0 7px;word-break:break-word}#gitl9 .row{display:flex;gap:5px}#gitl9 .row>*{flex:1;min-width:0}#gitl9 .grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}#gitl9 label{display:flex;align-items:center;gap:5px;padding:5px;border:1px solid #35323a;border-radius:7px;background:var(--g-surface)}#gitl9 input[type="text"],#gitl9 input[type="number"],#gitl9 select,#gitl9 textarea{width:100%;background:var(--g-panel);color:var(--g-text);border:1px solid var(--g-border);border-radius:7px;padding:6px}#gitl9 .pane{display:none}#gitl9 .pane.show{display:block}#gitl9 .tiny{font-size:10px;color:var(--g-muted);margin-top:5px}.helpbox{background:var(--g-panel);border:1px solid var(--g-border);border-radius:9px;padding:7px;margin:5px 0}.helpbox b{color:var(--g-accent)}.swatches{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}.swatches button{flex:0 0 28px;height:28px;padding:0}.headtools{display:flex;align-items:center;gap:5px}.helpbtn{padding:3px 6px!important;font-size:10px!important}.rail{display:none}.collapsebtn{padding:3px 7px!important;font-size:12px!important}#gitl9.collapsed{right:0!important;top:34vh!important;width:42px!important;min-width:42px!important;max-width:42px!important;padding:5px!important;border-right:0!important;border-radius:12px 0 0 12px!important}#gitl9.collapsed>*:not(.rail){display:none!important}#gitl9.collapsed .rail{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:92px;cursor:pointer;user-select:none}#gitl9.collapsed .rail .ghost{font-size:20px;line-height:1}#gitl9.collapsed .rail .arrow{font-size:18px;color:var(--g-accent)}#gitl9.collapsed .rail .railstate{font-size:9px;color:var(--g-accent);line-height:1}#gitl9.collapsed .rail .mini{font-size:9px;color:var(--g-muted);writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.5px}.progline{height:4px;background:var(--g-surface);border-radius:99px;overflow:hidden;margin-top:5px}.progline span{display:block;height:100%;background:var(--g-accent);transition:width .15s ease}@media(max-width:520px){#gitl9{top:58px;width:min(238px,calc(100vw - 12px));right:6px;padding:7px}#gitl9.collapsed{right:0!important;top:32vh!important;width:42px!important;min-width:42px!important;padding:4px!important}#gitl9 .tabs{display:grid;grid-template-columns:repeat(3,1fr)}#gitl9 .tabs button{min-height:38px}#gitl9 .transport{display:grid;grid-template-columns:1fr 1fr}#gitl9 .transport button,#gitl9 .helpbox button{min-height:40px}#gitl9 button{padding:7px 5px}}`;
 document.documentElement.appendChild(style);
-const panel = document.createElement('div'); panel.id = 'gitl9'; (document.body || document.documentElement).appendChild(panel);
+const panel = document.createElement('div'); canonicalPanel = panel; panel.id = 'gitl9'; panel.dataset.gitlOwner = VER; panel.dataset.gitlRoot = '1'; (document.body || document.documentElement).appendChild(panel);
+const legacyObserver = new MutationObserver(() => {
+  // Defer one microtask so a just-mounted legacy panel can finish rendering its Stop button.
+  queueMicrotask(() => retireLegacyGhostPanels());
+});
+legacyObserver.observe(document.documentElement, { childList: true, subtree: true });
+setTimeout(() => retireLegacyGhostPanels(), 250);
+setTimeout(() => retireLegacyGhostPanels(), 1500);
 function applyAppearance() {
   const skin = SKINS[skinId] || SKINS.classic;
   const accent = ACCENTS[accentId] || skin.accent;
@@ -1304,7 +1340,7 @@ function render() {
 render();
 window.__GITL_V9__ = true;
 try { delete window.__GITL_V9_BOOTING__; } catch (_) { window.__GITL_V9_BOOTING__ = 0; }
-log('boot', { version: VER, host: HOST.id, nonStopActive: nonStopActive(), sendFence: !!readSendFence() });
+log('boot', { version: VER, host: HOST.id, nonStopActive: nonStopActive(), sendFence: !!readSendFence(), singleInstance: true });
 window.addEventListener('focus', () => wakeNonStop('focus'));
 window.addEventListener('pageshow', () => wakeNonStop('pageshow'));
 window.addEventListener('online', () => wakeNonStop('online'));
