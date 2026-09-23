@@ -1,0 +1,62 @@
+name: Blog live SEO edge smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/blog-live-seo-edge-smoke.yml'
+      - 'backend/app/Http/Controllers/SeoShellController.php'
+      - 'backend/config/blog_seo.php'
+      - 'backend/routes/web.php'
+      - 'default.conf'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-blog-seo:
+    name: Live blog raw HTTP SEO
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify live blog initial HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          retry_fetch() {
+            local url="$1" body="$2" headers="$3" status_file="$4"
+            local attempt status
+            for attempt in 1 2 3 4 5 6; do
+              status="$(curl -sS --max-time 30 -D "$headers" -o "$body" -w '%{http_code}' "$url")" && {
+                printf '%s' "$status" > "$status_file"
+                return 0
+              }
+              echo "retrying $url in 8s ($attempt/6)" >&2
+              sleep 8
+            done
+            return 1
+          }
+
+          retry_fetch "https://mercasto.com/blog?edge_audit=${GITHUB_RUN_ID}"             "$tmp_dir/index.html" "$tmp_dir/index.headers" "$tmp_dir/index.status"
+          test "$(cat "$tmp_dir/index.status")" = "200"
+          grep -Fq '<link rel="canonical" href="https://mercasto.com/blog" />' "$tmp_dir/index.html"
+          grep -Fq 'content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"' "$tmp_dir/index.html"
+          grep -Fq '"@type":"CollectionPage"' "$tmp_dir/index.html"
+
+          retry_fetch "https://mercasto.com/blog/comprar-con-seguridad?edge_audit=${GITHUB_RUN_ID}"             "$tmp_dir/article.html" "$tmp_dir/article.headers" "$tmp_dir/article.status"
+          test "$(cat "$tmp_dir/article.status")" = "200"
+          grep -Fq '<link rel="canonical" href="https://mercasto.com/blog/comprar-con-seguridad" />' "$tmp_dir/article.html"
+          grep -Fq 'content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"' "$tmp_dir/article.html"
+          grep -Fq '"@type":"Article"' "$tmp_dir/article.html"
+          grep -Fq '"headline":"Guía para comprar con seguridad"' "$tmp_dir/article.html"
+
+          retry_fetch "https://mercasto.com/blog/no-existe?edge_audit=${GITHUB_RUN_ID}"             "$tmp_dir/missing.html" "$tmp_dir/missing.headers" "$tmp_dir/missing.status"
+          test "$(cat "$tmp_dir/missing.status")" = "404"
+          grep -Fq '<link rel="canonical" href="https://mercasto.com/blog/no-existe" />' "$tmp_dir/missing.html"
+          grep -Fq 'content="noindex,nofollow"' "$tmp_dir/missing.html"
+          grep -Fq '"@type":"WebPage"' "$tmp_dir/missing.html"
+          grep -Fq 'Artículo no encontrado' "$tmp_dir/missing.html"
