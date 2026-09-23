@@ -462,6 +462,171 @@ case "$OPERATION" in
     public_smoke
     ;;
 
+  harness_upload_fix)
+    require_confirm
+    print_header "Apply Harness upload proxy limits"
+    HARNESS_CONF=/etc/deepseek-harness/nginx.conf
+    EDGE_CONF=/etc/mercasto-edge/harness.conf
+    sudo -n test -s "$HARNESS_CONF"
+    sudo -n test -s "$EDGE_CONF"
+
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    backup_dir="/root/harness-upload-fix-backups/$stamp"
+    sudo -n install -d -m 0700 "$backup_dir"
+    sudo -n cp -a "$HARNESS_CONF" "$backup_dir/deepseek-harness.nginx.conf"
+    sudo -n cp -a "$EDGE_CONF" "$backup_dir/mercasto-edge.harness.conf"
+    echo "backup_dir=$backup_dir"
+
+    rollback_harness_upload_fix() {
+      rc=$?
+      set +e
+      echo "Harness upload fix failed; restoring nginx backups." >&2
+      sudo -n cp -a "$backup_dir/deepseek-harness.nginx.conf" "$HARNESS_CONF"
+      sudo -n cp -a "$backup_dir/mercasto-edge.harness.conf" "$EDGE_CONF"
+      sudo -n /usr/sbin/nginx -t -c "$HARNESS_CONF" >/dev/null 2>&1
+      sudo -n systemctl reload deepseek-harness-proxy.service >/dev/null 2>&1
+      docker exec mercasto_frontend_container nginx -t >/dev/null 2>&1
+      docker exec mercasto_frontend_container nginx -s reload >/dev/null 2>&1
+      exit "$rc"
+    }
+    trap rollback_harness_upload_fix ERR
+
+    sudo -n python3 - "$HARNESS_CONF" "$EDGE_CONF" <<'PY'
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
+
+HARNESS = Path(sys.argv[1])
+EDGE = Path(sys.argv[2])
+DIRECTIVES = (
+    ("client_max_body_size", "160m"),
+    ("client_body_timeout", "300s"),
+    ("proxy_request_buffering", "off"),
+)
+
+def server_blocks(text):
+    lines = text.splitlines(keepends=True)
+    blocks = []
+    start = None
+    depth = 0
+    for i, line in enumerate(lines):
+        code = line.split("#", 1)[0]
+        if start is None:
+            if re.match(r"^\s*server\s*\{", code):
+                start = i
+                depth = code.count("{") - code.count("}")
+                if depth == 0:
+                    blocks.append((start, i))
+                    start = None
+            continue
+        depth += code.count("{") - code.count("}")
+        if depth == 0:
+            blocks.append((start, i))
+            start = None
+    if start is not None:
+        raise SystemExit("unterminated nginx server block")
+    return lines, blocks
+
+def patch_block(block):
+    updated = block
+    for name, value in DIRECTIVES:
+        pattern = re.compile(rf"^([ \t]*){re.escape(name)}\s+[^;]+;[ \t]*$", re.M)
+        if pattern.search(updated):
+            updated = pattern.sub(lambda m: f"{m.group(1)}{name} {value};", updated)
+        else:
+            rows = updated.splitlines(keepends=True)
+            indent_match = re.match(r"^(\s*)server\s*\{", rows[0])
+            indent = (indent_match.group(1) if indent_match else "") + "    "
+            rows.insert(1, f"{indent}{name} {value};\n")
+            updated = "".join(rows)
+    return updated
+
+def choose_and_patch(path, kind):
+    text = path.read_text()
+    lines, blocks = server_blocks(text)
+    rendered = ["".join(lines[a:b+1]) for a, b in blocks]
+
+    if kind == "edge":
+        candidates = [
+            idx for idx, block in enumerate(rendered)
+            if "server_name harness.flyaicrm.com;" in block and "proxy_pass" in block
+        ]
+    else:
+        candidates = [
+            idx for idx, block in enumerate(rendered)
+            if re.search(r"^\s*listen\s+172\.19\.0\.1:13080\s*;", block, re.M)
+            and "proxy_pass" in block
+        ]
+
+    if len(candidates) != 1:
+        raise SystemExit(f"{path}: expected exactly one Harness proxy server block, found {len(candidates)}")
+
+    idx = candidates[0]
+    start, end = blocks[idx]
+    replacement = patch_block(rendered[idx])
+    new_text = "".join(lines[:start]) + replacement + "".join(lines[end+1:])
+
+    st = path.stat()
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".", text=True)
+    try:
+        with os.fdopen(fd, "w") as fh:
+            fh.write(new_text)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.chmod(tmp, st.st_mode)
+        os.chown(tmp, st.st_uid, st.st_gid)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+    verify = path.read_text()
+    for name, value in DIRECTIVES:
+        if f"{name} {value};" not in verify:
+            raise SystemExit(f"{path}: directive verification failed for {name}")
+    print(f"patched={path}")
+
+choose_and_patch(HARNESS, "harness")
+choose_and_patch(EDGE, "edge")
+PY
+
+    print_header "Validate and reload Harness nginx"
+    sudo -n /usr/sbin/nginx -t -c "$HARNESS_CONF"
+    sudo -n systemctl reload deepseek-harness-proxy.service
+    systemctl is-active --quiet deepseek-harness-proxy.service
+
+    print_header "Validate and reload edge nginx"
+    docker exec mercasto_frontend_container nginx -t
+    docker exec mercasto_frontend_container nginx -s reload
+    test "$(docker inspect -f '{{.State.Status}}' mercasto_frontend_container)" = "running"
+
+    print_header "Verify configured directives"
+    sudo -n grep -nE 'client_max_body_size|client_body_timeout|proxy_request_buffering' "$HARNESS_CONF"
+    sudo -n grep -nE 'client_max_body_size|client_body_timeout|proxy_request_buffering' "$EDGE_CONF"
+
+    print_header "Harness >1 MiB upload proxy smoke"
+    smoke_file="$SERVER_OPERATOR_TMPDIR/harness-upload-smoke.bin"
+    dd if=/dev/zero of="$smoke_file" bs=1M count=2 status=none
+    smoke_code="$(
+      curl -ksS -o "$SERVER_OPERATOR_TMPDIR/harness-upload-smoke.out" -w '%{http_code}' \
+        --max-time 30 \
+        -X POST \
+        -H 'Content-Type: application/octet-stream' \
+        --data-binary @"$smoke_file" \
+        https://harness.flyaicrm.com/api/session/uploadFileBinary || true
+    )"
+    echo "harness_upload_2m_http=$smoke_code"
+    if [ "$smoke_code" = "000" ] || [ "$smoke_code" = "413" ]; then
+      echo "Harness upload proxy smoke failed with HTTP $smoke_code" >&2
+      false
+    fi
+
+    trap - ERR
+    echo "HARNESS_UPLOAD_PROXY_FIX_OK"
+    ;;
+
   align_media_caps)
     require_confirm
     print_header "Align nginx media upload cap"
