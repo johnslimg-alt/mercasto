@@ -94,30 +94,86 @@ html.dark .mcg-root .mcg-map {
     color: var(--mc-ink, #111827);
   }
   .mcg-root .mcg-header {
+    display: flex;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 30;
     height: 56px;
-    padding: 0 10px;
-    gap: 6px;
+    padding: 0 12px;
+    gap: 8px;
   }
-  .mcg-root .mcg-location {
-    height: 40px;
-    padding: 0 8px;
-    font-size: 12px;
-    max-width: 42vw;
-    flex: 1;
+  .mcg-root .mcg-header .mcg-brand {
+    flex: none;
+    gap: 0;
+    font-size: 0;
+  }
+  .mcg-root .mcg-header .mcg-brand > span {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+  .mcg-root .mcg-header .mcg-location-wrap {
+    flex: 1 1 auto;
     min-width: 0;
   }
-  .mcg-root .mcg-location > span {
+  .mcg-root .mcg-header .mcg-location {
+    width: 100%;
     max-width: none;
-    flex: 1;
-  }
-  .mcg-root .mcg-lang {
     height: 40px;
-    min-width: 52px;
-    margin-left: auto;
+    min-height: 40px;
+    padding: 0 10px;
+    font-size: 13px;
+    gap: 6px;
   }
-  .mcg-root .mcg-lang select {
-    font-size: 12px;
-    max-width: 36px;
+  .mcg-root .mcg-header .mcg-location > span {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mcg-root .mcg-header .mcg-lang {
+    flex: none;
+    width: auto;
+    height: 40px;
+    min-width: 64px;
+    margin-left: 0;
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .mcg-root .mcg-header .mcg-lang select {
+    width: auto;
+    max-width: none;
+    min-height: 0;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .mcg-root .mcg-header .mcg-theme {
+    position: static;
+    flex: none;
+    width: 52px;
+    min-width: 52px;
+    height: 32px;
+    min-height: 32px;
+    padding: 3px;
+    background: #e7edf1;
+  }
+  .mcg-root .mcg-header .mcg-theme::before {
+    content: none;
+  }
+  .mcg-root .mcg-header .mcg-theme span,
+  .mcg-root .mcg-header .mcg-theme.dark span {
+    position: static;
+    left: auto;
+    top: auto;
+    width: 26px;
+    height: 26px;
+  }
+  .mcg-root .mcg-header .mcg-theme.dark {
+    background: var(--mc-brand, #84cc16);
   }
 
   .mcg-root .mcg-msearch {
