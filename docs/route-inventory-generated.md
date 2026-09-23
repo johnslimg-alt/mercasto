@@ -660,6 +660,10 @@ Source: php artisan route:list --except-vendor -v
             ⇂ web
   GET|HEAD  ayuda/publicar-anuncio generated::<auto> › SeoShellController@source
             ⇂ web
+  GET|HEAD  blog generated::<auto> › SeoShellController@blogIndex
+            ⇂ web
+  GET|HEAD  blog/{slug} generated::<auto> › SeoShellController@blogArticle
+            ⇂ web
   GET|HEAD  boletos generated::<auto> › SeoShellController@vertical
             ⇂ web
   GET|HEAD  boletos_turismo generated::<auto> › SeoShellController@verticalAlias
