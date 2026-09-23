@@ -21,6 +21,7 @@ jobs:
         github.event.comment.body == 'RUN:status' ||
         github.event.comment.body == 'RUN:mcp_status' ||
         github.event.comment.body == 'RUN:harness_proxy_status' ||
+        github.event.comment.body == 'RUN:ghost_access_probe' ||
         github.event.comment.body == 'RUN:harness_upload_fix:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_bootstrap:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_tls_issue:MERCASTO' ||
@@ -58,6 +59,7 @@ jobs:
               'RUN:status': ['status', '', '160'],
               'RUN:mcp_status': ['mcp_status', '', '220'],
               'RUN:harness_proxy_status': ['harness_proxy_status', '', '220'],
+              'RUN:ghost_access_probe': ['ghost_access_probe', '', '260'],
               'RUN:harness_upload_fix:MERCASTO': ['harness_upload_fix', 'MERCASTO', '260'],
               'RUN:mcp_plugin_bootstrap:MERCASTO': ['mcp_plugin_bootstrap', 'MERCASTO', '220'],
               'RUN:mcp_plugin_tls_issue:MERCASTO': ['mcp_plugin_tls_issue', 'MERCASTO', '220'],
@@ -121,6 +123,29 @@ jobs:
             echo
             echo "== MCP local listeners =="
             ss -lntpH 2>/dev/null | grep -E '127\.0\.0\.1|\[::1\]' | grep -Ei 'mcp|ssh|node|:8001|:8765|:300[0-9]|:30[0-9]{2}' || true
+          elif [ "$OPERATION" = "ghost_access_probe" ]; then
+            echo "== Ghost nonstop local files =="
+            find /var/www /root /home /opt /srv -maxdepth 7 -type f \( -name 'chatgpt-nonstop.user.js' -o -name 'ghost-in-the-loop.user.js' \) -print 2>/dev/null | head -100 || true
+            echo
+            echo "== Ghost nonstop version hits =="
+            grep -RIl --exclude-dir=node_modules --exclude-dir=.cache --exclude-dir=.npm --exclude-dir=vendor --exclude-dir=postgres-backups '9.0.0-alpha.2-nonstop' /var/www /root /home /opt /srv 2>/dev/null | head -100 || true
+            echo
+            echo "== Ghost git clones/branches =="
+            find /var/www /root /home /opt /srv -maxdepth 6 -type d -name .git -print 2>/dev/null | while read -r gitdir; do
+              worktree="${gitdir%/.git}"
+              remote="$(git -C "$worktree" remote get-url origin 2>/dev/null || true)"
+              case "$remote" in
+                *ghost-in-the-loop*)
+                  echo "worktree=$worktree"
+                  echo "remote=$remote"
+                  git -C "$worktree" branch -a --list '*chatgpt-nonstop-loop*' 2>/dev/null || true
+                  git -C "$worktree" log --all --oneline --grep='nonstop' -n 12 2>/dev/null || true
+                  ;;
+              esac
+            done
+            echo
+            echo "== Remote nonstop branch =="
+            git ls-remote https://github.com/MShneur/ghost-in-the-loop.git 'refs/heads/tooling/chatgpt-nonstop-loop' 2>/dev/null || true
           else
             OPERATION="$OPERATION" CONFIRM="$CONFIRM" TAIL_LINES="$TAIL_LINES" \
               bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
