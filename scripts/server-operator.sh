@@ -335,6 +335,65 @@ case "$OPERATION" in
     echo "mcp_tls_certificate=ready"
     ;;
 
+  mcp_plugin_publish)
+    require_confirm
+    print_header "Sync main for bounded MCP HTTPS publish"
+    if is_production_checkout; then
+      sudo -n git fetch origin main --prune
+      sudo -n git reset --hard origin/main
+      sudo -n git switch -C main origin/main
+      sudo -n git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    else
+      git fetch origin main --prune
+      git reset --hard origin/main
+      git switch -C main origin/main
+      git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    fi
+
+    test -f mcp-plugin/Dockerfile
+    test -f mcp-plugin/server.mjs
+    sudo -n test -s /etc/letsencrypt/live/mcp.mercasto.com-0001/fullchain.pem
+    sudo -n test -s /etc/letsencrypt/live/mcp.mercasto.com-0001/privkey.pem
+    bash scripts/mcp-production-retirement-gate.sh
+
+    print_header "Ensure read-only MCP plugin is running"
+    "${COMPOSE_PROD[@]}" up -d --build --no-deps mercasto-mcp-plugin
+    retry_command curl -fsS --max-time 10 -H 'Host: mcp.mercasto.com' http://127.0.0.1/healthz
+
+    nginx_config_test
+    nginx_reload_upstreams
+
+    print_header "MCP HTTPS origin smoke"
+    retry_command curl -fsS --max-time 15 \
+      --resolve mcp.mercasto.com:443:127.0.0.1 \
+      https://mcp.mercasto.com/healthz \
+      >"$SERVER_OPERATOR_TMPDIR/mcp-origin-health.json"
+    grep -q '"mode":"read-only"' "$SERVER_OPERATOR_TMPDIR/mcp-origin-health.json"
+
+    origin_http_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 -H 'Host: mcp.mercasto.com' http://127.0.0.1/mcp)"
+    if [ "$origin_http_code" != "308" ]; then
+      echo "Expected origin HTTP /mcp redirect 308, got $origin_http_code" >&2
+      exit 71
+    fi
+    echo "mcp_origin_http_code=$origin_http_code"
+
+    print_header "MCP HTTPS public protocol smoke"
+    retry_command curl -fsS --max-time 20 \
+      -X POST https://mcp.mercasto.com/mcp \
+      -H 'Content-Type: application/json' \
+      -H 'Accept: application/json, text/event-stream' \
+      --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2026-07-28","capabilities":{},"clientInfo":{"name":"mercasto-production-smoke","version":"1.0"}}}' \
+      >"$SERVER_OPERATOR_TMPDIR/mcp-public-initialize.txt"
+    grep -q 'Mercasto Server Status' "$SERVER_OPERATOR_TMPDIR/mcp-public-initialize.txt"
+    retry_command curl -fsS --max-time 15 https://mcp.mercasto.com/healthz \
+      >"$SERVER_OPERATOR_TMPDIR/mcp-public-health.json"
+    grep -q '"mode":"read-only"' "$SERVER_OPERATOR_TMPDIR/mcp-public-health.json"
+
+    echo "mcp_https_url=https://mcp.mercasto.com/mcp"
+    echo "mcp_https_publish=ok"
+    public_smoke
+    ;;
+
   deploy_main)
     require_confirm
     print_header "Sync main"
