@@ -1,0 +1,38 @@
+name: PR status
+
+on:
+  workflow_run:
+    workflows:
+      - Frontend build
+      - Frontend Quality Gate
+      - PR Quality Gate
+      - Production checks
+      - Recovery Guard
+      - Production live gates
+    types:
+      - completed
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: pr-status-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Update the PR status comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: bash scripts/pr-status-comment.sh
