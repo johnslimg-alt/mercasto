@@ -1305,10 +1305,16 @@ render();
 window.__GITL_V9__ = true;
 try { delete window.__GITL_V9_BOOTING__; } catch (_) { window.__GITL_V9_BOOTING__ = 0; }
 log('boot', { version: VER, host: HOST.id, nonStopActive: nonStopActive(), sendFence: !!readSendFence() });
-if (readSendFence()) resolveSendFence();
 window.addEventListener('focus', () => wakeNonStop('focus'));
 window.addEventListener('pageshow', () => wakeNonStop('pageshow'));
 window.addEventListener('online', () => wakeNonStop('online'));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') wakeNonStop('visible'); });
-if (nonStopActive()) resumeNonStop('boot');
+if (readSendFence()) {
+  setTimeout(() => {
+    if (!resolveSendFence()) return;
+    if (nonStopActive()) resumeNonStop('boot-fence');
+  }, 1800);
+} else if (nonStopActive()) {
+  resumeNonStop('boot');
+}
 })();
