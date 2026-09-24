@@ -30,4 +30,39 @@ for fixture in docker_chain stale_bridge docker_nat; do
   fi
 done
 
+grep -qF 'sudo -n cat "$RULES_FILE"' "$GATE"
+
+mkdir -p "$TMP_DIR/fake-bin"
+cat > "$TMP_DIR/fake-bin/sudo" <<'FAKE_SUDO'
+#!/usr/bin/env bash
+set -u
+if [[ "${1:-}" != "-n" || "${2:-}" != "cat" || -z "${3:-}" ]]; then
+  echo "unexpected fake sudo invocation: $*" >&2
+  exit 64
+fi
+path="$3"
+mode="$(stat -c %a "$path")"
+chmod u+r "$path"
+cat "$path"
+rc=$?
+chmod "$mode" "$path"
+exit "$rc"
+FAKE_SUDO
+chmod +x "$TMP_DIR/fake-bin/sudo"
+
+cp "$TMP_DIR/clean.rules" "$TMP_DIR/privileged-clean.rules"
+chmod 000 "$TMP_DIR/privileged-clean.rules"
+PATH="$TMP_DIR/fake-bin:$PATH" \
+  PERSISTENT_IPTABLES_RULES_FILE="$TMP_DIR/privileged-clean.rules" \
+  "$GATE" >/dev/null
+
+cp "$TMP_DIR/docker_chain.rules" "$TMP_DIR/privileged-docker.rules"
+chmod 000 "$TMP_DIR/privileged-docker.rules"
+if PATH="$TMP_DIR/fake-bin:$PATH" \
+  PERSISTENT_IPTABLES_RULES_FILE="$TMP_DIR/privileged-docker.rules" \
+  "$GATE" >/dev/null 2>&1; then
+  echo "expected privileged contaminated fixture to fail" >&2
+  exit 1
+fi
+
 echo "persistent firewall Docker-rule gate tests OK"
