@@ -331,7 +331,7 @@ class SeoShellController extends Controller
                     'name' => 'Mercasto',
                     'url' => url('/'),
                 ],
-            ], 404, 'blog');
+            ], 404, 'blog')->header('X-Robots-Tag', 'noindex,nofollow');
         }
 
         return $this->renderShell([
