@@ -69,6 +69,7 @@ React routes under `/login`, `/register`, canonical `/post`, `/profile`, `/admin
 | `GET /api/auth/{provider}/redirect` | `AuthController@redirectToProvider` | `api`, `web` | No | No | Provider/state checks | `auth-providers-smoke.sh` |
 | `GET /api/auth/{provider}/callback` | `AuthController@handleProviderCallback` | `api`, `web` | No | **Yes** | Provider/state checks | `auth-account-gate.sh` |
 | `GET /api/user` | `ProfileController@show` | `api`, `auth:sanctum` | Yes | No | API policy | `auth-account-gate.sh` |
+| `GET /api/user/data-export` | `DataSubjectExportController@show` | `api`, `auth:sanctum` | Yes | No | `data-export` | `route-inventory-freshness-gate.sh` |
 | `DELETE /api/user` | `AccountDeletionController@delete` | `api`, `auth:sanctum` | Yes | **Yes** | API/account policy | `auth-account-gate.sh` |
 | `PUT|POST /api/user/password` | `ProfileController@changePassword` | `api`, `auth:sanctum` | Yes | **Yes** | API/account policy | `auth-account-gate.sh` |
 | `POST /api/user/email/request` | `ProfileController@requestEmailChange` | `api`, `auth:sanctum` | Yes | **Yes** | `3,1` | `auth-account-gate.sh` |
