@@ -61,7 +61,8 @@ assert(sitemap.includes("'blog/comprar-con-seguridad' => ['monthly', '0.6']"));
 assert(sitemap.includes("'blog/encontrar-grandes-oportunidades' => ['monthly', '0.6']"));
 assert(routes.includes("Route::get('/blog', [SeoShellController::class, 'blogIndex']);"));
 assert(routes.includes("Route::get('/blog/{slug}', [SeoShellController::class, 'blogArticle'])"));
-assert(nginx.includes('location ~ ^/blog(?:/[A-Za-z0-9-]+)?/?'));
+assert(nginx.includes('location ~ ^/blog'), 'nginx must route blog shells through Laravel');
+assert(nginx.includes('[A-Za-z0-9-]+'), 'nginx blog article slug constraint is missing');
 assert(!sitemap.includes("'moderacion' => ['monthly', '0.5']"));
 
 const guardedCopy = [
