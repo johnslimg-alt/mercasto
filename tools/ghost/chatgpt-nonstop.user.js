@@ -892,7 +892,7 @@ async function sendOnce(text, reason) {
   }
   const beforeComposer = semanticText(nodeText(ready.el));
   writeSendFence({ at: now(), beforeUsers, beforeAssistantHash, beforeAssistantCount, reason: String(reason || '') });
-  let strategy = '';
+  let strategy;
   try {
     strategy = actuateSend(ready);
     if (!strategy) throw new Error('No send strategy available');
