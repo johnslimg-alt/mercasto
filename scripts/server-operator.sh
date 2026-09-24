@@ -343,17 +343,17 @@ case "$OPERATION" in
       certonly \
       --webroot \
       -w /var/www/certbot \
-      --cert-name mcp.mercasto.com \
+      --cert-name mercasto-mcp-plugin \
       -d mcp.mercasto.com \
       --non-interactive \
       --agree-tos \
       --register-unsafely-without-email \
       --keep-until-expiring
 
-    sudo -n test -s /etc/letsencrypt/live/mcp.mercasto.com/fullchain.pem
-    sudo -n test -s /etc/letsencrypt/live/mcp.mercasto.com/privkey.pem
+    sudo -n test -s /etc/letsencrypt/live/mercasto-mcp-plugin/fullchain.pem
+    sudo -n test -s /etc/letsencrypt/live/mercasto-mcp-plugin/privkey.pem
     sudo -n openssl x509 \
-      -in /etc/letsencrypt/live/mcp.mercasto.com/fullchain.pem \
+      -in /etc/letsencrypt/live/mercasto-mcp-plugin/fullchain.pem \
       -noout -subject -issuer -dates
     echo "mcp_tls_certificate=ready"
     ;;
