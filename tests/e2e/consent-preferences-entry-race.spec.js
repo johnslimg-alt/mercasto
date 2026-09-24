@@ -67,15 +67,13 @@ async function interceptTraffic(page, { failConsentChunks = false } = {}) {
 // whichever is usable also makes this an assertion of the invariant itself -- if both
 // collapse, this returns nothing and the test fails.
 async function laidOutConsentEntry(page) {
-  // Keep this locator dynamic. Both responsive footer variants can coexist in the
-  // DOM, and a fixed nth() can become the hidden variant after scroll/layout settles.
-  // :visible is re-evaluated at action time, so the returned locator always targets
-  // the entry point a user can actually click at the active breakpoint.
-  const visible = page.locator(
-    '[data-testid="golden-cookie-settings"]:visible, [data-testid="cookie-settings"]:visible',
-  ).first();
-  await expect(visible).toBeVisible({ timeout: 15_000 });
-  return visible;
+  // These regressions exercise the Golden home route. Its footer is the canonical
+  // user-facing cookie-settings entry point; targeting the legacy AppFooter as a
+  // fallback makes the test race two responsive DOM trees that intentionally trade
+  // visibility. Keep one stable locator and let click() perform its own auto-scroll.
+  const golden = page.getByTestId('golden-cookie-settings');
+  await expect(golden).toBeVisible({ timeout: 15_000 });
+  return golden;
 }
 
 test.describe('cookie preferences entry point', () => {
@@ -95,7 +93,6 @@ test.describe('cookie preferences entry point', () => {
 
     const settings = await laidOutConsentEntry(page);
     await expect(settings).toBeAttached();
-    await settings.scrollIntoViewIfNeeded();
     await settings.click();
 
     await expect(page.getByTestId('cookie-banner')).toBeVisible({ timeout: 15_000 });
@@ -134,7 +131,6 @@ test.describe('cookie preferences entry point', () => {
     // this file already use the Golden entry point; this one now matches them.
     const settings = await laidOutConsentEntry(page);
     await expect(settings).toBeAttached({ timeout: 15_000 });
-    await settings.scrollIntoViewIfNeeded();
     await settings.click();
 
     await expect(page.getByTestId('cookie-banner')).toBeVisible({ timeout: 15_000 });
@@ -159,7 +155,6 @@ test.describe('cookie preferences entry point', () => {
 
     const settings = await laidOutConsentEntry(page);
     await expect(settings).toBeAttached();
-    await settings.scrollIntoViewIfNeeded();
     await settings.click();
 
     await expect(page.getByTestId('cookie-banner')).toBeVisible({ timeout: 15_000 });
