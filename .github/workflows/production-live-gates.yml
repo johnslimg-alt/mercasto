@@ -49,6 +49,9 @@ jobs:
     timeout-minutes: 10
     if: ${{ github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
+      - name: Checkout live SEO audit
+        uses: actions/checkout@v7
+
       - name: Check public search signals
         run: |
           set -euo pipefail
@@ -71,6 +74,12 @@ jobs:
           grep -Eiq 'application/ld\+json|schema.org' "$tmp_dir/home.html"
           grep -Eiq '<urlset|<sitemapindex|<url>' "$tmp_dir/sitemap.xml"
           grep -Eiq 'Sitemap:|User-agent:' "$tmp_dir/robots.txt"
+
+      - name: Audit route-specific live SEO
+        env:
+          BASE_URL: https://mercasto.com
+          SEO_AUDIT_ATTEMPTS: "3"
+        run: node scripts/seo-public-audit.mjs
 
   production-error-mode:
     name: Production error mode and leak smoke
