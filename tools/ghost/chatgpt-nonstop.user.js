@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.7
+// @version      9.0.0-alpha.2-nonstop.8
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.7';
+const VER = '9.0.0-alpha.2-nonstop.8';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -1249,7 +1249,16 @@ function copyReport() {
 }
 
 function legacyGhostCandidates() {
-  return [...document.querySelectorAll('#gitl9, #gitl8, #gitl-panel, [data-gitl-root]')];
+  const out = new Set(document.querySelectorAll('#gitl9, #gitl8, #gitl-panel, [data-gitl-root], [id*="gitl" i], [class*="gitl" i]'));
+  for (const el of document.querySelectorAll('body > div, body > aside, body > section')) {
+    if (!el || el === canonicalPanel) continue;
+    const text = String(el.innerText || el.textContent || '').slice(0, 240);
+    if (!/GHOST|Ghost in the Loop|PLAY-INPUT|round\s+\d+\/\d+/i.test(text)) continue;
+    let pos = '';
+    try { pos = getComputedStyle(el).position; } catch (_) {}
+    if (pos === 'fixed' || pos === 'sticky') out.add(el);
+  }
+  return [...out];
 }
 let canonicalPanel = null;
 function retireLegacyGhostPanel(node) {
@@ -1277,6 +1286,11 @@ for (const node of legacyGhostCandidates()) {
   try { node.remove(); } catch (_) {}
 }
 
+try {
+  document.dispatchEvent(new CustomEvent('gitl:takeover', { detail: { version: VER, at: Date.now() } }));
+  document.documentElement.dataset.gitlActiveVersion = VER;
+} catch (_) {}
+
 const style = document.createElement('style');
 style.textContent = `#gitl9{position:fixed;z-index:2147483646;top:70px;right:8px;width:min(270px,calc(100vw - 16px));background:var(--g-bg);color:var(--g-text);border:1px solid var(--g-border);border-radius:var(--g-radius);box-shadow:var(--g-shadow);font:12px/1.35 system-ui,sans-serif;padding:8px}#gitl9 *{box-sizing:border-box}#gitl9 .head{display:flex;align-items:center;justify-content:space-between;gap:6px}#gitl9 .brand{font-weight:750}#gitl9 .meta{font-size:10px;opacity:.65}#gitl9 .tabs{display:flex;gap:4px;margin:7px 0}#gitl9 button{border:1px solid #494550;background:var(--g-surface);color:var(--g-text);border-radius:8px;padding:7px 6px;font:inherit}#gitl9 button.on{background:var(--g-accent-bg);border-color:var(--g-accent);color:var(--g-text)}#gitl9 button.stop{background:#46191d;border-color:#85333a}#gitl9 button:disabled{opacity:.45;cursor:not-allowed}#gitl9 .tabs button{flex:1;padding:5px 3px}#gitl9 .status{background:var(--g-panel);border-radius:8px;padding:7px;min-height:42px;margin:5px 0 7px;word-break:break-word}#gitl9 .row{display:flex;gap:5px}#gitl9 .row>*{flex:1;min-width:0}#gitl9 .grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}#gitl9 label{display:flex;align-items:center;gap:5px;padding:5px;border:1px solid #35323a;border-radius:7px;background:var(--g-surface)}#gitl9 input[type="text"],#gitl9 input[type="number"],#gitl9 select,#gitl9 textarea{width:100%;background:var(--g-panel);color:var(--g-text);border:1px solid var(--g-border);border-radius:7px;padding:6px}#gitl9 .pane{display:none}#gitl9 .pane.show{display:block}#gitl9 .tiny{font-size:10px;color:var(--g-muted);margin-top:5px}.helpbox{background:var(--g-panel);border:1px solid var(--g-border);border-radius:9px;padding:7px;margin:5px 0}.helpbox b{color:var(--g-accent)}.swatches{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}.swatches button{flex:0 0 28px;height:28px;padding:0}.headtools{display:flex;align-items:center;gap:5px}.helpbtn{padding:3px 6px!important;font-size:10px!important}.rail{display:none}.collapsebtn{padding:3px 7px!important;font-size:12px!important}#gitl9.collapsed{right:0!important;top:34vh!important;width:42px!important;min-width:42px!important;max-width:42px!important;padding:5px!important;border-right:0!important;border-radius:12px 0 0 12px!important}#gitl9.collapsed>*:not(.rail){display:none!important}#gitl9.collapsed .rail{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:92px;cursor:pointer;user-select:none}#gitl9.collapsed .rail .ghost{font-size:20px;line-height:1}#gitl9.collapsed .rail .arrow{font-size:18px;color:var(--g-accent)}#gitl9.collapsed .rail .railstate{font-size:9px;color:var(--g-accent);line-height:1}#gitl9.collapsed .rail .mini{font-size:9px;color:var(--g-muted);writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.5px}.progline{height:4px;background:var(--g-surface);border-radius:99px;overflow:hidden;margin-top:5px}.progline span{display:block;height:100%;background:var(--g-accent);transition:width .15s ease}@media(max-width:520px){#gitl9{top:58px;width:min(238px,calc(100vw - 12px));right:6px;padding:7px}#gitl9.collapsed{right:0!important;top:32vh!important;width:42px!important;min-width:42px!important;padding:4px!important}#gitl9 .tabs{display:grid;grid-template-columns:repeat(3,1fr)}#gitl9 .tabs button{min-height:38px}#gitl9 .transport{display:grid;grid-template-columns:1fr 1fr}#gitl9 .transport button,#gitl9 .helpbox button{min-height:40px}#gitl9 button{padding:7px 5px}}`;
 document.documentElement.appendChild(style);
@@ -1286,8 +1300,10 @@ const legacyObserver = new MutationObserver(() => {
   queueMicrotask(() => retireLegacyGhostPanels());
 });
 legacyObserver.observe(document.documentElement, { childList: true, subtree: true });
-setTimeout(() => retireLegacyGhostPanels(), 250);
+setTimeout(() => retireLegacyGhostPanels(), 100);
+setTimeout(() => retireLegacyGhostPanels(), 500);
 setTimeout(() => retireLegacyGhostPanels(), 1500);
+setInterval(() => retireLegacyGhostPanels(), 2000);
 function applyAppearance() {
   const skin = SKINS[skinId] || SKINS.classic;
   const accent = ACCENTS[accentId] || skin.accent;
@@ -1308,10 +1324,10 @@ function render() {
   const prog = progressSummary();
   panel.classList.toggle('collapsed', panelCollapsed);
   panel.innerHTML = trustedHTML(`
-    <div class="rail" data-a="expand" title="Expand Ghost · ${esc(S.mode)}"><span class="ghost">👻</span><span class="arrow">◀</span><span class="railstate">${S.mode==='RUNNING'?'●':'○'}</span><span class="mini">GHOST</span></div>
+    <div class="rail" data-a="expand" title="Expand Ghost · ${esc(S.mode)} · ${VER}"><span class="ghost">👻</span><span class="arrow">◀</span><span class="railstate">${S.mode==='RUNNING'?'●':'○'}</span><span class="mini">GHOST · .8</span></div>
     <div class="head"><span class="brand">👻 GHOST</span><span class="headtools"><button class="collapsebtn" data-a="collapse" title="Minimize Ghost to the side">▶</button><button class="helpbtn" data-a="help">? Help</button><span class="meta">${esc(HOST.id)} · ${VER}</span></span></div>
     <div class="tabs"><button data-tab="play" class="${S.tab==='play'?'on':''}">Play</button><button data-tab="prompt" class="${S.tab==='prompt'?'on':''}">Prompt</button><button data-tab="aoa" class="${S.tab==='aoa'?'on':''}">AoA</button><button data-tab="export" class="${S.tab==='export'?'on':''}">Export</button><button data-tab="settings" class="${S.tab==='settings'?'on':''}">Settings</button></div>
-    <div class="status"><b>${esc(S.mode)}</b> · round ${S.round}/${S.max}<br>${esc(S.detail)}<div class="progline"><span style="width:${prog.roundPct}%"></span></div><div class="tiny">${prog.stages ? "Workflow: "+esc(prog.workflow)+" · "+(prog.stage ? "stage "+prog.stage.step+"/"+prog.stage.total : prog.stages+" stages · waiting for explicit stage") : "Manual workflow"}</div></div>
+    <div class="status"><b>${esc(S.mode)}</b> · round ${S.round}/${S.max} · <b>${VER}</b><br>${esc(S.detail)}<div class="progline"><span style="width:${prog.roundPct}%"></span></div><div class="tiny">${prog.stages ? "Workflow: "+esc(prog.workflow)+" · "+(prog.stage ? "stage "+prog.stage.step+"/"+prog.stage.total : prog.stages+" stages · waiting for explicit stage") : "Manual workflow"}</div></div>
     <div class="pane ${S.tab==='play'?'show':''}" data-pane="play">
       ${quickStartOpen ? '<div class="helpbox"><b>Quick Start</b><br>1. Type your task in the chat.<br>2. Press ▶ Play.<br>3. Ghost continues only through the one-Send Play pathway.<br><button data-a="quick-done" style="margin-top:6px">Got it</button></div>' : ''}
       ${helpOpen ? '<div class="helpbox"><b>What the controls do</b><br><b>Play</b> starts/resumes Ghost. <b>Stop</b> stops Ghost automation. <b>Page</b> reloads the host page. <b>Top</b> finds the first loaded prompt and loads older history when possible. <b>AoA</b> chooses external protocols. <b>Export</b> saves the conversation. <b>Settings</b> changes appearance only.</div>' : ''}
@@ -1397,7 +1413,7 @@ function render() {
 render();
 window.__GITL_V9__ = true;
 try { delete window.__GITL_V9_BOOTING__; } catch (_) { window.__GITL_V9_BOOTING__ = 0; }
-log('boot', { version: VER, host: HOST.id, nonStopActive: nonStopActive(), sendFence: !!readSendFence(), singleInstance: true });
+log('boot', { version: VER, host: HOST.id, nonStopActive: nonStopActive(), sendFence: !!readSendFence(), singleInstance: 'hard' });
 window.addEventListener('focus', () => wakeNonStop('focus'));
 window.addEventListener('pageshow', () => wakeNonStop('pageshow'));
 window.addEventListener('online', () => wakeNonStop('online'));
