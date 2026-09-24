@@ -20,21 +20,10 @@ jobs:
         run: |
           set -euo pipefail
           SETTINGS=/root/.dsh/settings.yaml
-          BACKUP="/root/.dsh/settings.yaml.bak-nvidia-v41-catalog2-$(date -u +%Y%m%dT%H%M%SZ)"
+          BACKUP="/root/.dsh/settings.yaml.bak-nvidia-v41-final-$(date -u +%Y%m%dT%H%M%SZ)"
           sudo -n cp "$SETTINGS" "$BACKUP"
 
-          sudo -n perl -0pi -e '
-            s{(    nvidia:\n      models:\n)}
-             {$1        - id: deepseek-ai/deepseek-v4.1-flash\n          name: DeepSeek V4.1 Flash - NVIDIA NIM - Free\n}
-             unless /    nvidia:\n      models:\n(?:(?:        |          ).*\n)*?        - id: deepseek-ai\/deepseek-v4\.1-flash\n/s
-          ' "$SETTINGS"
-
-          echo "=== NVIDIA V4.1 CATALOG CHECK ==="
-          sudo -n awk '
-            /^    nvidia:$/ {inside=1}
-            inside {print}
-            inside && /^    kimi-direct:$/ {exit}
-          ' "$SETTINGS" | grep -E 'nvidia:|deepseek-v4\.1-flash|DeepSeek V4\.1 Flash|apiKeyEnv|displayName' | head -20
+          sudo -n perl -0pi -e 's{    nvidia:\n      models:\n}{    nvidia:\n      models:\n        - id: deepseek-ai/deepseek-v4.1-flash\n          name: DeepSeek V4.1 Flash - NVIDIA NIM - Free\n}' "$SETTINGS"
 
           sudo -n awk '
             /^    nvidia:$/ {inside=1}
@@ -42,6 +31,7 @@ jobs:
             inside && /^    kimi-direct:$/ {exit}
             END {exit(found?0:1)}
           ' "$SETTINGS"
+          echo "CATALOG_MODEL_ADDED=true"
 
           sudo -n perl -0pi -e 's{^agent-default-model:\n(?:[ \t].*\n)*}{agent-default-model:\n  provider: nvidia\n  model: deepseek-ai/deepseek-v4.1-flash\n}m' "$SETTINGS"
 
