@@ -15,39 +15,27 @@ jobs:
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 15
     steps:
-      - name: Verify direct DeepSeek readiness
+      - name: Inspect DeepSeek account route safely
         shell: bash
         run: |
           set -euo pipefail
-          echo "=== VERSION ==="
-          node -p "require('/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/package.json').version" || true
+          echo "=== DSH VERSION ==="
+          sudo -n -H node -p "require('/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/package.json').version" 2>/dev/null || true
 
-          echo "=== DIRECT CONFIG ==="
-          sudo -n awk '
-            BEGIN{show=0}
-            /^llm-deepseek:/{show=1}
-            show{print}
-            show && /^[^[:space:]].*:/ && $0 !~ /^llm-deepseek:/ {exit}
-          ' /root/.dsh/settings.yaml 2>/dev/null | head -120 || true
+          echo "=== ACCOUNT PACKAGES ==="
+          for p in             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-deepseek-account-platform             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-deepseek-account             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-llm-deepseek-account; do
+            if [ -d "$p" ]; then
+              echo "PRESENT $(basename "$p")"
+            else
+              echo "MISSING $(basename "$p")"
+            fi
+          done
 
-          echo "=== DEFAULT MODEL ==="
-          sudo -n awk '
-            BEGIN{show=0}
-            /^agent-default-model:/{show=1}
-            show{print}
-            show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}
-          ' /root/.dsh/settings.yaml 2>/dev/null | head -20 || true
+          echo "=== ACCOUNT ROUTE REFERENCES ==="
+          grep -RIl --exclude='*.map' -E 'deepseek-account|deepseekAccount'             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-base             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-llm-deepseek*             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-deepseek-account*             2>/dev/null | head -80 || true
 
-          echo "=== DEEPSEEK CREDENTIAL REFS (SECRET REDACTED) ==="
-          sudo -n grep -n -C 4 'DEEPSEEK_API_KEY' /root/.dsh/.credentials.yaml 2>/dev/null \
-            | sed -E 's#(^[[:space:]-]*value:[[:space:]]*).*#\1<REDACTED>#; s#(^[[:space:]-]*(secret|token|key):[[:space:]]*).*#\1<REDACTED>#I' \
-            || true
+          echo "=== USER STATE FILENAMES ONLY ==="
+          sudo -n find /root/.dsh -maxdepth 4 -type f -printf '%p\n' 2>/dev/null             | grep -Ei 'account|auth|grant|credential|deepseek'             | sed 's#^/root/.dsh/#~/.dsh/#'             | head -80 || true
 
-          echo "=== LISTEN SOCKETS ==="
-          pid="$(pgrep -f '/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js web' | head -1 || true)"
-          if [ -n "$pid" ]; then
-            sudo -n ss -ltnp 2>/dev/null | grep "pid=$pid," || true
-          fi
-
-          echo "=== CLI HELP ==="
-          node /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js --help 2>&1 | head -100 || true
+          echo "=== SETTINGS ROUTE NAMES ONLY ==="
+          sudo -n grep -E '^[[:space:]]*(provider:|[A-Za-z0-9_-]+:)$' /root/.dsh/settings.yaml 2>/dev/null             | grep -Ei 'deepseek|provider'             | head -120 || true
