@@ -8,36 +8,46 @@ on:
       - .github/workflows/harness-workspace-recover.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   recover:
     runs-on: self-hosted
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Recover Harness workspace membership
+      - name: Repair runner device permissions and recover Harness
         shell: bash
         run: |
           set -euo pipefail
-          REPORT=/tmp/harness-workspace-recovery-report.txt
-          : > "$REPORT"
-          exec > >(tee -a "$REPORT") 2>&1
-
           echo "RUNNER=$(hostname) UID=$(id -u) DATE=$(date -u +%FT%TZ)"
-          test "$(id -u)" = "0"
-          test -f /root/.dsh/storages/workspace.json
-          test -d /root/.dsh/sessions
+          echo "DEVNULL_BEFORE=$(stat -c '%F %a %U %G %t:%T' /dev/null 2>&1 || true)"
+          sudo -n true
+          sudo -n chown root:root /dev/null
+          sudo -n chmod 666 /dev/null
+          echo "DEVNULL_AFTER=$(stat -c '%F %a %U %G %t:%T' /dev/null)"
+
+          sudo -n bash -s <<'ROOT'
+          set -euo pipefail
+
+          WS=/root/.dsh/storages/workspace.json
+          SESS=/root/.dsh/sessions
+          BACKUPS=/root/harness-backups
+
+          echo "=== PRE-STATE ==="
+          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager || true
+          systemctl show deepseek-harness-proxy.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager || true
+          ss -ltnp | grep -E ':3080|:3081|:13080|:13082|:443 ' || true
+          test -f "$WS"
+          test -d "$SESS"
           command -v zstdcat >/dev/null
+          mkdir -p "$BACKUPS"
 
           python3 - <<'PY'
-          import collections, datetime, json, os, re, shutil, subprocess
+          import collections, datetime, json, os, shutil, subprocess
 
           WS="/root/.dsh/storages/workspace.json"
           SESS="/root/.dsh/sessions"
           BACKUPS="/root/harness-backups"
-          os.makedirs(BACKUPS, exist_ok=True)
 
           with open(WS, "r", encoding="utf-8") as f:
               data=json.load(f)
@@ -49,7 +59,7 @@ jobs:
               for sid in w.get("sessionIds", []):
                   assigned[sid]=wid
 
-          stamp=datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+          stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
           backup=os.path.join(BACKUPS, f"workspace-before-membership-recover-{stamp}.json")
           shutil.copy2(WS, backup)
 
@@ -67,7 +77,13 @@ jobs:
               cwd=None
               has_message=False
               try:
-                  p=subprocess.Popen(["zstdcat", path], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, errors="replace")
+                  p=subprocess.Popen(
+                      ["zstdcat", path],
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.DEVNULL,
+                      text=True,
+                      errors="replace",
+                  )
                   assert p.stdout is not None
                   for line in p.stdout:
                       if '"user/message"' in line or '"assistant/message"' in line:
@@ -105,10 +121,15 @@ jobs:
               matches=[]
               for p,wid in path_to_id.items():
                   if cwd == p:
-                      matches.append((len(p)+100000, wid))
+                      matches.append((100000 + len(p), wid))
                   elif p != "/root" and cwd.startswith(p.rstrip("/") + "/"):
                       matches.append((len(p), wid))
               return max(matches)[1] if matches else None
+
+          journals=[]
+          for root,dirs,files in os.walk(SESS):
+              if "session.v3.jsonl.zstd" in files:
+                  journals.append(os.path.join(root,"session.v3.jsonl.zstd"))
 
           found=0
           nonblank=0
@@ -117,11 +138,6 @@ jobs:
           added=collections.Counter()
           unmatched=collections.Counter()
           add_by_workspace=collections.defaultdict(list)
-
-          journals=[]
-          for root,dirs,files in os.walk(SESS):
-              if "session.v3.jsonl.zstd" in files:
-                  journals.append(os.path.join(root,"session.v3.jsonl.zstd"))
 
           for path in sorted(journals):
               sid,cwd,has_message=inspect_journal(path)
@@ -166,46 +182,48 @@ jobs:
               w=workspaces.get(wid,{})
               print(f"  {w.get('title')} | path={w.get('path')} | sessions={len(w.get('sessionIds',[]))} | added={added[wid]}")
           print("UNMATCHED_CWD_TOP")
-          for cwd,n in unmatched.most_common(30):
+          for cwd,n in unmatched.most_common(40):
               print(f"  {n}\t{cwd}")
           print("TOTAL_ADDED",sum(added.values()))
           PY
 
-          echo "RESTARTING_HARNESS"
+          echo "=== RESTART MAIN ==="
           systemctl restart deepseek-harness.service || true
 
-          ok=0
-          for i in $(seq 1 180); do
+          harness=0
+          for i in $(seq 1 210); do
             if systemctl is-active --quiet deepseek-harness.service && curl -fsS --max-time 2 http://127.0.0.1:3080/ >/dev/null 2>&1; then
-              ok=1
+              harness=1
               break
             fi
             sleep 2
           done
-          echo "HARNESS_READY=$ok"
-          test "$ok" = "1"
+          echo "HARNESS_READY=$harness"
+          test "$harness" = "1"
+
+          echo "=== ENSURE PROXY ==="
+          systemctl restart deepseek-harness-proxy.service || true
 
           helper=0
-          for i in $(seq 1 60); do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 http://172.19.0.1:13082/cookie || true)
+          for i in $(seq 1 90); do
+            code=$(curl -sS -o /tmp/harness-helper-probe -w '%{http_code}' --max-time 3 http://172.19.0.1:13082/cookie || true)
             if [ "$code" = "204" ]; then helper=1; break; fi
             sleep 2
           done
           echo "HELPER_READY=$helper"
           test "$helper" = "1"
 
-          grep -nE 'groupBy:|persist: "dsh.workspace.view' /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js | head -10
-          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager
+          internal=$(curl -sS -o /tmp/harness-internal-probe -w '%{http_code}' --max-time 5 -H 'Host: harness.flyaicrm.com' http://172.19.0.1:13080/ || true)
+          echo "INTERNAL_PROXY_HTTP=$internal"
 
-      - name: Commit recovery report to temporary branch
-        if: always()
-        shell: bash
-        run: |
-          set -e
-          mkdir -p .ops
-          cp /tmp/harness-workspace-recovery-report.txt .ops/harness-workspace-recovery-report.txt 2>/dev/null || echo "report unavailable" > .ops/harness-workspace-recovery-report.txt
-          git config user.name "harness-recovery-bot"
-          git config user.email "harness-recovery@localhost"
-          git add .ops/harness-workspace-recovery-report.txt
-          git commit -m "ops: record Harness workspace recovery" || exit 0
-          git push origin HEAD:ops-harness-workspace-recover
+          public=$(curl -k -sS -o /tmp/harness-public-probe -w '%{http_code}' --max-time 10 https://harness.flyaicrm.com/ || true)
+          echo "PUBLIC_HTTP=$public"
+
+          echo "=== UI PATCH ==="
+          grep -nE 'groupBy:|persist: "dsh.workspace.view' /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js | head -10
+          grep -nE 'groupBy: "flat"|groupBy: "workspace"|dsh.workspace.view.v8' /usr/local/sbin/harness-history-ui-patch.sh | head -20
+
+          echo "=== FINAL SERVICES ==="
+          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager
+          systemctl show deepseek-harness-proxy.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager
+          ROOT
