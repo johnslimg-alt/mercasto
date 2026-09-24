@@ -31,10 +31,13 @@ export default function MercastoGoldenHeader({
   onLocationApply,
   onAccount,
   accountLabel,
+  accountTextMode = false,
+  showPublishCta = false,
   onNotifications,
   unreadCount = 0,
   showAiBrand = false,
   search = null,
+  showMobileSearch = true,
   isDarkMode,
   toggleDarkMode,
   lang,
@@ -149,9 +152,12 @@ export default function MercastoGoldenHeader({
           {unreadCount > 0 && <i data-testid="golden-notifications-unread" className="mcg-unread-dot mcg-unread-dot--header" aria-hidden="true"/>}
         </Link>
       )}
-      <button type="button" data-testid="golden-account-button" className="mcg-hicon" aria-label={accountLabel || t.my_account || t.open_account_menu || t.login || ''} onClick={onAccount}><Icon name="menu"/></button>
+      <button type="button" data-testid="golden-account-button" className={accountTextMode ? 'mcg-account-text' : 'mcg-hicon'} aria-label={accountLabel || t.my_account || t.open_account_menu || t.login || ''} onClick={onAccount}>
+        {accountTextMode ? <><Icon name="user" size={17}/><span>{accountLabel || t.login || 'Iniciar sesión'}</span></> : <Icon name="menu"/>}
+      </button>
+      {showPublishCta && <button type="button" className="mcg-publish-cta" data-testid="golden-header-publish" onClick={publish}><Icon name="plus" size={18}/><span>{t.publish_btn || 'Publicar anuncio'}</span></button>}
     </header>
-    {search && (
+    {search && showMobileSearch && (
       <div className="mcg-public-search-mobile-row">
         <div className="mcg-public-search-wrap">
           <form data-testid="mobile-header-search" onSubmit={search.onSubmit} className="mcg-public-search-form">

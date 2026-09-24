@@ -67,6 +67,13 @@ async function interceptTraffic(page, { failConsentChunks = false } = {}) {
 // whichever is usable also makes this an assertion of the invariant itself -- if both
 // collapse, this returns nothing and the test fails.
 async function laidOutConsentEntry(page) {
+  if (new URL(page.url()).pathname === '/') {
+    await expect.poll(
+      () => page.evaluate(() => document.body.classList.contains('mc-golden-home-active')),
+      { timeout: 15_000 },
+    ).toBe(true);
+  }
+
   // POLLED, never one-shot: a single boundingBox() sample right after domcontentloaded
   // races the second footer's mount and reports "no entry point" while one is still
   // arriving -- the same false-negative shape as sampling a banner before its show timer

@@ -80,7 +80,7 @@ test('UIProvider is the only owner of the persisted theme state', () => {
   assert.match(goldenHome, /const \{isDarkMode,toggleDarkMode,setLang\}=useUI\(\)/);
   assert.doesNotMatch(goldenHome, /localStorage\.setItem\(['"]theme['"]/);
   assert.doesNotMatch(goldenHome, /document\.documentElement\.classList\.toggle\(['"]dark/);
-  assert.match(goldenHome, /<MercastoGoldenHeader[^>]*toggleDarkMode=\{toggleDarkMode\}/);
+  assert.match(goldenHome, /<MercastoGoldenHeader[\s\S]*?toggleDarkMode=\{toggleDarkMode\}/);
   assert.doesNotMatch(goldenHeader, /localStorage\.setItem\(['"]theme['"]/);
   assert.doesNotMatch(goldenHeader, /document\.documentElement\.classList\.toggle\(['"]dark/);
   assert.match(goldenHeader, /onClick=\{toggleDarkMode\}/);

@@ -27,7 +27,7 @@ test('public routes declare Mexican Spanish and remain indexable', async ({ page
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'es-MX');
-  await expect(page.locator('main h1')).toHaveCount(1);
+  await expect(page.locator('main h1:visible')).toHaveCount(1);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /index,follow/);
 });
 
