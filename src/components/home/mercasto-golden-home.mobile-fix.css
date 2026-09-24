@@ -1,0 +1,315 @@
+/* Phone <=767px. Tablet is 768–1179px and desktop is >=1180px in mercasto-golden-home.css.
+   This file loads after that one. There is no 360px breakpoint. */
+
+.mcg-root {
+  --mcg-green: var(--mc-brand, #84cc16);
+  --mcg-green-dark: var(--mc-brand-dark, #65a30d);
+  --mcg-ink: var(--mc-ink, #111827);
+  --mcg-muted: var(--mc-muted, #64748b);
+  --mcg-line: var(--mc-line, #e2e8f0);
+  --mcg-soft: var(--mc-raised-surface, #f1f5f9);
+  --mcg-card: var(--mc-surface, #fff);
+  font-family: var(--font-sans, 'Inter Variable', Inter, system-ui, sans-serif);
+}
+.mcg-root .mcg-brand > span {
+  background: var(--mc-brand, #84cc16);
+  color: var(--mc-ink, #111827);
+}
+.mcg-root .mcg-ad-body strong,
+.mcg-root .mcg-device-head a,
+.mcg-root .mcg-section-head a {
+  color: #4d7c0f;
+}
+html.dark .mcg-root .mcg-ad-body strong,
+html.dark .mcg-root .mcg-device-head a,
+html.dark .mcg-root .mcg-section-head a {
+  color: var(--mc-brand, #84cc16);
+}
+
+html.dark .mcg-root {
+  --mcg-ink: var(--mc-dark-ink, #f8fafc);
+  --mcg-muted: var(--mc-dark-muted, #cbd5e1);
+  --mcg-line: var(--mc-dark-line, #64748b);
+  --mcg-soft: var(--mc-dark-raised-surface, #1f2937);
+  --mcg-card: var(--mc-dark-surface, #111827);
+  background: var(--mc-dark-background, #0f172a);
+  color: var(--mc-dark-ink, #f8fafc);
+}
+
+html.dark .mc-golden-home-active {
+  background: var(--mc-dark-background, #0f172a);
+}
+
+html.dark .mcg-root .mcg-ai,
+html.dark .mcg-root .mcg-mobile-ai,
+html.dark .mcg-root .mcg-device-ai .main,
+html.dark .mcg-root .mcg-device-ai .chat,
+html.dark .mcg-root .mcg-map {
+  background: var(--mc-dark-surface, #111827);
+  border-color: var(--mc-dark-line, #64748b);
+}
+
+.mcg-root .mcg-search > button,
+.mcg-root .mcg-ai > button,
+.mcg-root .mcg-sell button,
+.mcg-root .mcg-dsearch > button,
+.mcg-root .mcg-device-ai .main > button,
+.mcg-root .mcg-device-ai .chat button,
+.mcg-root .mcg-msearch > button.mcg-msearch-go,
+.mcg-root .mcg-bottom-nav .publish i {
+  background: var(--mc-brand, #84cc16);
+  color: var(--mc-ink, #111827);
+}
+
+.mcg-root .mcg-search > button:hover,
+.mcg-root .mcg-ai > button:hover,
+.mcg-root .mcg-sell button:hover,
+.mcg-root .mcg-dsearch > button:hover,
+.mcg-root .mcg-msearch > button.mcg-msearch-go:hover,
+.mcg-root .mcg-bottom-nav .publish i:hover {
+  background: var(--mc-brand-dark, #65a30d);
+  color: #fff;
+}
+
+.mcg-root .mcg-msearch > button:not(.mcg-msearch-go) {
+  background: var(--mcg-card);
+  color: var(--mcg-ink);
+  border: 1px solid var(--mcg-line);
+}
+
+@media (max-width: 767px) {
+  .mcg-root .mcg-responsive-h1 {
+    position: static;
+    left: auto;
+    top: auto;
+    height: auto;
+    margin: 0;
+    padding: 12px 14px 0;
+    overflow: visible;
+    clip: auto;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: var(--mc-ink, #111827);
+  }
+  .mcg-root .mcg-header {
+    display: flex;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: 56px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .mcg-root .mcg-header .mcg-brand {
+    flex: none;
+    gap: 0;
+    font-size: 0;
+  }
+  .mcg-root .mcg-header .mcg-brand > span {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+  .mcg-root .mcg-header .mcg-location-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .mcg-root .mcg-header .mcg-location {
+    width: 100%;
+    max-width: none;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 10px;
+    font-size: 13px;
+    gap: 6px;
+  }
+  .mcg-root .mcg-header .mcg-location > span {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mcg-root .mcg-header .mcg-lang {
+    flex: none;
+    width: auto;
+    height: 40px;
+    min-width: 64px;
+    margin-left: 0;
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .mcg-root .mcg-header .mcg-lang select {
+    width: auto;
+    max-width: none;
+    min-height: 0;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .mcg-root .mcg-header .mcg-theme {
+    position: static;
+    flex: none;
+    width: 52px;
+    min-width: 52px;
+    height: 32px;
+    min-height: 32px;
+    padding: 3px;
+    background: #e7edf1;
+  }
+  .mcg-root .mcg-header .mcg-theme::before {
+    content: none;
+  }
+  .mcg-root .mcg-header .mcg-theme span,
+  .mcg-root .mcg-header .mcg-theme.dark span {
+    position: static;
+    left: auto;
+    top: auto;
+    width: 26px;
+    height: 26px;
+  }
+  .mcg-root .mcg-header .mcg-theme.dark {
+    background: var(--mc-brand, #84cc16);
+  }
+
+  .mcg-root .mcg-msearch {
+    display: grid;
+    grid-template-columns: 1fr 48px 48px;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .mcg-root .mcg-msearch > div {
+    height: 48px;
+    min-width: 0;
+    padding: 0 10px;
+  }
+  .mcg-root .mcg-msearch > button {
+    border-radius: var(--mc-radius-md, 12px);
+    display: grid;
+    place-items: center;
+    min-width: 48px;
+    min-height: 48px;
+  }
+  .mcg-root .mcg-mobile-ai {
+    min-height: 132px;
+    height: auto;
+    padding: 14px 88px 14px 14px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--mc-brand, #84cc16) 16%, white), var(--mc-surface, #fff));
+    border-color: color-mix(in srgb, var(--mc-brand, #84cc16) 42%, var(--mc-line, #e2e8f0));
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+  html.dark .mcg-root .mcg-mobile-ai {
+    background: var(--mc-dark-surface, #111827);
+    box-shadow: none;
+  }
+  .mcg-root .mcg-ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--mc-ink, #111827);
+    background: color-mix(in srgb, var(--mc-brand, #84cc16) 28%, white);
+    border-radius: var(--mc-radius-pill, 999px);
+    padding: 4px 9px;
+    margin-bottom: 8px;
+  }
+  .mcg-root .mcg-ai-badge small {
+    font-size: 9px;
+    background: var(--mc-brand-dark, #65a30d);
+    color: #fff;
+    border-radius: var(--mc-radius-pill, 999px);
+    padding: 2px 6px;
+  }
+  .mcg-root .mcg-mobile-ai h2 {
+    font-size: 18px;
+    line-height: 1.25;
+    margin: 0;
+  }
+  .mcg-root .mcg-mactions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .mcg-root .mcg-mactions button,
+  .mcg-root .mcg-mobile .mcg-ad,
+  .mcg-root .mcg-mobile-chat {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  }
+  .mcg-root .mcg-mactions button {
+    min-height: 76px;
+    height: auto;
+    padding: 10px 10px 12px;
+    align-items: flex-start;
+    text-align: left;
+    border-radius: var(--mc-radius-lg, 14px);
+  }
+  .mcg-root .mcg-mobile .mcg-device-categories span,
+  .mcg-root .mcg-mactions span {
+    background: color-mix(in srgb, var(--mc-brand, #84cc16) 22%, white);
+    color: #4d7c0f;
+  }
+  html.dark .mcg-root .mcg-mobile .mcg-device-categories span,
+  html.dark .mcg-root .mcg-mactions span {
+    background: #1a2e05;
+    color: var(--mc-brand, #84cc16);
+  }
+  .mcg-root .mcg-mactions span {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+  .mcg-root .mcg-mactions b {
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .mcg-root .mcg-mactions small {
+    font-size: 11px;
+    color: var(--mcg-muted);
+  }
+  .mcg-root .mcg-bottom-nav .publish b {
+    font-size: 10px;
+  }
+  .mcg-root .mcg-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 16px calc(84px + env(safe-area-inset-bottom));
+  }
+  .mcg-root .mcg-msearch,
+  .mcg-root .mcg-mobile-ai,
+  .mcg-root .mcg-mobile-chat,
+  .mcg-root .mcg-mactions,
+  .mcg-root .mcg-mobile .mcg-device-section {
+    margin-top: 0;
+  }
+  .mcg-root .mcg-mobile-ai > .mcg-mobile-title-spacer {
+    display: none;
+  }
+  .mcg-root .mcg-mactions button {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mcg-root .mcg-mactions small {
+    display: block;
+    line-height: 1.3;
+  }
+  .mcg-root .mcg-mobile .mcg-device-ads {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mcg-root .mcg-mobile .mcg-ad {
+    overflow: hidden;
+    border: 1px solid var(--mcg-line);
+    border-radius: 14px;
+    background: var(--mcg-card);
+  }
+  .mcg-root .mcg-mobile .mcg-ad-media {
+    height: 112px;
+  }
+}

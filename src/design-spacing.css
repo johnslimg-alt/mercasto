@@ -1,0 +1,16 @@
+/* Mercasto spacing scale. Base step is 4px, same as Tailwind v4 default --spacing.
+   Numeric utilities (p-4, gap-2) stay unchanged. Use these names in product CSS. */
+:root {
+  --mc-space-1: 4px;
+  --mc-space-2: 8px;
+  --mc-space-3: 12px;
+  --mc-space-4: 16px;
+  --mc-space-5: 24px;
+  --mc-space-6: 32px;
+  --mc-space-stack: 8px;
+  --mc-space-gutter: 12px;
+  --mc-space-page: 16px;
+  --mc-space-page-lg: 40px;
+  --mc-space-section: 24px;
+  --mc-space-touch: 48px;
+}

@@ -1,0 +1,32 @@
+name: Jira GitHub autolink
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/jira-github-autolink.yml'
+      - 'scripts/jira-github-autolink.sh'
+
+permissions:
+  contents: read
+  administration: write
+
+concurrency:
+  group: jira-github-autolink
+  cancel-in-progress: false
+
+jobs:
+  autolink:
+    name: Link Jira keys in GitHub
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create the Jira autolink
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+        run: bash scripts/jira-github-autolink.sh

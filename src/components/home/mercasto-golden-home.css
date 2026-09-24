@@ -1,3 +1,4 @@
+/* Breakpoints: phone <=767px, tablet 768px–1179px, desktop >=1180px. */
 :root{--mcg-green:#84cc16;--mcg-green-dark:#4d7c0f;--mcg-ink:#111827;--mcg-muted:#64748b;--mcg-line:#e2e8f0;--mcg-soft:#f1f5f9;--mcg-card:#fff}
 .dark{--mcg-ink:#f8fafc;--mcg-muted:#cbd5e1;--mcg-line:#64748b;--mcg-soft:#1f2937;--mcg-card:#111827}
 .mc-golden-shell-active .site-header,.mc-golden-shell-active .mobile-tabbar{display:none!important}
@@ -117,8 +118,8 @@
  .mcg-faq-grid{grid-template-columns:1fr}
 }
 
-/* Shared Golden shell touch geometry for catalogue/tablet surfaces. */
-@media(max-width:1179px){
+/* Tablet only. Phone layout lives in mercasto-golden-home.mobile-fix.css. */
+@media(max-width:1179px) and (min-width:768px){
   .mcg-header .mcg-location,.mcg-header .mcg-lang{min-height:48px}
   .mcg-header .mcg-theme,.mcg-header .mcg-hicon{min-width:48px;min-height:48px}
   .mcg-location-popover select,.mcg-location-popover>button{min-height:48px}
@@ -126,6 +127,7 @@
 
 @media(max-width:767px){
   .mcg-location-popover{position:fixed;left:10px;right:10px;top:64px;width:auto;max-width:none}
+  .mcg-location-popover select,.mcg-location-popover>button{min-height:48px}
 }
 
 /* Golden seller profile: shared shell, identical geometry in light/dark. */
@@ -331,15 +333,4 @@
 @media(max-width:767px){
   .mcg-vertical-page .vertical-quick-filters{top:58px!important}
 }
-@media(max-width:360px){
-  .mc-golden-public-active .mcg-header{padding-left:6px;padding-right:6px;gap:3px}
-  .mc-golden-public-active .mcg-brand{flex:none;gap:0;font-size:0}
-  .mc-golden-public-active .mcg-brand>span{font-size:18px}
-  .mc-golden-public-active .mcg-location-wrap{flex:1;min-width:0}
-  .mc-golden-public-active .mcg-location{width:100%;min-width:0;padding-left:4px;padding-right:4px}
-  .mc-golden-public-active .mcg-location>span{max-width:34px}
-  .mc-golden-public-active .mcg-lang{width:44px;min-width:44px;padding-left:2px;padding-right:2px}
-  .mc-golden-public-active .mcg-theme{width:48px}
-  .mc-golden-public-active .mcg-theme::before{width:48px}
-  .mc-golden-public-active .mcg-theme.dark span{left:17px}
-}
+/* Phone stays one range through 767px. */
