@@ -48,6 +48,19 @@ export default defineConfig([
     },
   },
   {
+    // Tampermonkey/Greasemonkey APIs are injected by the userscript manager at runtime.
+    // Keep these globals scoped to userscripts instead of weakening browser linting.
+    files: ['tools/ghost/**/*.user.js'],
+    languageOptions: {
+      globals: {
+        GM_getValue: 'readonly',
+        GM_setValue: 'readonly',
+        GM_setClipboard: 'readonly',
+        GM_notification: 'readonly',
+      },
+    },
+  },
+  {
     // Legacy admin screen needs a focused follow-up refactor: the payments effect is
     // currently after an admin-only early return. Keep the repository lint gate moving
     // without weakening the rule for new or unrelated files.
