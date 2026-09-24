@@ -23,6 +23,7 @@ jobs:
         github.event.comment.body == 'RUN:harness_proxy_status' ||
         github.event.comment.body == 'RUN:harness_upload_diag' ||
         github.event.comment.body == 'RUN:harness_workspace_audit' ||
+        github.event.comment.body == 'RUN:harness_models_diag' ||
         github.event.comment.body == 'RUN:ghost_access_probe' ||
         github.event.comment.body == 'RUN:harness_upload_fix:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_bootstrap:MERCASTO' ||
@@ -63,6 +64,7 @@ jobs:
               'RUN:harness_proxy_status': ['harness_proxy_status', '', '220'],
               'RUN:harness_upload_diag': ['harness_upload_diag', '', '360'],
               'RUN:harness_workspace_audit': ['harness_workspace_audit', '', '400'],
+              'RUN:harness_models_diag': ['harness_models_diag', '', '500'],
               'RUN:ghost_access_probe': ['ghost_access_probe', '', '260'],
               'RUN:harness_upload_fix:MERCASTO': ['harness_upload_fix', 'MERCASTO', '260'],
               'RUN:mcp_plugin_bootstrap:MERCASTO': ['mcp_plugin_bootstrap', 'MERCASTO', '220'],
@@ -205,6 +207,57 @@ jobs:
 
             rm -f "$smoke_file"
             trap - EXIT
+          elif [ "$OPERATION" = "harness_models_diag" ]; then
+            echo "== Harness model/provider diagnostics (secrets redacted) =="
+            echo "-- service --"
+            sudo -n systemctl show deepseek-harness.service --no-pager \
+              -p FragmentPath -p ActiveState -p SubState -p MainPID -p User -p ExecStart -p EnvironmentFiles 2>/dev/null || true
+            echo
+            echo "-- candidate config files --"
+            sudo -n find /root/.dsh -maxdepth 5 -type f \
+              \( -name '*.json' -o -name '*.yaml' -o -name '*.yml' -o -name '*.toml' -o -name '*.conf' -o -name '*.env' \) \
+              -print 2>/dev/null | sort | head -250
+            echo
+            echo "-- model/provider references --"
+            sudo -n python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          pats = re.compile(r'(deepseek|model|provider|base.?url|endpoint|openrouter|nvidia|novita|silicon|flash|free)', re.I)
+          secretish = re.compile(r'(?i)(api[_-]?key|token|secret|authorization|password)(\s*[:=]\s*)([^\s,}"\']+)')
+          bearer = re.compile(r'(?i)bearer\s+[A-Za-z0-9._~+/=-]{8,}')
+          key_tokens = re.compile(r'(?i)\b(?:sk|nvapi|or)[-_][A-Za-z0-9._-]{8,}\b')
+          allowed = {'.json','.yaml','.yml','.toml','.conf','.env'}
+
+          shown = 0
+          for p in sorted(Path('/root/.dsh').rglob('*')):
+              if not p.is_file() or p.suffix.lower() not in allowed:
+                  continue
+              try:
+                  if p.stat().st_size > 2_000_000:
+                      continue
+                  text = p.read_text(errors='replace')
+              except Exception:
+                  continue
+              hits = []
+              for i, line in enumerate(text.splitlines(), 1):
+                  if not pats.search(line):
+                      continue
+                  safe = secretish.sub(lambda m: m.group(1)+m.group(2)+'***REDACTED***', line)
+                  safe = bearer.sub('Bearer ***REDACTED***', safe)
+                  safe = key_tokens.sub('***REDACTED***', safe)
+                  hits.append((i, safe[:600]))
+              if hits:
+                  print(f'FILE {p}')
+                  for i, line in hits[:120]:
+                      print(f'{i}: {line}')
+                  shown += 1
+                  if shown >= 80:
+                      raise SystemExit
+          PY
+            echo
+            echo "-- Harness package/version hints --"
+            sudo -n bash -lc 'command -v dsh || true; dsh --version 2>/dev/null || true; npm -g ls --depth=0 2>/dev/null | grep -Ei "deepseek|harness|dsh" || true'
           elif [ "$OPERATION" = "harness_workspace_audit" ]; then
             # Read-only audit: session directory names and workspace membership only.
             echo "== Harness workspace audit =="
