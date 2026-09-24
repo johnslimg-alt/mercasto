@@ -696,6 +696,43 @@ PY
     "${COMPOSE_PROD[@]}" exec -T mercasto-backend php artisan ads:audit-active-content-quality --limit-groups=20
     ;;
 
+  repair_dev_null)
+    require_confirm
+    print_header "Repair /dev/null on runner host"
+
+    dev_type="$(stat -c '%F' /dev/null)"
+    dev_rdev="$(stat -c '%t:%T' /dev/null)"
+    echo "before_type=$dev_type"
+    echo "before_rdev=$dev_rdev"
+    echo "before_owner=$(stat -c '%U:%G' /dev/null)"
+    echo "before_mode=$(stat -c '%a' /dev/null)"
+
+    if [ "$dev_type" != "character special file" ]; then
+      echo "Refusing repair: /dev/null is not a character special file." >&2
+      exit 65
+    fi
+    if [ "$dev_rdev" != "1:3" ]; then
+      echo "Refusing repair: /dev/null has unexpected device numbers $dev_rdev (expected 1:3)." >&2
+      exit 66
+    fi
+
+    sudo -n chown root:root /dev/null
+    sudo -n chmod 0666 /dev/null
+
+    [ "$(stat -c '%F' /dev/null)" = "character special file" ]
+    [ "$(stat -c '%t:%T' /dev/null)" = "1:3" ]
+    [ "$(stat -c '%U:%G' /dev/null)" = "root:root" ]
+    [ "$(stat -c '%a' /dev/null)" = "666" ]
+    test -r /dev/null
+    test -w /dev/null
+    printf 'probe\n' >/dev/null
+    cat /dev/null >/dev/null
+
+    echo "after_owner=$(stat -c '%U:%G' /dev/null)"
+    echo "after_mode=$(stat -c '%a' /dev/null)"
+    echo "DEV_NULL_REPAIR_OK"
+    ;;
+
   runner_health)
     print_header "GitHub runner services"
     if command -v systemctl >/dev/null 2>&1; then

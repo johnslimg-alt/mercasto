@@ -67,6 +67,7 @@ const serverOperatorCommands = [
   'RUN:security_smoke',
   'RUN:seo_aeo_smoke',
   'RUN:content_quality_audit',
+  'RUN:repair_dev_null:MERCASTO',
   'RUN:runner_health',
   'RUN:logs_frontend',
   'RUN:logs_backend',
