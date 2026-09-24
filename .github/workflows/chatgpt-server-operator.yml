@@ -23,6 +23,7 @@ jobs:
         github.event.comment.body == 'RUN:harness_proxy_status' ||
         github.event.comment.body == 'RUN:harness_upload_diag' ||
         github.event.comment.body == 'RUN:harness_workspace_audit' ||
+        github.event.comment.body == 'RUN:harness_workspace_repair:MERCASTO' ||
         github.event.comment.body == 'RUN:ghost_access_probe' ||
         github.event.comment.body == 'RUN:harness_upload_fix:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_bootstrap:MERCASTO' ||
@@ -63,6 +64,7 @@ jobs:
               'RUN:harness_proxy_status': ['harness_proxy_status', '', '220'],
               'RUN:harness_upload_diag': ['harness_upload_diag', '', '360'],
               'RUN:harness_workspace_audit': ['harness_workspace_audit', '', '400'],
+              'RUN:harness_workspace_repair:MERCASTO': ['harness_workspace_repair', 'MERCASTO', '460'],
               'RUN:ghost_access_probe': ['ghost_access_probe', '', '260'],
               'RUN:harness_upload_fix:MERCASTO': ['harness_upload_fix', 'MERCASTO', '260'],
               'RUN:mcp_plugin_bootstrap:MERCASTO': ['mcp_plugin_bootstrap', 'MERCASTO', '220'],
@@ -285,6 +287,179 @@ jobs:
               print('unmatched_bucket=' + json.dumps({'bucket': bucket, 'count': count}, ensure_ascii=False, sort_keys=True))
           print('WORKSPACE_AUDIT_END')
           PY
+          elif [ "$OPERATION" = "harness_workspace_repair" ]; then
+            test "$CONFIRM" = "MERCASTO"
+            echo "== Harness workspace exact-bucket repair =="
+            sudo -n systemctl stop deepseek-harness.service
+            repair_ok=0
+            cleanup() {
+              sudo -n systemctl start deepseek-harness.service >/dev/null 2>&1 || true
+              sudo -n systemctl start deepseek-harness-proxy.service >/dev/null 2>&1 || true
+              if [ "$repair_ok" -ne 1 ]; then
+                echo "repair_cleanup_started_services=true"
+              fi
+            }
+            trap cleanup EXIT
+
+            sudo -n python3 - <<'PY'
+          import json
+          import os
+          import shutil
+          import tempfile
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          workspace_path = Path('/root/.dsh/storages/workspace.json')
+          sessions_root = Path('/root/.dsh/sessions')
+          backup_dir = Path('/root/harness-backups')
+          backup_dir.mkdir(parents=True, exist_ok=True)
+
+          st = workspace_path.stat()
+          data = json.loads(workspace_path.read_text())
+          workspaces = data.get('tables', {}).get('workspaces', {})
+          order = data.get('global', {}).get('workspaceIds', [])
+
+          sid_to_bucket = {}
+          for journal in sessions_root.rglob('session.v3.jsonl.zstd'):
+              sid = journal.parent.name
+              if sid.startswith('session-'):
+                  sid_to_bucket.setdefault(sid, journal.parent.parent.name)
+
+          assigned = set()
+          bucket_owners = {}
+          for wid in order:
+              ws = workspaces.get(wid) or {}
+              ids = [x for x in ws.get('sessionIds', []) if isinstance(x, str)]
+              assigned.update(ids)
+              buckets = {sid_to_bucket[sid] for sid in ids if sid in sid_to_bucket}
+              for bucket in buckets:
+                  bucket_owners.setdefault(bucket, []).append(wid)
+
+          candidates = {}
+          unmatched = []
+          ambiguous = []
+          for sid, bucket in sorted(sid_to_bucket.items()):
+              if sid in assigned:
+                  continue
+              owners = bucket_owners.get(bucket, [])
+              if len(owners) == 1:
+                  candidates.setdefault(owners[0], []).append(sid)
+              elif len(owners) > 1:
+                  ambiguous.append((sid, bucket))
+              else:
+                  unmatched.append((sid, bucket))
+
+          total = sum(len(v) for v in candidates.values())
+          print('repair_candidates=' + str(total))
+          print('repair_ambiguous=' + str(len(ambiguous)))
+          print('repair_unmatched=' + str(len(unmatched)))
+          if ambiguous:
+              raise SystemExit('refusing repair: ambiguous exact-bucket ownership exists')
+          if total == 0:
+              print('repair_noop=true')
+              raise SystemExit(0)
+
+          stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+          backup = backup_dir / f'workspace-before-exact-bucket-repair-{stamp}.json'
+          shutil.copy2(workspace_path, backup)
+          print('backup=' + str(backup))
+
+          for wid, ids in candidates.items():
+              ws = workspaces.get(wid)
+              if not ws:
+                  raise SystemExit(f'missing workspace row: {wid}')
+              current = [x for x in ws.get('sessionIds', []) if isinstance(x, str)]
+              seen = set(current)
+              for sid in ids:
+                  if sid not in seen:
+                      current.append(sid)
+                      seen.add(sid)
+              ws['sessionIds'] = current
+              print('repaired=' + json.dumps({
+                  'id': wid,
+                  'title': ws.get('title') or wid,
+                  'added': len(ids),
+                  'registered_sessions_after': len(current),
+              }, ensure_ascii=False, sort_keys=True))
+
+          payload = json.dumps(data, ensure_ascii=False, indent=2) + '\n'
+          fd, tmp_name = tempfile.mkstemp(prefix='.workspace-repair-', suffix='.json', dir=str(workspace_path.parent))
+          try:
+              with os.fdopen(fd, 'w') as fh:
+                  fh.write(payload)
+                  fh.flush()
+                  os.fsync(fh.fileno())
+              os.chmod(tmp_name, st.st_mode)
+              os.chown(tmp_name, st.st_uid, st.st_gid)
+              json.loads(Path(tmp_name).read_text())
+              os.replace(tmp_name, workspace_path)
+          finally:
+              if os.path.exists(tmp_name):
+                  os.unlink(tmp_name)
+
+          verified = json.loads(workspace_path.read_text())
+          repaired_assigned = set()
+          for ws in verified.get('tables', {}).get('workspaces', {}).values():
+              repaired_assigned.update(x for x in ws.get('sessionIds', []) if isinstance(x, str))
+          visible = set(sid_to_bucket)
+          print('visible_session_journals=' + str(len(visible)))
+          print('assigned_visible_after=' + str(len(visible & repaired_assigned)))
+          print('ungrouped_visible_after=' + str(len(visible - repaired_assigned)))
+          print('WORKSPACE_REPAIR_WRITE_OK')
+          PY
+
+            sudo -n systemctl start deepseek-harness.service
+            sudo -n systemctl start deepseek-harness-proxy.service
+            repair_ok=1
+            trap - EXIT
+
+            echo
+            echo "== Post-repair service state =="
+            for unit in deepseek-harness.service deepseek-harness-proxy.service; do
+              systemctl show "$unit" --no-pager -p ActiveState -p SubState -p MainPID -p NRestarts
+            done
+
+            echo
+            echo "== Post-repair workspace audit =="
+            sudo -n python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          workspace_path = Path('/root/.dsh/storages/workspace.json')
+          sessions_root = Path('/root/.dsh/sessions')
+          data = json.loads(workspace_path.read_text())
+          workspaces = data.get('tables', {}).get('workspaces', {})
+          order = data.get('global', {}).get('workspaceIds', [])
+          sid_to_bucket = {}
+          for journal in sessions_root.rglob('session.v3.jsonl.zstd'):
+              sid = journal.parent.name
+              if sid.startswith('session-'):
+                  sid_to_bucket.setdefault(sid, journal.parent.parent.name)
+          assigned = set()
+          for wid in order:
+              ws = workspaces.get(wid) or {}
+              ids = [x for x in ws.get('sessionIds', []) if isinstance(x, str)]
+              assigned.update(ids)
+              print('workspace_after=' + json.dumps({
+                  'id': wid,
+                  'title': ws.get('title') or wid,
+                  'registered_sessions': len(ids),
+                  'existing_visible_sessions': sum(1 for sid in ids if sid in sid_to_bucket),
+              }, ensure_ascii=False, sort_keys=True))
+          visible = set(sid_to_bucket)
+          print('visible_session_journals=' + str(len(visible)))
+          print('assigned_visible=' + str(len(visible & assigned)))
+          print('ungrouped_visible=' + str(len(visible - assigned)))
+          PY
+
+            echo
+            echo "== Harness UI patch state =="
+            sudo -n grep -nE 'groupBy:|persist: "dsh.workspace.view' \
+              /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js | head -12 || true
+            echo
+            echo "== Harness helper state =="
+            curl -sS -o /dev/null -w 'helper_http=%{http_code}\n' --max-time 10 \
+              http://172.19.0.1:13082/cookie || true
           elif [ "$OPERATION" = "ghost_access_probe" ]; then
             echo "== Ghost deleted-branch GitHub events =="
             curl -fsSL --max-time 20 -H 'Accept: application/vnd.github+json' \
