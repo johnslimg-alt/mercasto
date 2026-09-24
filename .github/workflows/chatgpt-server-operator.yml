@@ -32,6 +32,7 @@ jobs:
         github.event.comment.body == 'RUN:security_smoke' ||
         github.event.comment.body == 'RUN:seo_aeo_smoke' ||
         github.event.comment.body == 'RUN:content_quality_audit' ||
+        github.event.comment.body == 'RUN:repair_dev_null:MERCASTO' ||
         github.event.comment.body == 'RUN:runner_health' ||
         github.event.comment.body == 'RUN:logs_frontend' ||
         github.event.comment.body == 'RUN:logs_backend' ||
@@ -72,6 +73,7 @@ jobs:
               'RUN:security_smoke': ['security_smoke', '', '160'],
               'RUN:seo_aeo_smoke': ['seo_aeo_smoke', '', '160'],
               'RUN:content_quality_audit': ['content_quality_audit', '', '160'],
+              'RUN:repair_dev_null:MERCASTO': ['repair_dev_null', 'MERCASTO', '160'],
               'RUN:runner_health': ['runner_health', '', '160'],
               'RUN:logs_frontend': ['logs_frontend', '', '200'],
               'RUN:logs_backend': ['logs_backend', '', '200'],
