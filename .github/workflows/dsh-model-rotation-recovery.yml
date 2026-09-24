@@ -19,7 +19,8 @@ jobs:
       (
         github.event.comment.body == 'RUN:dsh_rotation_preflight:MERCASTO' ||
         github.event.comment.body == 'RUN:dsh_rotation_install_zai:MERCASTO' ||
-        github.event.comment.body == 'RUN:dsh_rotation_install_zai-coding:MERCASTO'
+        github.event.comment.body == 'RUN:dsh_rotation_install_zai-coding:MERCASTO' ||
+        github.event.comment.body == 'RUN:dsh_rotation_install_deepseek4_free:MERCASTO'
       )
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -40,6 +41,9 @@ jobs:
               ;;
             RUN:dsh_rotation_install_zai-coding:MERCASTO)
               echo "mode=install_zai-coding" >> "$GITHUB_OUTPUT"
+              ;;
+            RUN:dsh_rotation_install_deepseek4_free:MERCASTO)
+              echo "mode=install_deepseek4_free" >> "$GITHUB_OUTPUT"
               ;;
             *)
               exit 64
@@ -145,6 +149,133 @@ jobs:
 
           if [ "$MODE" = "preflight" ]; then
             echo "DSH_ROTATION_PREFLIGHT_OK"
+            exit 0
+          fi
+
+          if [ "$MODE" = "install_deepseek4_free" ]; then
+            PROVIDER=deepseek-v4-free
+            MODEL='deepseek-ai/DeepSeek-V4-Flash-0731'
+            BASE_URL='https://q5dh1rfszfym23hj.us-east-2.aws.endpoints.huggingface.cloud/v1'
+            FREE_BACKUP_DIR=/root/.dsh/backups/deepseek4-free
+            FREE_STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+            FREE_BACKUP="$FREE_BACKUP_DIR/settings.yaml.pre-install.$FREE_STAMP"
+            install -d -m 0700 "$FREE_BACKUP_DIR"
+
+            echo "=== DEEPSEEK V4 FREE ENDPOINT PREFLIGHT ==="
+            cat >/tmp/dsh-deepseek4-free-request.json <<EOF
+          {"model":"$MODEL","messages":[{"role":"user","content":"Reply with exactly: DIRECT_DEEPSEEK4_FREE_OK"}],"temperature":0,"max_tokens":32}
+          EOF
+            endpoint_ok=0
+            for attempt in 1 2 3 4; do
+              code="$(
+                curl -sS --max-time 120 \
+                  -o /tmp/dsh-deepseek4-free-response.json \
+                  -w '%{http_code}' \
+                  -H 'Content-Type: application/json' \
+                  -X POST "$BASE_URL/chat/completions" \
+                  --data-binary @/tmp/dsh-deepseek4-free-request.json \
+                || true
+              )"
+              echo "endpoint_attempt=$attempt http=${code:-000}"
+              if [ "$code" = "200" ] && python3 - /tmp/dsh-deepseek4-free-response.json <<'PY'
+          import json,sys
+          try:
+              data=json.load(open(sys.argv[1],encoding="utf-8"))
+              choices=data.get("choices") or []
+              content=((choices[0].get("message") or {}).get("content") or "") if choices else ""
+              ok=bool(content.strip())
+              print("endpoint_completion=" + ("ok" if ok else "empty"))
+              raise SystemExit(0 if ok else 1)
+          except Exception:
+              print("endpoint_json=invalid")
+              raise SystemExit(1)
+          PY
+              then
+                endpoint_ok=1
+                break
+              fi
+              sleep 8
+            done
+            if [ "$endpoint_ok" -ne 1 ]; then
+              echo "DIRECT_ENDPOINT_UNAVAILABLE" >&2
+              exit 40
+            fi
+
+            cp -a "$SETTINGS" "$FREE_BACKUP"
+            chmod 0600 "$FREE_BACKUP"
+
+            free_rollback() {
+              echo "DEEPSEEK4_FREE_ROLLBACK"
+              cp -a "$FREE_BACKUP" "$SETTINGS"
+              systemctl restart deepseek-harness.service >/dev/null 2>&1 || true
+              systemctl restart deepseek-harness-proxy.service >/dev/null 2>&1 || true
+            }
+            trap free_rollback ERR
+
+            python3 - "$SETTINGS" "$PROVIDER" "$MODEL" "$BASE_URL" <<'PY'
+          import copy,os,sys,tempfile,yaml
+          from pathlib import Path
+
+          path=Path(sys.argv[1])
+          provider,model,base_url=sys.argv[2:5]
+          data=yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+          original_default=copy.deepcopy(data.get("agent-default-model"))
+
+          providers=data.setdefault("llm-pi-ai",{}).setdefault("providers",{})
+          providers[provider]={
+              "displayName":"DeepSeek V4 Flash 0731 Free",
+              "api":"openai-completions",
+              "baseURL":base_url,
+              "models":[{
+                  "id":model,
+                  "name":"DeepSeek V4 Flash 0731 Free",
+                  "contextWindow":393216,
+                  "input":["text"],
+              }],
+          }
+
+          if data.get("agent-default-model") != original_default:
+              raise RuntimeError("agent-default-model changed unexpectedly")
+
+          st=path.stat()
+          fd,tmp=tempfile.mkstemp(dir=str(path.parent),prefix=".settings.deepseek4-free.",text=True)
+          try:
+              with os.fdopen(fd,"w",encoding="utf-8") as h:
+                  yaml.safe_dump(data,h,sort_keys=False,allow_unicode=True)
+                  h.flush()
+                  os.fsync(h.fileno())
+              os.chmod(tmp,st.st_mode & 0o777)
+              os.replace(tmp,path)
+          finally:
+              if os.path.exists(tmp):
+                  os.unlink(tmp)
+          PY
+
+            python3 - "$SETTINGS" "$PROVIDER" "$MODEL" "$BASE_URL" <<'PY'
+          import sys,yaml
+          d=yaml.safe_load(open(sys.argv[1],encoding="utf-8")) or {}
+          provider,model,base=sys.argv[2:5]
+          route=(((d.get("llm-pi-ai") or {}).get("providers") or {}).get(provider) or {})
+          assert route.get("api") == "openai-completions"
+          assert route.get("baseURL") == base
+          assert not route.get("apiKeyEnv")
+          models=route.get("models") or []
+          assert any(isinstance(m,dict) and m.get("id")==model for m in models)
+          print("provider_config=ok")
+          print("provider="+provider)
+          print("model="+model)
+          PY
+
+            systemctl restart deepseek-harness.service
+            systemctl restart deepseek-harness-proxy.service
+            sleep 3
+            systemctl is-active deepseek-harness.service
+            systemctl is-active deepseek-harness-proxy.service
+            curl -fsSI --max-time 20 https://harness.flyaicrm.com/ | head -12
+
+            trap - ERR
+            rm -f /tmp/dsh-deepseek4-free-request.json /tmp/dsh-deepseek4-free-response.json
+            echo "DSH_DEEPSEEK4_FREE_INSTALL_OK provider=$PROVIDER model=$MODEL"
             exit 0
           fi
 
