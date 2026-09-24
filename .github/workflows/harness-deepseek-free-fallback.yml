@@ -15,15 +15,15 @@ jobs:
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 10
     steps:
-      - name: Enable working free DeepSeek V4.1 Flash
+      - name: Enable NVIDIA NIM Free DeepSeek V4.1 Flash
         shell: bash
         run: |
           set -euo pipefail
           SETTINGS=/root/.dsh/settings.yaml
-          BACKUP="/root/.dsh/settings.yaml.bak-free-v41-$(date -u +%Y%m%dT%H%M%SZ)"
+          BACKUP="/root/.dsh/settings.yaml.bak-nvidia-v41-$(date -u +%Y%m%dT%H%M%SZ)"
           sudo -n cp "$SETTINGS" "$BACKUP"
 
-          sudo -n perl -0pi -e 's{^agent-default-model:\n(?:[ \t].*\n)*}{agent-default-model:\n  provider: nvidia-deepseek\n  model: deepseek-ai/deepseek-v4.1-flash\n}m' "$SETTINGS"
+          sudo -n perl -0pi -e 's{^agent-default-model:\n(?:[ \t].*\n)*}{agent-default-model:\n  provider: nvidia\n  model: deepseek-ai/deepseek-v4.1-flash\n}m' "$SETTINGS"
 
           echo "=== CANDIDATE ==="
           sudo -n awk '
@@ -32,22 +32,22 @@ jobs:
             show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}
           ' "$SETTINGS" | head -10
 
-          rm -f /tmp/dsh-free-v41.out /tmp/dsh-free-v41.err
+          rm -f /tmp/dsh-nvidia-v41.out /tmp/dsh-nvidia-v41.err
           set +e
-          sudo -n -H /usr/bin/node /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js             --profile headless "Reply with exactly FREE_V41_OK. Do not use tools."             >/tmp/dsh-free-v41.out 2>/tmp/dsh-free-v41.err
+          sudo -n -H /usr/bin/node /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js             --profile headless "Reply with exactly NVIDIA_V41_OK. Do not use tools."             >/tmp/dsh-nvidia-v41.out 2>/tmp/dsh-nvidia-v41.err
           rc=$?
           set -e
 
-          echo "FREE_V41_EXIT=$rc"
-          if [ "$rc" -ne 0 ] || ! grep -q 'FREE_V41_OK' /tmp/dsh-free-v41.out; then
-            echo "FREE_V41_SMOKE=FAIL"
-            tail -30 /tmp/dsh-free-v41.err               | sed -E 's#sk-[A-Za-z0-9_-]+#<REDACTED>#g; s#nvapi-[A-Za-z0-9_-]+#<REDACTED>#g; s#Your api key: [^ ]+#Your api key: <REDACTED>#g'               || true
+          echo "NVIDIA_V41_EXIT=$rc"
+          if [ "$rc" -ne 0 ] || ! grep -q 'NVIDIA_V41_OK' /tmp/dsh-nvidia-v41.out; then
+            echo "NVIDIA_V41_SMOKE=FAIL"
+            tail -40 /tmp/dsh-nvidia-v41.err               | sed -E 's#sk-[A-Za-z0-9_-]+#<REDACTED>#g; s#nvapi-[A-Za-z0-9_-]+#<REDACTED>#g; s#Your api key: [^ ]+#Your api key: <REDACTED>#g'               || true
             sudo -n cp "$BACKUP" "$SETTINGS"
             echo "ROLLBACK=PASS"
             exit 1
           fi
 
-          echo "FREE_V41_SMOKE=PASS"
-          echo "SELECTED_PROVIDER=nvidia-deepseek"
+          echo "NVIDIA_V41_SMOKE=PASS"
+          echo "SELECTED_PROVIDER=nvidia"
           echo "SELECTED_MODEL=deepseek-ai/deepseek-v4.1-flash"
           echo "FINAL_SELECTION=PASS"
