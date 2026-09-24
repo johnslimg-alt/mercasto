@@ -75,6 +75,30 @@ export default function BlogArticleScreen({ shellProps = {} }) {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    if (article) return undefined;
+
+    const canonicalUrl = `${SITE_URL}/blog/${slug}`;
+
+    let robots = document.querySelector('meta[name="robots"]');
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.setAttribute('name', 'robots');
+      document.head.appendChild(robots);
+    }
+    robots.setAttribute('content', 'noindex,nofollow');
+
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', canonicalUrl);
+
+    return undefined;
+  }, [article, slug]);
+
   if (!article) {
     return (
       <GoldenPublicPageShell {...shellProps} testId="golden-blog-article-main" className="mcg-blog-article-page">
