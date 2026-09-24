@@ -609,19 +609,43 @@ PY
     print_header "Harness >1 MiB upload proxy smoke"
     smoke_file="$SERVER_OPERATOR_TMPDIR/harness-upload-smoke.bin"
     dd if=/dev/zero of="$smoke_file" bs=1M count=2 status=none
-    smoke_code="$(
-      curl -ksS -o "$SERVER_OPERATOR_TMPDIR/harness-upload-smoke.out" -w '%{http_code}' \
+
+    internal_code="$(
+      curl -sS -o "$SERVER_OPERATOR_TMPDIR/harness-upload-internal.out" -w '%{http_code}' \
+        --max-time 30 \
+        -X POST \
+        -H 'Host: harness.flyaicrm.com' \
+        -H 'Content-Type: application/octet-stream' \
+        --data-binary @"$smoke_file" \
+        http://172.19.0.1:13080/api/session/uploadFileBinary || true
+    )"
+    edge_code="$(
+      curl -ksS -o "$SERVER_OPERATOR_TMPDIR/harness-upload-edge.out" -w '%{http_code}' \
+        --max-time 30 \
+        --resolve harness.flyaicrm.com:443:127.0.0.1 \
+        -X POST \
+        -H 'Content-Type: application/octet-stream' \
+        --data-binary @"$smoke_file" \
+        https://harness.flyaicrm.com/api/session/uploadFileBinary || true
+    )"
+    public_code="$(
+      curl -ksS -o "$SERVER_OPERATOR_TMPDIR/harness-upload-public.out" -w '%{http_code}' \
         --max-time 30 \
         -X POST \
         -H 'Content-Type: application/octet-stream' \
         --data-binary @"$smoke_file" \
         https://harness.flyaicrm.com/api/session/uploadFileBinary || true
     )"
-    echo "harness_upload_2m_http=$smoke_code"
-    if [ "$smoke_code" = "000" ] || [ "$smoke_code" = "413" ]; then
-      echo "Harness upload proxy smoke failed with HTTP $smoke_code" >&2
-      false
-    fi
+
+    echo "harness_upload_2m_internal_http=$internal_code"
+    echo "harness_upload_2m_edge_http=$edge_code"
+    echo "harness_upload_2m_public_http=$public_code"
+    for code in "$internal_code" "$edge_code" "$public_code"; do
+      if [ "$code" = "000" ] || [ "$code" = "413" ]; then
+        echo "Harness upload proxy smoke failed with HTTP $code" >&2
+        false
+      fi
+    done
 
     trap - ERR
     echo "HARNESS_UPLOAD_PROXY_FIX_OK"

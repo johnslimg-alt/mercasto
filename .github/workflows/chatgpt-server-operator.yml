@@ -169,23 +169,40 @@ jobs:
               print(json.dumps({'path': item[0], 'name': item[1], 'version': item[2]}, sort_keys=True))
           PY
             echo
-            echo "== 2 MiB local upload POST codes =="
+            echo "== 2 MiB upload path codes =="
             smoke_file="$(mktemp /tmp/harness-upload-diag.XXXXXX)"
-            trap 'rm -f "$smoke_file"' EXIT
+            trap 'rm -f "$smoke_file" /tmp/harness-upload-diag-headers.*' EXIT
             dd if=/dev/zero of="$smoke_file" bs=1M count=2 status=none
-            for url in \
-              http://127.0.0.1:3081/api/session/uploadFileBinary \
-              http://127.0.0.1:3080/api/session/uploadFileBinary
-            do
+
+            probe_upload() {
+              label="$1"
+              shift
+              headers="$(mktemp /tmp/harness-upload-diag-headers.XXXXXX)"
               code="$(
-                curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+                curl -ksS -D "$headers" -o /dev/null -w '%{http_code}' --max-time 30 \
                   -X POST \
                   -H 'Content-Type: application/octet-stream' \
                   --data-binary @"$smoke_file" \
-                  "$url" || true
+                  "$@" || true
               )"
-              echo "$url -> $code"
-            done
+              server="$(awk 'BEGIN{IGNORECASE=1} /^server:/{sub(/^[^:]+:[[:space:]]*/, ""); gsub(/\\r/, ""); print; exit}' "$headers")"
+              echo "$label -> $code server=${server:-<none>}"
+              rm -f "$headers"
+            }
+
+            probe_upload "app_3081" \
+              http://127.0.0.1:3081/api/session/uploadFileBinary
+            probe_upload "app_3080" \
+              http://127.0.0.1:3080/api/session/uploadFileBinary
+            probe_upload "internal_13080" \
+              -H 'Host: harness.flyaicrm.com' \
+              http://172.19.0.1:13080/api/session/uploadFileBinary
+            probe_upload "edge_local_443" \
+              --resolve harness.flyaicrm.com:443:127.0.0.1 \
+              https://harness.flyaicrm.com/api/session/uploadFileBinary
+            probe_upload "public_443" \
+              https://harness.flyaicrm.com/api/session/uploadFileBinary
+
             rm -f "$smoke_file"
             trap - EXIT
           elif [ "$OPERATION" = "harness_workspace_audit" ]; then
