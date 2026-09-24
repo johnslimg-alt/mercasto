@@ -13,29 +13,33 @@ permissions:
 jobs:
   inspect:
     runs-on: [self-hosted, linux, docker]
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Inspect DeepSeek account route safely
+      - name: Test current Harness release in isolated install
         shell: bash
         run: |
           set -euo pipefail
-          echo "=== DSH VERSION ==="
-          sudo -n -H node -p "require('/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/package.json').version" 2>/dev/null || true
+          echo "PRODUCTION_DSH_VERSION=$(sudo -n -H node -p "require('/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/package.json').version")"
+          latest="$(npm view @deepseek-ai/dsh version)"
+          echo "NPM_LATEST_DSH_VERSION=$latest"
 
-          echo "=== ACCOUNT PACKAGES ==="
-          for p in             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-deepseek-account-platform             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-deepseek-account             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-llm-deepseek-account; do
-            if [ -d "$p" ]; then
-              echo "PRESENT $(basename "$p")"
+          testroot="/tmp/dsh-latest-inspect"
+          rm -rf "$testroot"
+          mkdir -p "$testroot"
+          cd "$testroot"
+          npm init -y >/dev/null 2>&1
+          npm install --no-audit --no-fund --ignore-scripts "@deepseek-ai/dsh@$latest" >/tmp/dsh-install.log 2>&1
+
+          echo "ISOLATED_DSH_VERSION=$(node -p "require('$testroot/node_modules/@deepseek-ai/dsh/package.json').version")"
+          for pkg in dsh-deepseek-account-platform dsh-llm-deepseek; do
+            if [ -d "$testroot/node_modules/@deepseek-ai/$pkg" ]; then
+              echo "LATEST_PACKAGE_PRESENT=$pkg"
             else
-              echo "MISSING $(basename "$p")"
+              echo "LATEST_PACKAGE_MISSING=$pkg"
             fi
           done
 
-          echo "=== ACCOUNT ROUTE REFERENCES ==="
-          grep -RIl --exclude='*.map' -E 'deepseek-account|deepseekAccount'             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-base             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-llm-deepseek*             /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-deepseek-account*             2>/dev/null | head -80 || true
+          echo "=== ACCOUNT ROUTE IN LATEST ==="
+          grep -RIl --exclude='*.map' -E 'deepseek-account|deepseekAccount'             "$testroot/node_modules/@deepseek-ai/dsh-base"             "$testroot/node_modules/@deepseek-ai/dsh-llm-deepseek"             "$testroot/node_modules/@deepseek-ai/dsh-deepseek-account-platform"             2>/dev/null | head -40 || true
 
-          echo "=== USER STATE FILENAMES ONLY ==="
-          sudo -n find /root/.dsh -maxdepth 4 -type f -printf '%p\n' 2>/dev/null             | grep -Ei 'account|auth|grant|credential|deepseek'             | sed 's#^/root/.dsh/#~/.dsh/#'             | head -80 || true
-
-          echo "=== SETTINGS ROUTE NAMES ONLY ==="
-          sudo -n grep -E '^[[:space:]]*(provider:|[A-Za-z0-9_-]+:)$' /root/.dsh/settings.yaml 2>/dev/null             | grep -Ei 'deepseek|provider'             | head -120 || true
+          echo "PRODUCTION_UNCHANGED=true"
