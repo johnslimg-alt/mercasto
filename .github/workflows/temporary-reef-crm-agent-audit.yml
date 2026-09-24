@@ -102,6 +102,76 @@ jobs:
             ' 2>/dev/null || true
           done
 
+          echo '== reef source model identifiers =='
+          sudo -n sh -lc '
+            if [ -d /root/reef-crm ]; then
+              grep -RhoEi "(deepseek[-_./:a-zA-Z0-9]*|mimo[-_./:a-zA-Z0-9]*|gpt[-_./:a-zA-Z0-9]*|openai|claude[-_./:a-zA-Z0-9]*|sonnet[-_./:a-zA-Z0-9]*|haiku[-_./:a-zA-Z0-9]*|qwen[-_./:a-zA-Z0-9]*|glm[-_./:a-zA-Z0-9]*|gemini[-_./:a-zA-Z0-9]*|kimi[-_./:a-zA-Z0-9]*|minimax[-_./:a-zA-Z0-9]*|ollama|openrouter|groq)" /root/reef-crm \
+                --include="*.js" --include="*.mjs" --include="*.cjs" --include="*.ts" --include="*.tsx" --include="*.json" --include="*.yaml" --include="*.yml" --include="*.py" --include="*.sh" \
+                --exclude=".env" --exclude=".env.*" --exclude="*.log" --exclude="*.db" --exclude="*.sqlite*" \
+                --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=backups --exclude-dir=logs --exclude-dir=data 2>/dev/null \
+                | tr -d "\"'\''" | sort -fu | head -200
+            fi
+          ' || true
+
+          echo '== reef agent-role filenames/role tokens =='
+          sudo -n sh -lc '
+            if [ -d /root/reef-crm ]; then
+              find /root/reef-crm -maxdepth 7 -type f \
+                \( -iname "*agent*" -o -iname "*council*" -o -iname "*model*" -o -iname "*llm*" -o -iname "*seller*" -o -iname "*sales*" -o -iname "*prompt*" -o -iname "*autonomous*" \) \
+                -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/backups/*" -not -path "*/data/*" -print 2>/dev/null | sort -u | head -240
+              echo "-- role tokens --"
+              grep -RhoEi "(chairman|fact[ _-]?checker|red[ _-]?team|critic|analyst|engineer|seller|sales[ _-]?agent|salesperson|closer|qualifier|translator|vision[ _-]?agent|voice[ _-]?agent)" /root/reef-crm \
+                --include="*.js" --include="*.mjs" --include="*.ts" --include="*.tsx" --include="*.json" --include="*.yaml" --include="*.yml" --include="*.py" --include="*.sh" \
+                --exclude=".env" --exclude=".env.*" --exclude="*.log" --exclude="*.db" --exclude="*.sqlite*" \
+                --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=backups --exclude-dir=logs --exclude-dir=data 2>/dev/null \
+                | tr "[:upper:]" "[:lower:]" | sort -u | head -120
+            fi
+          ' || true
+
+          echo '== relevant reef services =='
+          for u in reef-org-autonomous.service reef-n8n-ai-guard.service reef-bot-cycle-guard.service reef-core-health.service reef-mcp-agent.service; do
+            systemctl show "$u" --no-pager -p Id -p ActiveState -p SubState -p FragmentPath -p ExecStart 2>/dev/null || true
+          done
+
+          echo '== active n8n AI/agent nodes (sanitized) =='
+          docker exec n8n sh -lc '
+            set -eu
+            tmp=/tmp/chatgpt-agent-audit-workflows.json
+            rm -f "$tmp"
+            n8n export:workflow --all --output="$tmp" >/dev/null 2>&1 || exit 0
+            node - "$tmp" <<"NODE"
+const fs=require("fs");
+const p=process.argv[2];
+let d=JSON.parse(fs.readFileSync(p,"utf8"));
+if(!Array.isArray(d)) d=[d];
+const re=/(agent|llm|openai|anthropic|claude|gemini|google.*chat|groq|ollama|deepseek|mimo|qwen|glm|chat.*model|language.*model|ai)/i;
+const keyRe=/(model|provider|baseurl|endpoint)/i;
+for (const w of d) {
+  if (!w || !Array.isArray(w.nodes)) continue;
+  const selected=[];
+  for (const n of w.nodes) {
+    const hay=(n.name||"")+" "+(n.type||"");
+    if(!re.test(hay)) continue;
+    const safe={name:n.name||"",type:n.type||""};
+    const params=n.parameters||{};
+    const picked={};
+    for(const [k,v] of Object.entries(params)){
+      if(!keyRe.test(k)) continue;
+      if(/key|token|secret|password|credential|auth/i.test(k)) continue;
+      if(typeof v==="string" && v.length<=160) picked[k]=v;
+      else if(typeof v==="number" || typeof v==="boolean") picked[k]=v;
+    }
+    if(Object.keys(picked).length) safe.params=picked;
+    selected.push(safe);
+  }
+  if(selected.length) {
+    console.log(JSON.stringify({workflow:w.name||"",active:!!w.active,nodes:selected}));
+  }
+}
+NODE
+            rm -f "$tmp"
+          ' 2>/dev/null | head -240 || true
+
           echo '== host unit names =='
           systemctl list-units --type=service --all --no-legend 2>/dev/null |
             awk '{print $1}' | grep -Ei 'reef|crm|whatsapp|n8n|bot|ai' | head -120 || true
