@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.9
+// @version      9.0.0-alpha.2-nonstop.10
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.9';
+const VER = '9.0.0-alpha.2-nonstop.10';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -313,6 +313,14 @@ function queryAll(selectors) {
   }
   return out;
 }
+let lastExternalEditable = null;
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if (!el || el.closest?.('#gitl9')) return;
+  const isText = /^(TEXTAREA|INPUT)$/.test(el.tagName || '') || el.isContentEditable || ['true','plaintext-only'].includes(el.getAttribute?.('contenteditable'));
+  if (isText) lastExternalEditable = el;
+}, true);
+
 function editableComposerCandidate(el, requireGeometry = false) {
   if (!el || !el.isConnected || el.closest?.('#gitl9')) return false;
   if (el.getAttribute?.('aria-disabled') === 'true' || el.disabled) return false;
@@ -330,6 +338,8 @@ function composerScore(el) {
   if (el.getAttribute?.('name') === 'prompt-textarea') score += 180;
   if (el.getAttribute?.('role') === 'textbox') score += 80;
   if (el.closest?.('form')) score += 60;
+  if (/^(TEXTAREA|INPUT)$/.test(el.tagName || '')) score += 70;
+  if (el.isContentEditable || ['true','plaintext-only'].includes(el.getAttribute?.('contenteditable'))) score += 70;
   if (visible(el)) score += 40;
   const r = el.getBoundingClientRect?.();
   if (r) score += Math.max(0, Math.min(30, Math.round((r.top / Math.max(1, window.innerHeight)) * 30)));
@@ -365,12 +375,23 @@ function composer() {
 
   const fallbackSelectors = [
     'div[contenteditable="true"][role="textbox"]',
+    '[contenteditable="true"]',
+    '[contenteditable="plaintext-only"]',
     'textarea[name*="prompt" i]',
-    'textarea[placeholder]'
+    'textarea[placeholder]',
+    'textarea'
   ];
-  const candidates = queryAll(fallbackSelectors).filter(el => editableComposerCandidate(el, true));
-  if (!candidates.length) return null;
-  return candidates.sort((a,b) => composerScore(b) - composerScore(a))[0];
+  const candidates = queryAll(fallbackSelectors).filter(el => editableComposerCandidate(el, false));
+  if (lastExternalEditable && editableComposerCandidate(lastExternalEditable, false)) candidates.push(lastExternalEditable);
+  const unique = [...new Set(candidates)].filter(el => {
+    if (!editableComposerCandidate(el, false)) return false;
+    const r = el.getBoundingClientRect?.();
+    if (!r) return true;
+    // Prefer controls in the lower 60% of the viewport; accept zero-geometry host nodes as a fallback.
+    return (!r.width && !r.height) || r.bottom >= window.innerHeight * 0.4;
+  });
+  if (!unique.length) return null;
+  return unique.sort((a,b) => composerScore(b) - composerScore(a))[0];
 }
 async function waitForComposer(timeoutMs = 5000) {
   const started = now();
@@ -960,7 +981,9 @@ async function play(options = {}) {
     fail('PLAY-INPUT', 'Current chat composer was not found after retry.', {
       host: HOST.id,
       url: location.href,
-      selectors: HOST.input.slice()
+      selectors: HOST.input.slice(),
+      editableCount: document.querySelectorAll('[contenteditable="true"],[contenteditable="plaintext-only"],textarea').length,
+      rememberedEditable: !!(lastExternalEditable && lastExternalEditable.isConnected)
     });
     return;
   }
