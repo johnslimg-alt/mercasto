@@ -15,71 +15,39 @@ jobs:
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 15
     steps:
-      - name: Inspect active Harness configuration safely
+      - name: Verify direct DeepSeek readiness
         shell: bash
         run: |
           set -euo pipefail
-          echo "=== HARNESS VERSION ==="
-          node -p "require('/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/package.json').version" 2>/dev/null || true
+          echo "=== VERSION ==="
+          node -p "require('/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/package.json').version" || true
 
-          echo "=== SERVICE UNIT ==="
-          sudo -n systemctl cat deepseek-harness.service 2>/dev/null \
-            | sed -E 's#((KEY|TOKEN|SECRET|PASSWORD)[A-Za-z0-9_]*=)[^[:space:]]+#\1<REDACTED>#Ig' \
-            || systemctl cat deepseek-harness.service 2>/dev/null \
-            | sed -E 's#((KEY|TOKEN|SECRET|PASSWORD)[A-Za-z0-9_]*=)[^[:space:]]+#\1<REDACTED>#Ig' \
+          echo "=== DIRECT CONFIG ==="
+          sudo -n awk '
+            BEGIN{show=0}
+            /^llm-deepseek:/{show=1}
+            show{print}
+            show && /^[^[:space:]].*:/ && $0 !~ /^llm-deepseek:/ {exit}
+          ' /root/.dsh/settings.yaml 2>/dev/null | head -120 || true
+
+          echo "=== DEFAULT MODEL ==="
+          sudo -n awk '
+            BEGIN{show=0}
+            /^agent-default-model:/{show=1}
+            show{print}
+            show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}
+          ' /root/.dsh/settings.yaml 2>/dev/null | head -20 || true
+
+          echo "=== DEEPSEEK CREDENTIAL REFS (SECRET REDACTED) ==="
+          sudo -n grep -n -C 4 'DEEPSEEK_API_KEY' /root/.dsh/.credentials.yaml 2>/dev/null \
+            | sed -E 's#(^[[:space:]-]*value:[[:space:]]*).*#\1<REDACTED>#; s#(^[[:space:]-]*(secret|token|key):[[:space:]]*).*#\1<REDACTED>#I' \
             || true
 
+          echo "=== LISTEN SOCKETS ==="
           pid="$(pgrep -f '/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js web' | head -1 || true)"
-          echo "HARNESS_PID=$pid"
           if [ -n "$pid" ]; then
-            echo "=== PROCESS CWD ==="
-            sudo -n readlink -f "/proc/$pid/cwd" 2>/dev/null || readlink -f "/proc/$pid/cwd" 2>/dev/null || true
-            echo "=== SELECTED ENV NAMES ==="
-            if sudo -n test -r "/proc/$pid/environ" 2>/dev/null; then
-              sudo -n tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null \
-                | grep -E '^(DSH_HOME|HOME|DEEPSEEK_BASE_URL|DEEPSEEK_API_KEY|NODE_ENV)=' \
-                | sed -E 's#(DEEPSEEK_API_KEY=).*#\1<REDACTED>#' || true
-            elif [ -r "/proc/$pid/environ" ]; then
-              tr '\0' '\n' < "/proc/$pid/environ" \
-                | grep -E '^(DSH_HOME|HOME|DEEPSEEK_BASE_URL|DEEPSEEK_API_KEY|NODE_ENV)=' \
-                | sed -E 's#(DEEPSEEK_API_KEY=).*#\1<REDACTED>#' || true
-            fi
+            sudo -n ss -ltnp 2>/dev/null | grep "pid=$pid," || true
           fi
 
-          echo "=== DSH CONFIG FILES ==="
-          for base in /root/.dsh /home/github-runner/.dsh /opt/dsh-rc2 /var/lib/deepseek-harness /etc/deepseek-harness; do
-            if [ -e "$base" ]; then
-              echo "--- $base"
-              sudo -n find "$base" -maxdepth 4 -type f \( -name 'settings.yaml' -o -name '.credentials.yaml' -o -name '*.patch.yml' -o -name '*.patch.yaml' \) -printf '%p\n' 2>/dev/null \
-                || find "$base" -maxdepth 4 -type f \( -name 'settings.yaml' -o -name '.credentials.yaml' -o -name '*.patch.yml' -o -name '*.patch.yaml' \) -printf '%p\n' 2>/dev/null \
-                || true
-            fi
-          done
-
-          settings=""
-          for p in /root/.dsh/settings.yaml /home/github-runner/.dsh/settings.yaml; do
-            if sudo -n test -f "$p" 2>/dev/null || [ -f "$p" ]; then settings="$p"; break; fi
-          done
-          if [ -n "$settings" ]; then
-            echo "=== SETTINGS REDACTED: $settings ==="
-            (sudo -n cat "$settings" 2>/dev/null || cat "$settings") \
-              | sed -E 's#(^[[:space:]]*[A-Za-z0-9_.-]*(key|token|secret|password)[A-Za-z0-9_.-]*:[[:space:]]*).*#\1<REDACTED>#Ig' \
-              | head -400
-          fi
-
-          creds=""
-          for p in /root/.dsh/.credentials.yaml /home/github-runner/.dsh/.credentials.yaml; do
-            if sudo -n test -f "$p" 2>/dev/null || [ -f "$p" ]; then creds="$p"; break; fi
-          done
-          if [ -n "$creds" ]; then
-            echo "=== CREDENTIAL TOP-LEVEL KEYS ONLY: $creds ==="
-            (sudo -n cat "$creds" 2>/dev/null || cat "$creds") \
-              | awk -F: '/^[A-Za-z0-9_.-]+:/ {print $1":"}'
-          fi
-
-          echo "=== PACKAGE DEEPSEEK DEFAULTS ==="
-          grep -RInsE 'deepseek-official|deepseek-v4-flash|deepseek-flash|DEEPSEEK_API_KEY|DEEPSEEK_BASE_URL' \
-            /opt/dsh-rc2/node_modules/@deepseek-ai 2>/dev/null \
-            | head -200 \
-            | sed -E 's#((KEY|TOKEN|SECRET|PASSWORD)[A-Za-z0-9_]*[[:space:]]*[:=][[:space:]]*)[^[:space:]]+#\1<REDACTED>#Ig' \
-            || true
+          echo "=== CLI HELP ==="
+          node /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js --help 2>&1 | head -100 || true
