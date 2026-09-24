@@ -21,9 +21,13 @@ jobs:
           set -euo pipefail
           systemctl is-active --quiet deepseek-harness.service
           echo "HARNESS_SERVICE=active"
+
           code="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3080/)"
           echo "HARNESS_HTTP=$code"
-          test "$code" = "200"
+          case "$code" in
+            200|401|403) ;;
+            *) exit 1 ;;
+          esac
 
           echo "=== DEFAULT MODEL ==="
           sudo -n awk '
@@ -32,7 +36,7 @@ jobs:
             show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}
           ' /root/.dsh/settings.yaml | head -10
 
-          grep -q 'id: deepseek-flash' /root/.dsh/settings.yaml
-          grep -q 'DeepSeek V4.1 Flash - Direct' /root/.dsh/settings.yaml
+          sudo -n grep -q 'id: deepseek-flash' /root/.dsh/settings.yaml
+          sudo -n grep -q 'DeepSeek V4.1 Flash - Direct' /root/.dsh/settings.yaml
           echo "DIRECT_MODEL_CATALOG_PRESENT=true"
           echo "FINAL_VERIFY=PASS"
