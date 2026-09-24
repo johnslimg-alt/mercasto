@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.8
+// @version      9.0.0-alpha.2-nonstop.9
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.8';
+const VER = '9.0.0-alpha.2-nonstop.9';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -224,7 +224,9 @@ const PROFILES = [
       '#prompt-textarea[contenteditable="true"]',
       '#prompt-textarea[contenteditable="plaintext-only"]',
       '#prompt-textarea',
+      '[data-testid="prompt-textarea"]',
       'div.ProseMirror[contenteditable="true"][role="textbox"]',
+      'div.ProseMirror[contenteditable="true"]',
       'div[contenteditable="true"][role="textbox"][aria-label*="Chat" i]',
       'div[contenteditable="true"][role="textbox"][aria-label*="Message" i]',
       'textarea[name="prompt-textarea"]',
@@ -311,36 +313,62 @@ function queryAll(selectors) {
   }
   return out;
 }
-function validComposerCandidate(el) {
-  if (!el || !visible(el) || el.closest?.('#gitl9')) return false;
+function editableComposerCandidate(el, requireGeometry = false) {
+  if (!el || !el.isConnected || el.closest?.('#gitl9')) return false;
   if (el.getAttribute?.('aria-disabled') === 'true' || el.disabled) return false;
+  if (requireGeometry && !visible(el)) return false;
   if (/^(TEXTAREA|INPUT)$/.test(el.tagName || '')) return !el.readOnly;
   return el.isContentEditable || ['true','plaintext-only'].includes(el.getAttribute?.('contenteditable'));
 }
 function composerScore(el) {
-  if (!validComposerCandidate(el)) return -1;
+  if (!editableComposerCandidate(el, false)) return -1;
   let score = 0;
-  if (el.id === 'prompt-textarea') score += 200;
+  if (el.id === 'prompt-textarea') score += 500;
+  if (el.getAttribute?.('data-testid') === 'prompt-textarea') score += 450;
+  if (el.classList?.contains('ProseMirror')) score += 300;
+  if (el.getAttribute?.('aria-label') === 'Chat with ChatGPT') score += 220;
   if (el.getAttribute?.('name') === 'prompt-textarea') score += 180;
-  if (el.classList?.contains('ProseMirror')) score += 80;
-  if (el.getAttribute?.('role') === 'textbox') score += 40;
-  if (el.closest?.('form')) score += 20;
+  if (el.getAttribute?.('role') === 'textbox') score += 80;
+  if (el.closest?.('form')) score += 60;
+  if (visible(el)) score += 40;
   const r = el.getBoundingClientRect?.();
   if (r) score += Math.max(0, Math.min(30, Math.round((r.top / Math.max(1, window.innerHeight)) * 30)));
   return score;
 }
+function composerFromSendButton() {
+  const send = queryFirst(HOST.send);
+  if (!send) return null;
+  for (let node = send.parentElement, depth = 0; node && depth < 10; node = node.parentElement, depth++) {
+    const candidates = [
+      ...node.querySelectorAll?.('#prompt-textarea, [data-testid="prompt-textarea"], div.ProseMirror[contenteditable="true"], div[contenteditable="true"][role="textbox"]') || []
+    ].filter(el => editableComposerCandidate(el, false));
+    if (candidates.length) return candidates.sort((a,b) => composerScore(b) - composerScore(a))[0];
+  }
+  return null;
+}
 function composer() {
-  const direct = queryAll(HOST.input).filter(validComposerCandidate);
-  if (direct.length) return direct.sort((a,b) => composerScore(b) - composerScore(a))[0];
-  // Host DOM changes frequently. Fall back to editable text controls, but never Ghost's own UI.
-  const fallbackSelectors = [
+  // Strong ChatGPT selectors are accepted even if the host reports zero geometry during a React transition.
+  const strongSelectors = [
+    '#prompt-textarea',
+    '[data-testid="prompt-textarea"]',
     'div.ProseMirror[contenteditable="true"]',
+    'div[role="textbox"][aria-label="Chat with ChatGPT"]'
+  ];
+  const strong = queryAll(strongSelectors).filter(el => editableComposerCandidate(el, false));
+  if (strong.length) return strong.sort((a,b) => composerScore(b) - composerScore(a))[0];
+
+  const nearSend = composerFromSendButton();
+  if (nearSend) return nearSend;
+
+  const direct = queryAll(HOST.input).filter(el => editableComposerCandidate(el, true));
+  if (direct.length) return direct.sort((a,b) => composerScore(b) - composerScore(a))[0];
+
+  const fallbackSelectors = [
     'div[contenteditable="true"][role="textbox"]',
     'textarea[name*="prompt" i]',
-    'textarea[placeholder]',
-    'textarea'
+    'textarea[placeholder]'
   ];
-  const candidates = queryAll(fallbackSelectors).filter(validComposerCandidate);
+  const candidates = queryAll(fallbackSelectors).filter(el => editableComposerCandidate(el, true));
   if (!candidates.length) return null;
   return candidates.sort((a,b) => composerScore(b) - composerScore(a))[0];
 }
@@ -1324,7 +1352,7 @@ function render() {
   const prog = progressSummary();
   panel.classList.toggle('collapsed', panelCollapsed);
   panel.innerHTML = trustedHTML(`
-    <div class="rail" data-a="expand" title="Expand Ghost · ${esc(S.mode)} · ${VER}"><span class="ghost">👻</span><span class="arrow">◀</span><span class="railstate">${S.mode==='RUNNING'?'●':'○'}</span><span class="mini">GHOST · .8</span></div>
+    <div class="rail" data-a="expand" title="Expand Ghost · ${esc(S.mode)} · ${VER}"><span class="ghost">👻</span><span class="arrow">◀</span><span class="railstate">${S.mode==='RUNNING'?'●':'○'}</span><span class="mini">GHOST · .9</span></div>
     <div class="head"><span class="brand">👻 GHOST</span><span class="headtools"><button class="collapsebtn" data-a="collapse" title="Minimize Ghost to the side">▶</button><button class="helpbtn" data-a="help">? Help</button><span class="meta">${esc(HOST.id)} · ${VER}</span></span></div>
     <div class="tabs"><button data-tab="play" class="${S.tab==='play'?'on':''}">Play</button><button data-tab="prompt" class="${S.tab==='prompt'?'on':''}">Prompt</button><button data-tab="aoa" class="${S.tab==='aoa'?'on':''}">AoA</button><button data-tab="export" class="${S.tab==='export'?'on':''}">Export</button><button data-tab="settings" class="${S.tab==='settings'?'on':''}">Settings</button></div>
     <div class="status"><b>${esc(S.mode)}</b> · round ${S.round}/${S.max} · <b>${VER}</b><br>${esc(S.detail)}<div class="progline"><span style="width:${prog.roundPct}%"></span></div><div class="tiny">${prog.stages ? "Workflow: "+esc(prog.workflow)+" · "+(prog.stage ? "stage "+prog.stage.step+"/"+prog.stage.total : prog.stages+" stages · waiting for explicit stage") : "Manual workflow"}</div></div>
