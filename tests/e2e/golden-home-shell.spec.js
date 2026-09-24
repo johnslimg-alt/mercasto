@@ -35,8 +35,10 @@ test('approved desktop home owns its shell and controls', async ({ page }, testI
   const header = page.getByTestId('golden-header');
   await expect(header).toBeVisible();
   await expect(page.locator('.site-header')).toBeHidden();
-  await expect(header.locator('input')).toHaveCount(0);
+  await expect(header.locator('input')).toHaveCount(1);
   await expect(page.getByTestId('golden-desktop-search-input')).toBeVisible();
+  await expect(page.getByTestId('golden-header-publish')).toBeVisible();
+  await expect(page.getByTestId('golden-reference-hero')).toBeVisible();
 
   const [brand, location] = await Promise.all([
     header.locator('.mcg-brand').boundingBox(),

@@ -149,6 +149,14 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run ${{ matrix.shard }} regression
         run: bash scripts/frontend-quality-shard.sh '${{ matrix.shard }}' '${{ matrix.port }}'
+      - name: Upload Golden home reference screenshots
+        if: always() && matrix.shard == 'critical'
+        uses: actions/upload-artifact@v6
+        with:
+          name: golden-home-reference-${{ github.sha }}
+          path: test-results/reference-home/*.png
+          if-no-files-found: ignore
+          retention-days: 7
 
   webkit:
     name: WebKit public smoke

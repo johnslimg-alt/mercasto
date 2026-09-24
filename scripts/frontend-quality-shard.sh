@@ -89,6 +89,7 @@ case "${shard}" in
       tests/e2e/consent-preferences-entry-race.spec.js \
       tests/e2e/header-geometry.spec.js \
       tests/e2e/header-geometry-scrollbar.spec.js tests/e2e/sticky-header-offsets.spec.js tests/e2e/ai-brand-positioning.spec.js \
+      tests/e2e/golden-home-shell.spec.js tests/e2e/golden-home-reference-parity.spec.js \
       --project=chromium-desktop --workers=1 --retries=0 --reporter=list
     ;;
   catalog)

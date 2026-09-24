@@ -10,9 +10,9 @@ test('HomeScreen delegates discovery to the approved responsive home', () => {
   const goldenHome = read('src/components/home/MercastoGoldenHome.jsx');
   assert.match(home, /<MercastoGoldenHome/);
   assert.match(home, /lang=\{lang\}/);
-  assert.match(goldenHome, /mcg-cities/);
+  assert.match(goldenHome, /mcg-ref-cities/);
   assert.match(goldenHome, /mcg-recents/);
-  assert.match(goldenHome, /mcg-bottom-content/);
+  assert.match(goldenHome, /mcg-ref-footer/);
 });
 
 test('extracted sections preserve search, city and newsletter behavior', () => {
@@ -48,4 +48,17 @@ test('home interaction feedback is explicit in every active language', async () 
   ]) {
     assert.equal(goldenHome.includes(stale) || sections.includes(stale), false, stale);
   }
+});
+
+
+test('Golden home keeps category and account interactions semantically correct', () => {
+  const goldenHome = read('src/components/home/MercastoGoldenHome.jsx');
+  const goldenHeader = read('src/components/shell/MercastoGoldenHeader.jsx');
+
+  assert.match(goldenHome, /\['Niños','infantil','users'\]/);
+  assert.match(goldenHome, /\['Negocios','negocios','building'\]/);
+  assert.match(goldenHome, /infantil:'\/infantil'/);
+  assert.match(goldenHome, /negocios:'\/negocios'/);
+  assert.match(goldenHome, /accountLabel=\{user \? \(t\.my_account \|\| 'Mi cuenta'\) : \(t\.login \|\| 'Iniciar sesión'\)\}/);
+  assert.match(goldenHeader, /accountTextMode \? <><Icon name="user" size=\{17\}\/><span>\{accountLabel \|\| t\.login \|\| 'Iniciar sesión'\}<\/span><\/>/);
 });

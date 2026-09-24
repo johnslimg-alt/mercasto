@@ -41,7 +41,7 @@ test('header uses compact geometry and removes the redundant AI strip', () => {
 test('approved home keeps distinct responsive discovery layouts', () => {
   assert.equal(home.includes('HERO STATS'), false);
   assert.ok(home.includes('mcg-desktop'));
-  assert.ok(home.includes('mcg-cats'));
+  assert.ok(home.includes('mcg-ref-cats'));
   assert.ok(home.includes('mcg-tablet'));
   assert.ok(home.includes('mcg-mobile'));
   assert.match(homeCss, /@media\(max-width:1179px\) and \(min-width:768px\)/);

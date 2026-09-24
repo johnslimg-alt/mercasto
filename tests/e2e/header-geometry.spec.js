@@ -31,7 +31,7 @@ test('desktop Golden Header keeps the approved single-row geometry', async ({ pa
     const header = page.getByTestId('golden-header');
     await expect(header).toBeVisible();
     await expect(page.locator('.site-header')).toBeHidden();
-    await expect(header.locator('input')).toHaveCount(0);
+    await expect(header.locator('input')).toHaveCount(1);
     await expect(page.getByTestId('golden-desktop-search-input')).toBeVisible();
 
     const headerBox = await header.boundingBox();
@@ -111,7 +111,9 @@ test('Golden Header guest account control is named and keyboard operable', async
     expect(style.width).toBeGreaterThanOrEqual(44);
     expect(style.height).toBeGreaterThanOrEqual(44);
   } else {
-    expect(Math.abs(style.width - style.height)).toBeLessThanOrEqual(2);
+    await expect(account).toHaveClass(/mcg-account-text/);
+    expect(style.height).toBeGreaterThanOrEqual(44);
+    expect(style.width).toBeGreaterThan(style.height);
   }
   expect(parseFloat(style.outlineWidth)).toBeGreaterThanOrEqual(2);
   expect(style.outlineColor).toMatch(/^rgba?\(132, 204, 22(?:, (?:0\.55|1))?\)$/);

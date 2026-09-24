@@ -42,9 +42,9 @@ const P = {
 };
 function Icon({name,size=22}){return <svg className="mcg-icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{P[name]||P.spark}</svg>}
 
-const cats=[['Autos','motor','car'],['Inmuebles','inmobiliaria','building'],['Electrónica','electronica','phone'],['Moda','moda','shirt'],['Hogar','hogar','sofa'],['Deportes','ocio','ball'],['Mascotas','mascotas','paw'],['Trabajo','empleo','briefcase'],['Servicios','servicios','tool'],['Más','productos','more']];
+const cats=[['Autos','motor','car'],['Inmuebles','inmobiliaria','building'],['Electrónica','electronica','phone'],['Hogar','hogar','sofa'],['Moda','moda','shirt'],['Empleo','empleo','briefcase'],['Servicios','servicios','tool'],['Mascotas','mascotas','paw'],['Deportes','ocio','ball'],['Niños','infantil','users'],['Negocios','negocios','building'],['Más','productos','more']];
 const col=[['Vive tu ciudad','/marketing/clasificados-banner-square.png'],['Tecnología','/seller-dashboard-mockup.jpg'],['Hogar con estilo','/og-default-1200x630.jpg'],['Deporte y aventura','/marketing/clasificados-banner-1350.png']];
-const cities=[['Ciudad de México','Ciudad de México'],['Guadalajara','Jalisco'],['Monterrey','Nuevo León'],['Puebla','Puebla'],['Querétaro','Querétaro']];
+const cities=[['Ciudad de México','Ciudad de México'],['Guadalajara','Jalisco'],['Monterrey','Nuevo León'],['Puebla','Puebla'],['Mérida','Yucatán'],['Cancún','Quintana Roo'],['Tijuana','Baja California'],['León','Guanajuato']];
 const languageCodes=['es','en','pt','fr','zh','ko','de','it','ar','ru','ja'];
 
 function imageFor(ad,getImageUrl){const x=ad&& (ad.image_url||ad.image||ad.thumbnail);if(!x)return '/og-default-1200x630.jpg';try{return getImageUrl?getImageUrl(x):x}catch{return x}}
@@ -58,26 +58,134 @@ export default function MercastoGoldenHome({serverAds=[],featuredAds=[],executeS
  React.useEffect(()=>{document.body.classList.add('mc-golden-home-active','mc-golden-shell-active');return()=>document.body.classList.remove('mc-golden-home-active','mc-golden-shell-active')},[]);
  const search=()=>{setSearchQuery&&setSearchQuery(q);executeSearch&&executeSearch(q,null,undefined,{pathname:'/listings',source:'homepage_search'})};
  const searchTerm=term=>{setQ(term);setSearchQuery&&setSearchQuery(term);executeSearch&&executeSearch(term,null,undefined,{pathname:'/listings',source:'homepage_recent_search'})};
- const category=s=>{events.categorySelected(s,{source:'homepage_category_rail'});setActiveCat&&setActiveCat(s);const routes={motor:'/motor',inmobiliaria:'/inmuebles',electronica:'/electronica',moda:'/moda',hogar:'/hogar',ocio:'/ocio',mascotas:'/mascotas',empleo:'/empleos',servicios:'/servicios',productos:'/productos'};nav(routes[s]||'/listings')};
+ const category=s=>{events.categorySelected(s,{source:'homepage_category_rail'});const routes={motor:'/motor',inmobiliaria:'/inmuebles',electronica:'/electronica',moda:'/moda',hogar:'/hogar',ocio:'/ocio',mascotas:'/mascotas',empleo:'/empleos',servicios:'/servicios',infantil:'/infantil',negocios:'/negocios',productos:'/productos'};nav(routes[s]||'/listings')};
  const publish=()=>nav('/post');
  const city=(label,state)=>{setSearchLocationInput&&setSearchLocationInput(label);setSelectedState&&setSelectedState(state||'');executeSearch&&executeSearch('',label,undefined,{pathname:'/listings',state:state||'',city:label&&label!==state?label:'',source:'homepage_location'})};
  const account=()=>{if(user){nav('/profile');return}setAuthMode?.('login');setShowAuthModal?.(true)};
  const notifications=()=>{if(user){nav('/notificaciones');return}setAuthMode?.('login');setShowAuthModal?.(true)};
- return <div className="mcg-root"><MercastoGoldenHeader publish={publish} onLocationApply={city} onAccount={account} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} lang={lang} setLang={setLang} locationLabel={searchLocationInput||selectedState||(t.all_mexico||'Todo México')} selectedState={selectedState} t={t}/>
- <h1 className="mcg-responsive-h1"><span className="mcg-h1-desktop">Cosas increíbles<br/>más cerca de ti</span><span className="mcg-h1-tablet">Encuentra, compra y vende</span><span className="mcg-h1-mobile">Mercasto AI <small>BETA</small></span></h1>
- <div className="mcg-desktop">
-  <section className="mcg-hero"><div className="mcg-hero-copy"><div className="mcg-desktop-title-spacer" aria-hidden="true"/><p>Compra y vende de forma fácil y local.<br/>Encuentra oportunidades cerca de ti.</p><div className="mcg-search"><Icon name="search"/><input data-testid="golden-desktop-search-input" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} placeholder="Buscar en Mercasto..."/><button data-testid="golden-desktop-search-submit" onClick={search}>Buscar</button></div><div className="mcg-chips">{cats.slice(0,5).map(c=><button key={c[0]} onClick={()=>category(c[1])}>{c[0]}</button>)}</div></div><div className="mcg-hero-photo"><img src="/marketing/clasificados-banner-1350.png" alt=""/></div></section>
-  <section className="mcg-metrics"><div><Icon name="users"/><b>Comunidad</b><small>Compra y vende entre personas</small></div><div><Icon name="document"/><b>Publica fácil</b><small>Crea tu anuncio en pocos pasos</small></div><div><Icon name="pin"/><b>Todo México</b><small>Busca oportunidades por ubicación</small></div><div><Icon name="shield"/><b>Más seguridad</b><small>Consejos y herramientas de confianza</small></div></section>
-  <section className="mcg-cats">{cats.map(c=><button key={c[0]} onClick={()=>category(c[1])}><span><Icon name={c[2]} size={25}/></span><b>{c[0]}</b></button>)}</section>
-  <Section title="Explora cerca de ti" link="/listings" sub="Descubre oportunidades en tu zona"><div className="mcg-near"><button className="mcg-map" onClick={()=>nav('/listings')}><div/><i className="p1"><Icon name="pin"/></i><i className="p2"><Icon name="pin"/></i><i className="p3"><Icon name="pin"/></i><i className="p4"><Icon name="pin"/></i><b>CDMX</b></button><div className="mcg-near-ads">{ads.length?ads.slice(0,3).map(a=><Ad key={a.id} ad={a} lang={lang} compact getImageUrl={getImageUrl} onOpen={handleViewAd}/>):<EmptyListings compact/>}</div></div></Section>
-  <Section title="Oportunidades del día" link="/listings"><div className="mcg-offers">{ads.length?ads.slice(2,8).map(a=><Ad key={String(a.id)+'o'} ad={a} lang={lang} getImageUrl={getImageUrl} onOpen={handleViewAd}/>):<EmptyListings/>}</div></Section>
-  <Section title="Colecciones para ti" link="/listings"><div className="mcg-collections">{col.map(c=><button key={c[0]} onClick={()=>nav('/listings')} style={{backgroundImage:'linear-gradient(0deg,rgba(0,0,0,.6),rgba(0,0,0,.04)),url("'+c[1]+'")'}}><b>{c[0]}</b><small>Explorar colección</small></button>)}</div></Section>
-  <section className="mcg-ai"><div><span><Icon name="spark" size={16}/>Mercasto AI</span><h2>Tu asistente inteligente de compra y venta</h2><ul><li>Encuentra lo que necesitas más rápido</li><li>Recibe recomendaciones personalizadas</li><li>Resuelve tus dudas al instante</li></ul></div><div className="mcg-bot"><Icon name="bot" size={72}/></div><button onClick={()=>openAi?.()}>Habla con Mercasto AI</button><div className="mcg-ai-actions"><button onClick={openAi}><Icon name="search"/>Buscar por foto</button><button onClick={openAi}><Icon name="compare"/>Comparar precios</button><button onClick={publish}><Icon name="document"/>Crear anuncio</button><button onClick={openAi}><Icon name="spark"/>Consejos inteligentes</button></div></section>
-  <Section title="Por qué Mercasto?"><div className="mcg-why">{[['pin','Más cerca de ti','Compra y vende en tu ciudad'],['users','Comunidad local','Personas conectando en todo México'],['shield','Consejos de seguridad','Herramientas para comprar con más confianza'],['spark','Un impacto positivo','Apoyamos lo local']].map(x=><div key={x[1]}><Icon name={x[0]}/><b>{x[1]}</b><small>{x[2]}</small></div>)}</div></Section>
-  <Section title="Ciudades populares"><div className="mcg-cities">{cities.map(([label,state],i)=><button key={label} onClick={()=>city(label,state)} style={{backgroundImage:'linear-gradient(0deg,rgba(0,0,0,.62),rgba(0,0,0,.03)),url("'+col[i%4][1]+'")'}}>{label}</button>)}</div></Section>
-  <section className="mcg-sell"><div><Icon name="plus" size={32}/><span><h3>Vende lo que ya no usas</h3><p>Publica gratis y encuentra compradores cerca de ti.</p></span><button onClick={publish}>Publica gratis ahora</button></div><div><Icon name="shield" size={32}/><span><h3>Compra con confianza</h3><p>Consejos y herramientas para comprar mejor.</p></span><a href="/seguridad">Ver consejos</a></div></section>
-  <section className="mcg-bottom-content"><div><h3>Historias de la comunidad</h3><p>Personas de todo México conectando y encontrando nuevas oportunidades cada día.</p><a href="/sobre-mercasto">Conoce la comunidad</a></div><div><h3>Consejos y novedades</h3><a href="/blog/como-vender-mas-rapido">Cómo vender más rápido en Mercasto</a><a href="/blog/comprar-con-seguridad">Guía para comprar con seguridad</a><a href="/blog/encontrar-grandes-oportunidades">Ideas para encontrar grandes oportunidades</a><a href="/blog">Ver todos</a></div><div><h3>Mercasto en tu bolsillo</h3><p>Compra, vende y conversa desde cualquier lugar.</p><button type="button" disabled aria-disabled="true">Descargar aplicación</button></div></section>
-  <footer className="mcg-footer"><div><a className="mcg-brand" href="/"><span>M</span>Mercasto</a><p>Un México con más oportunidades.</p></div><div><b>Mercasto</b><a href="/sobre-mercasto">Sobre nosotros</a><a href="/blog">Blog</a><a href="/ayuda">Ayuda</a></div><div><b>Comprar</b><a href="/listings">Categorías</a><a href="/listings">Mapa</a><a href="/profile?tab=favorites">Favoritos</a></div><div><b>Vender</b><button onClick={publish}>Publicar anuncio</button><button type="button" onClick={()=>openPricing?.()}>Mercasto Pro</button></div><div><b>Seguridad y legal</b><a href="/seguridad">Centro de seguridad</a><a href="/terminos">Términos</a><a href="/privacidad">Privacidad</a><a href="/cookies">Cookies</a><button type="button" data-testid="golden-cookie-settings" onClick={requestOpenCookiePreferences}>Preferencias de cookies</button></div></footer>
+ return <div className="mcg-root"><MercastoGoldenHeader
+  publish={publish}
+  onLocationApply={city}
+  onAccount={account}
+  accountLabel={user ? (t.my_account || 'Mi cuenta') : (t.login || 'Iniciar sesión')}
+  onNotifications={notifications}
+  unreadCount={unreadCount}
+  accountTextMode
+  showPublishCta
+  showMobileSearch={false}
+  search={{
+    value:q,
+    onChange:setQ,
+    onSubmit:e=>{e.preventDefault();search()},
+    showSuggestions:false,
+    suggestions:[],
+    recentSearches:[],
+  }}
+  isDarkMode={isDarkMode}
+  toggleDarkMode={toggleDarkMode}
+  lang={lang}
+  setLang={setLang}
+  locationLabel={searchLocationInput||selectedState||(t.all_mexico||'Todo México')}
+  selectedState={selectedState}
+  t={t}
+ />
+ <h1 className="mcg-responsive-h1"><span className="mcg-h1-desktop">Encuentra lo que necesitas.<br/><em>Vende lo que ya no usas.</em></span><span className="mcg-h1-tablet">Encuentra, compra y vende</span><span className="mcg-h1-mobile">Mercasto AI <small>BETA</small></span></h1>
+ <div className="mcg-desktop mcg-reference-desktop">
+  <section className="mcg-ref-hero" data-testid="golden-reference-hero">
+    <div className="mcg-ref-hero-copy">
+      <h1 className="mcg-ref-hero-title">Encuentra lo que necesitas.<br/><em>Vende lo que ya no usas.</em></h1>
+      <p>La comunidad de compra y venta en todo México.<br/><b>Fácil, rápido y seguro.</b></p>
+      <div className="mcg-ref-popular"><span>Búsquedas populares:</span>{['iPhone','Renta de departamentos','Autos','Empleo','Muebles'].map(term=><button key={term} onClick={()=>searchTerm(term)}>{term}</button>)}</div>
+      <div className="mcg-ref-metrics">
+        <div><Icon name="users" size={27}/><span><b>Comunidad local</b><small>en todo México</small></span></div>
+        <div><Icon name="shield" size={27}/><span><b>Compras seguras</b><small>y confiables</small></span></div>
+        <div><Icon name="pin" size={27}/><span><b>Presencia en</b><small>todo México</small></span></div>
+      </div>
+    </div>
+    <div className="mcg-ref-hero-art">
+      <img src="/marketing/golden-home-hero-reference.jpg" alt="Persona usando Mercasto junto a su perro"/>
+    </div>
+  </section>
+
+  <section className="mcg-ref-category-section" aria-label="Explora por categorías">
+    <div className="mcg-ref-section-heading"><h2>Explora por categorías</h2><a href="/listings">Ver todas las categorías <Icon name="right" size={15}/></a></div>
+    <div className="mcg-ref-cats">{cats.map(c=><button key={c[0]} onClick={()=>category(c[1])}><span><Icon name={c[2]} size={24}/></span><b>{c[0]}</b></button>)}</div>
+  </section>
+
+  <section className="mcg-ref-market-grid">
+    <div className="mcg-ref-market-main">
+      <div className="mcg-ref-section-heading">
+        <div><h2>Anuncios cerca de ti</h2><p>Descubre oportunidades en tu zona</p></div>
+        <a href="/listings">Ver más anuncios <Icon name="right" size={15}/></a>
+      </div>
+      <div className="mcg-ref-near-ads">{ads.length?ads.slice(0,5).map(a=><Ad key={'near-'+a.id} ad={a} lang={lang} getImageUrl={getImageUrl} onOpen={handleViewAd}/>):<EmptyListings/>}</div>
+
+      <div className="mcg-ref-section-heading mcg-ref-offer-heading">
+        <div><h2>Ofertas de hoy</h2><p>Ahorra en productos increíbles</p></div>
+        <a href="/listings">Ver todas las ofertas <Icon name="right" size={15}/></a>
+      </div>
+      <div className="mcg-ref-offers">{ads.length?ads.slice(5,10).map(a=><Ad key={'offer-'+a.id} ad={a} lang={lang} getImageUrl={getImageUrl} onOpen={handleViewAd}/>):<EmptyListings/>}</div>
+    </div>
+
+    <aside className="mcg-ref-market-aside">
+      <div className="mcg-ref-map-panel">
+        <div className="mcg-ref-panel-head"><div><h3>Explora anuncios en el mapa</h3><p>Encuentra lo que está cerca de ti</p></div><Icon name="pin" size={22}/></div>
+        <button className="mcg-ref-map" onClick={()=>nav('/listings')} aria-label="Explorar anuncios en el mapa">
+          <span className="mcg-ref-map-road r1"/><span className="mcg-ref-map-road r2"/><span className="mcg-ref-map-road r3"/>
+          <i className="p1"><Icon name="pin" size={19}/></i><i className="p2"><Icon name="pin" size={19}/></i><i className="p3"><Icon name="pin" size={19}/></i><i className="p4"><Icon name="pin" size={19}/></i>
+          <b>Ciudad de México</b>
+        </button>
+        <button className="mcg-ref-map-cta" onClick={()=>nav('/listings')}>Buscar en esta zona</button>
+      </div>
+      <div className="mcg-ref-seller-card">
+        <span>PARA VENDEDORES</span>
+        <h3>Vende en Mercasto</h3>
+        <p>Publica tu anuncio gratis en minutos y llega a miles de personas en todo México.</p>
+        <ul><li>Sin comisión</li><li>Publicación fácil</li><li>Contacto directo</li></ul>
+        <button onClick={publish}>Publicar anuncio <Icon name="right" size={16}/></button>
+      </div>
+    </aside>
+  </section>
+
+  <section className="mcg-ref-trust" aria-label="Compra y vende con confianza">
+    {[
+      ['shield','Personas verificadas','Perfiles más confiables'],
+      ['chat','Chat seguro','Comunícate sin compartir datos personales'],
+      ['shield','Consejos de seguridad','Recomendaciones para cada paso'],
+      ['users','Soporte y ayuda','Estamos para ayudarte'],
+      ['heart','Una comunidad real','Personas en todo México'],
+    ].map(item=><div key={item[1]}><span><Icon name={item[0]} size={23}/></span><b>{item[1]}</b><small>{item[2]}</small></div>)}
+  </section>
+
+  <section className="mcg-ref-duo">
+    <div className="mcg-ref-ai-card">
+      <div>
+        <span className="mcg-ref-kicker"><Icon name="spark" size={15}/>Mercasto AI <small>BETA</small></span>
+        <h2>Encuentra justo lo que necesitas, más rápido.</h2>
+        <p>Escribe lo que buscas en lenguaje natural y nuestra inteligencia artificial te ayudará a encontrar mejores opciones.</p>
+        <button onClick={openAi}>Hablar con Mercasto AI <Icon name="right" size={16}/></button>
+      </div>
+      <div className="mcg-ref-ai-bot"><Icon name="bot" size={78}/><span>Te entiende</span><span>Encuentra mejores opciones</span><span>Te ahorra tiempo</span></div>
+    </div>
+    <div className="mcg-ref-app-card">
+      <div><span className="mcg-ref-kicker">MERCASTO APP</span><h2>Mercasto en tu bolsillo</h2><p>Publica, compra y vende desde tu celular.</p><b>Próximamente</b></div>
+      <div className="mcg-ref-phone"><span>M</span><b>Mercasto</b><small>Compra. Vende. Cerca de ti.</small></div>
+    </div>
+  </section>
+
+  <section className="mcg-ref-city-section">
+    <div className="mcg-ref-section-heading"><h2>Explora por ciudad</h2><a href="/listings">Ver todas las ciudades <Icon name="right" size={15}/></a></div>
+    <div className="mcg-ref-cities">{cities.map(([label,state],i)=><button key={label} onClick={()=>city(label,state)} style={{backgroundImage:'linear-gradient(0deg,rgba(0,0,0,.62),rgba(0,0,0,.03)),url("'+col[i%4][1]+'")'}}><b>{label}</b></button>)}</div>
+  </section>
+
+  <footer className="mcg-ref-footer">
+    <div className="mcg-ref-footer-brand"><a className="mcg-brand" href="/"><span>M</span>Mercasto</a><p>Cosas que conectan personas.</p><div className="mcg-ref-social"><span>◎</span><span>f</span><span>♪</span><span>▶</span><span>𝕏</span></div></div>
+    <div><b>Mercasto</b><a href="/sobre-mercasto">Sobre nosotros</a><a href="/blog">Blog</a><a href="/ayuda">Ayuda</a><a href="/contacto">Contacto</a></div>
+    <div><b>Ayuda</b><a href="/ayuda">Centro de ayuda</a><a href="/seguridad">Consejos de seguridad</a><a href="/terminos">Términos y condiciones</a><a href="/privacidad">Política de privacidad</a></div>
+    <div><b>Para vendedores</b><button onClick={publish}>Publicar anuncio</button><a href="/blog/como-vender-mas-rapido">Tips para vender</a><button onClick={()=>openPricing?.()}>Mercasto Pro</button><button data-testid="golden-cookie-settings" onClick={requestOpenCookiePreferences}>Preferencias de cookies</button></div>
+    <div className="mcg-ref-footer-end"><span>🇲🇽 México</span><strong>Dale una<br/>segunda vida<br/>a lo que importa ♡</strong></div>
+    <small className="mcg-ref-copyright">© 2026 Mercasto. Todos los derechos reservados.</small>
+  </footer>
  </div>
  <DeviceLayouts q={q} setQ={setQ} search={search} searchTerm={searchTerm} category={category} publish={publish} nav={nav} openAi={openAi} ads={ads} lang={lang} getImageUrl={getImageUrl} handleViewAd={handleViewAd} account={account} notifications={notifications} unreadCount={unreadCount} t={t}/>
  </div>
