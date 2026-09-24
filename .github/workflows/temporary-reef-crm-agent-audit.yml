@@ -1,6 +1,10 @@
 name: Temporary Reef CRM Agent Audit
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/temporary-reef-crm-agent-audit.yml'
   issue_comment:
     types: [created]
 
@@ -14,9 +18,17 @@ env:
 jobs:
   audit:
     if: >-
-      github.event.issue.number == 832 &&
-      github.actor == 'johnslimg-alt' &&
-      github.event.comment.body == 'RUN:reef_crm_agent_audit'
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.number == 1277 &&
+        github.actor == 'johnslimg-alt'
+      ) ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.number == 832 &&
+        github.actor == 'johnslimg-alt' &&
+        github.event.comment.body == 'RUN:reef_crm_agent_audit'
+      )
     runs-on: [self-hosted]
     timeout-minutes: 10
     steps:
