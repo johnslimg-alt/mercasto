@@ -482,7 +482,21 @@ case "$OPERATION" in
       set +e
       echo "Harness upload fix failed; restoring nginx backups." >&2
       sudo -n cp -a "$backup_dir/deepseek-harness.nginx.conf" "$HARNESS_CONF"
-      sudo -n cp -a "$backup_dir/mercasto-edge.harness.conf" "$EDGE_CONF"
+      # EDGE_CONF is bind-mounted as a single file into mercasto_frontend_container.
+      # Restore its CONTENT in place so the bind mount keeps the same inode.
+      sudo -n python3 - "$backup_dir/mercasto-edge.harness.conf" "$EDGE_CONF" <<'PYROLLBACK'
+import os
+import sys
+from pathlib import Path
+
+src = Path(sys.argv[1])
+dst = Path(sys.argv[2])
+data = src.read_bytes()
+with dst.open("wb") as fh:
+    fh.write(data)
+    fh.flush()
+    os.fsync(fh.fileno())
+PYROLLBACK
       sudo -n /usr/sbin/nginx -t -c "$HARNESS_CONF" >/dev/null 2>&1
       sudo -n systemctl reload deepseek-harness-proxy.service >/dev/null 2>&1
       docker exec mercasto_frontend_container nginx -t >/dev/null 2>&1
@@ -569,18 +583,31 @@ def choose_and_patch(path, kind):
     new_text = "".join(lines[:start]) + replacement + "".join(lines[end+1:])
 
     st = path.stat()
-    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".", text=True)
-    try:
-        with os.fdopen(fd, "w") as fh:
+    if kind == "edge":
+        # EDGE is bind-mounted into the nginx container as a SINGLE FILE.
+        # Replacing the host path with os.replace() changes the inode and leaves
+        # the running container pinned to the old inode/config. Write in place.
+        inode_before = st.st_ino
+        with path.open("w") as fh:
             fh.write(new_text)
             fh.flush()
             os.fsync(fh.fileno())
-        os.chmod(tmp, st.st_mode)
-        os.chown(tmp, st.st_uid, st.st_gid)
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
+        inode_after = path.stat().st_ino
+        if inode_after != inode_before:
+            raise SystemExit(f"{path}: bind-mount inode changed unexpectedly")
+    else:
+        fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".", text=True)
+        try:
+            with os.fdopen(fd, "w") as fh:
+                fh.write(new_text)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.chmod(tmp, st.st_mode)
+            os.chown(tmp, st.st_uid, st.st_gid)
+            os.replace(tmp, path)
+        finally:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
 
     verify = path.read_text()
     for name, value in DIRECTIVES:
@@ -605,6 +632,9 @@ PY
     print_header "Verify configured directives"
     sudo -n grep -nE 'client_max_body_size|client_body_timeout|proxy_request_buffering' "$HARNESS_CONF"
     sudo -n grep -nE 'client_max_body_size|client_body_timeout|proxy_request_buffering' "$EDGE_CONF"
+    echo "-- active edge container config --"
+    docker exec mercasto_frontend_container sh -lc \
+      "grep -nE 'client_max_body_size|client_body_timeout|proxy_request_buffering' /etc/nginx/conf.d/harness.conf"
 
     print_header "Harness >1 MiB upload proxy smoke"
     smoke_file="$SERVER_OPERATOR_TMPDIR/harness-upload-smoke.bin"
