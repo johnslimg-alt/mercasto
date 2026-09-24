@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.11
+// @version      9.0.0-alpha.2-nonstop.12
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.11';
+const VER = '9.0.0-alpha.2-nonstop.12';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -438,10 +438,51 @@ function cleanTurnText(el, role = turnRole(el)) {
   text = text.replace(/^\s*(?:ChatGPT said:|You said:)\s*/i, '').trim();
   return text;
 }
+function nodeDocumentOrder(a, b) {
+  if (a === b) return 0;
+  const pos = a.compareDocumentPosition?.(b) || 0;
+  if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+  if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+  return 0;
+}
+function assistantFallbackNodes() {
+  const out = new Set();
+  const selectors = [
+    'main [data-message-author-role="assistant"]',
+    'main .markdown',
+    'main [class~="markdown"]',
+    'main .prose',
+    'main [class*="markdown"]'
+  ];
+  for (const el of queryAll(selectors)) {
+    if (!el?.isConnected || el.closest?.('#gitl9')) continue;
+    if (el.closest?.('#prompt-textarea,[data-testid="prompt-textarea"],form') && !el.closest?.('[data-message-author-role="assistant"]')) continue;
+    const text = nodeText(el);
+    if (text && text.length >= 2) out.add(el);
+  }
+  const actionBars = queryAll([
+    '[data-testid="copy-turn-action-button"]',
+    'button[aria-label="Copy"]',
+    'button[aria-label*="Copy response" i]'
+  ]);
+  for (const button of actionBars) {
+    if (!button?.isConnected || button.closest?.('#gitl9')) continue;
+    for (let node = button.parentElement, depth = 0; node && depth < 10; node = node.parentElement, depth++) {
+      const content = node.querySelector?.('[data-message-author-role="assistant"], .markdown, [class~="markdown"], .prose');
+      if (content && content.isConnected && nodeText(content)) {
+        out.add(content);
+        break;
+      }
+    }
+  }
+  return [...out].sort(nodeDocumentOrder);
+}
 function assistantNodes() {
   const direct = queryAll(HOST.assistant).filter(el => el.isConnected && cleanTurnText(el, 'assistant'));
   const turns = conversationTurnNodes().filter(el => turnRole(el) === 'assistant' && cleanTurnText(el, 'assistant'));
-  return [...new Set([...direct, ...turns])];
+  const fallback = assistantFallbackNodes();
+  const merged = [...new Set([...direct, ...turns, ...fallback])];
+  return merged.sort(nodeDocumentOrder);
 }
 function assistantText() {
   const nodes = assistantNodes();
@@ -965,7 +1006,11 @@ async function tick() {
   }
   if (S.generationStartedAt || S.stallState !== 'IDLE') clearGenerationWatchdog();
   const text = assistantText();
-  if (!text) { S.detail = 'Waiting for assistant output...'; render(); return; }
+  if (!text) {
+    S.detail = `Waiting for assistant output · turns ${conversationTurnNodes().length} · fallback ${assistantFallbackNodes().length}`;
+    render();
+    return;
+  }
   const parsedStage = stageProgress(text);
   if (parsedStage) S.stageProgress = parsedStage;
   const fp = hash(text);
@@ -1051,10 +1096,24 @@ async function play(options = {}) {
   if (draft.trim()) {
     S.bootstrapped = true;
     if (!await sendOnce(bootstrapPrompt(draft), 'initial task')) return;
+  } else if (!latest && !resuming && S.round > 0) {
+    S.bootstrapped = true;
+    log('opaque-history-manual-resume', {
+      host: HOST.id,
+      round: S.round,
+      turnCount: conversationTurnNodes().length,
+      fallbackAssistantCount: assistantFallbackNodes().length
+    });
+    if (!await sendOnce(continuationPrompt(), 'manual opaque-history resume')) return;
   } else if (!latest) {
     const turns = conversationTurnNodes();
-    pause(`No assistant turn detected (conversation turns: ${turns.length}). Type a task only if this is actually a new empty chat.`, { keepActive: false });
-    log('history-missing', { host: HOST.id, turnCount: turns.length, assistantSelectors: HOST.assistant.slice() });
+    pause(`No assistant turn detected (conversation turns: ${turns.length}, fallback blocks: ${assistantFallbackNodes().length}). Type a task only if this is actually a new empty chat.`, { keepActive: false });
+    log('history-missing', {
+      host: HOST.id,
+      turnCount: turns.length,
+      fallbackAssistantCount: assistantFallbackNodes().length,
+      assistantSelectors: HOST.assistant.slice()
+    });
     return;
   } else if (parsed.type !== 'bad') {
     S.bootstrapped = true; S.stableHash = hash(latest); S.stableSince = now() - VALID_QUIET_MS;
