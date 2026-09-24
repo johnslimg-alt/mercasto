@@ -13,30 +13,34 @@ permissions:
 jobs:
   verify:
     runs-on: [self-hosted, linux, docker]
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Verify production Harness state
+      - name: Verify current direct default with real request
         shell: bash
         run: |
           set -euo pipefail
           systemctl is-active --quiet deepseek-harness.service
           echo "HARNESS_SERVICE=active"
 
-          code="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3080/)"
-          echo "HARNESS_HTTP=$code"
-          case "$code" in
-            200|401|403) ;;
-            *) exit 1 ;;
-          esac
-
-          echo "=== DEFAULT MODEL ==="
+          echo "=== CURRENT DEFAULT ==="
           sudo -n awk '
             /^agent-default-model:/{show=1}
             show{print}
             show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}
           ' /root/.dsh/settings.yaml | head -10
 
-          sudo -n grep -q 'id: deepseek-flash' /root/.dsh/settings.yaml
-          sudo -n grep -q 'DeepSeek V4.1 Flash - Direct' /root/.dsh/settings.yaml
-          echo "DIRECT_MODEL_CATALOG_PRESENT=true"
-          echo "FINAL_VERIFY=PASS"
+          rm -f /tmp/dsh-current.out /tmp/dsh-current.err
+          set +e
+          sudo -n -H /usr/bin/node /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js             --profile headless "Reply with exactly CURRENT_DIRECT_OK. Do not use tools."             >/tmp/dsh-current.out 2>/tmp/dsh-current.err
+          rc=$?
+          set -e
+
+          echo "CURRENT_DIRECT_EXIT=$rc"
+          if [ "$rc" -eq 0 ] && grep -q 'CURRENT_DIRECT_OK' /tmp/dsh-current.out; then
+            echo "CURRENT_DIRECT_SMOKE=PASS"
+            exit 0
+          fi
+
+          echo "CURRENT_DIRECT_SMOKE=FAIL"
+          tail -60 /tmp/dsh-current.err             | sed -E 's#sk-[A-Za-z0-9_-]+#<REDACTED>#g; s#nvapi-[A-Za-z0-9_-]+#<REDACTED>#g; s#([A-Za-z0-9_-]{6})[A-Za-z0-9_-]{8,}#\1<REDACTED>#g'             || true
+          exit 1
