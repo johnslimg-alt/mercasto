@@ -74,6 +74,7 @@ const serverOperatorCommands = [
   'RUN:ghost_access_probe',
   'RUN:harness_proxy_status',
   'RUN:harness_upload_fix:MERCASTO',
+  'RUN:harness_workspace_audit',
   'RUN:hermes_install:MERCASTO',
   'RUN:hermes_publish:MERCASTO',
   'RUN:restart_frontend:MERCASTO',

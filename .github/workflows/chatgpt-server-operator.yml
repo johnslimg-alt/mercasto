@@ -21,6 +21,7 @@ jobs:
         github.event.comment.body == 'RUN:status' ||
         github.event.comment.body == 'RUN:mcp_status' ||
         github.event.comment.body == 'RUN:harness_proxy_status' ||
+        github.event.comment.body == 'RUN:harness_workspace_audit' ||
         github.event.comment.body == 'RUN:ghost_access_probe' ||
         github.event.comment.body == 'RUN:harness_upload_fix:MERCASTO' ||
         github.event.comment.body == 'RUN:mcp_plugin_bootstrap:MERCASTO' ||
@@ -59,6 +60,7 @@ jobs:
               'RUN:status': ['status', '', '160'],
               'RUN:mcp_status': ['mcp_status', '', '220'],
               'RUN:harness_proxy_status': ['harness_proxy_status', '', '220'],
+              'RUN:harness_workspace_audit': ['harness_workspace_audit', '', '400'],
               'RUN:ghost_access_probe': ['ghost_access_probe', '', '260'],
               'RUN:harness_upload_fix:MERCASTO': ['harness_upload_fix', 'MERCASTO', '260'],
               'RUN:mcp_plugin_bootstrap:MERCASTO': ['mcp_plugin_bootstrap', 'MERCASTO', '220'],
@@ -123,6 +125,86 @@ jobs:
             echo
             echo "== MCP local listeners =="
             ss -lntpH 2>/dev/null | grep -E '127\.0\.0\.1|\[::1\]' | grep -Ei 'mcp|ssh|node|:8001|:8765|:300[0-9]|:30[0-9]{2}' || true
+          elif [ "$OPERATION" = "harness_workspace_audit" ]; then
+            # Read-only audit: session directory names and workspace membership only.
+            echo "== Harness workspace audit =="
+            sudo -n python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          workspace_path = Path('/root/.dsh/storages/workspace.json')
+          sessions_root = Path('/root/.dsh/sessions')
+          data = json.loads(workspace_path.read_text())
+          workspaces = data.get('tables', {}).get('workspaces', {})
+          order = data.get('global', {}).get('workspaceIds', [])
+
+          sid_to_bucket = {}
+          for journal in sessions_root.rglob('session.v3.jsonl.zstd'):
+              sid = journal.parent.name
+              if not sid.startswith('session-'):
+                  continue
+              sid_to_bucket.setdefault(sid, journal.parent.parent.name)
+
+          assigned = {}
+          bucket_owners = {}
+          print('WORKSPACE_AUDIT_BEGIN')
+          print('visible_session_journals=' + str(len(sid_to_bucket)))
+
+          for wid in order:
+              ws = workspaces.get(wid) or {}
+              ids = [x for x in ws.get('sessionIds', []) if isinstance(x, str)]
+              for sid in ids:
+                  assigned[sid] = wid
+              buckets = sorted({sid_to_bucket[sid] for sid in ids if sid in sid_to_bucket})
+              for bucket in buckets:
+                  bucket_owners.setdefault(bucket, []).append(wid)
+              print('workspace=' + json.dumps({
+                  'id': wid,
+                  'title': ws.get('title') or wid,
+                  'path': ws.get('path') or '',
+                  'registered_sessions': len(ids),
+                  'existing_visible_sessions': sum(1 for sid in ids if sid in sid_to_bucket),
+                  'buckets': buckets,
+              }, ensure_ascii=False, sort_keys=True))
+
+          all_visible = set(sid_to_bucket)
+          assigned_visible = all_visible & set(assigned)
+          ungrouped = sorted(all_visible - assigned_visible)
+          safe_candidates = {}
+          ambiguous = []
+          unmatched = []
+
+          for sid in ungrouped:
+              bucket = sid_to_bucket[sid]
+              owners = bucket_owners.get(bucket, [])
+              if len(owners) == 1:
+                  safe_candidates.setdefault(owners[0], []).append(sid)
+              elif len(owners) > 1:
+                  ambiguous.append((sid, bucket))
+              else:
+                  unmatched.append((sid, bucket))
+
+          print('assigned_visible=' + str(len(assigned_visible)))
+          print('ungrouped_visible=' + str(len(ungrouped)))
+          print('safe_exact_bucket_candidates=' + str(sum(len(v) for v in safe_candidates.values())))
+          print('ambiguous_exact_bucket=' + str(len(ambiguous)))
+          print('no_exact_bucket=' + str(len(unmatched)))
+
+          for wid in order:
+              ws = workspaces.get(wid) or {}
+              print('candidate=' + json.dumps({
+                  'id': wid,
+                  'title': ws.get('title') or wid,
+                  'count': len(safe_candidates.get(wid, [])),
+              }, ensure_ascii=False, sort_keys=True))
+
+          counts = {}
+          for _, bucket in unmatched:
+              counts[bucket] = counts.get(bucket, 0) + 1
+          for bucket, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:80]:
+              print('unmatched_bucket=' + json.dumps({'bucket': bucket, 'count': count}, ensure_ascii=False, sort_keys=True))
+          print('WORKSPACE_AUDIT_END')
+          PY
           elif [ "$OPERATION" = "ghost_access_probe" ]; then
             echo "== Ghost deleted-branch GitHub events =="
             curl -fsSL --max-time 20 -H 'Accept: application/vnd.github+json' \
