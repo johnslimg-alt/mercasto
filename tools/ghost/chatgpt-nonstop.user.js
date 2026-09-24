@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.6
+// @version      9.0.0-alpha.2-nonstop.7
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.6';
+const VER = '9.0.0-alpha.2-nonstop.7';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -220,7 +220,16 @@ const PROFILES = [
   {
     id: 'chatgpt',
     host: /chatgpt\.com$|chat\.openai\.com$/i,
-    input: ['#prompt-textarea', 'textarea[data-id="root"]'],
+    input: [
+      '#prompt-textarea[contenteditable="true"]',
+      '#prompt-textarea[contenteditable="plaintext-only"]',
+      '#prompt-textarea',
+      'div.ProseMirror[contenteditable="true"][role="textbox"]',
+      'div[contenteditable="true"][role="textbox"][aria-label*="Chat" i]',
+      'div[contenteditable="true"][role="textbox"][aria-label*="Message" i]',
+      'textarea[name="prompt-textarea"]',
+      'textarea[data-id="root"]'
+    ],
     send: ['#composer-submit-button', 'button[data-testid="send-button"]', 'button[aria-label="Send prompt"]', 'button[aria-label="Send message"]'],
     stop: ['button[data-testid="stop-button"]', 'button[aria-label="Stop generating"]', 'button[aria-label="Stop streaming"]'],
     user: ['[data-message-author-role="user"]'],
@@ -302,7 +311,48 @@ function queryAll(selectors) {
   }
   return out;
 }
-function composer() { return queryFirst(HOST.input); }
+function validComposerCandidate(el) {
+  if (!el || !visible(el) || el.closest?.('#gitl9')) return false;
+  if (el.getAttribute?.('aria-disabled') === 'true' || el.disabled) return false;
+  if (/^(TEXTAREA|INPUT)$/.test(el.tagName || '')) return !el.readOnly;
+  return el.isContentEditable || ['true','plaintext-only'].includes(el.getAttribute?.('contenteditable'));
+}
+function composerScore(el) {
+  if (!validComposerCandidate(el)) return -1;
+  let score = 0;
+  if (el.id === 'prompt-textarea') score += 200;
+  if (el.getAttribute?.('name') === 'prompt-textarea') score += 180;
+  if (el.classList?.contains('ProseMirror')) score += 80;
+  if (el.getAttribute?.('role') === 'textbox') score += 40;
+  if (el.closest?.('form')) score += 20;
+  const r = el.getBoundingClientRect?.();
+  if (r) score += Math.max(0, Math.min(30, Math.round((r.top / Math.max(1, window.innerHeight)) * 30)));
+  return score;
+}
+function composer() {
+  const direct = queryAll(HOST.input).filter(validComposerCandidate);
+  if (direct.length) return direct.sort((a,b) => composerScore(b) - composerScore(a))[0];
+  // Host DOM changes frequently. Fall back to editable text controls, but never Ghost's own UI.
+  const fallbackSelectors = [
+    'div.ProseMirror[contenteditable="true"]',
+    'div[contenteditable="true"][role="textbox"]',
+    'textarea[name*="prompt" i]',
+    'textarea[placeholder]',
+    'textarea'
+  ];
+  const candidates = queryAll(fallbackSelectors).filter(validComposerCandidate);
+  if (!candidates.length) return null;
+  return candidates.sort((a,b) => composerScore(b) - composerScore(a))[0];
+}
+async function waitForComposer(timeoutMs = 5000) {
+  const started = now();
+  let el = composer();
+  while (!el && now() - started < timeoutMs) {
+    await sleep(150);
+    el = composer();
+  }
+  return el;
+}
 function nodeText(el) { if (!el) return ''; if (typeof el.value === 'string' && /^(TEXTAREA|INPUT)$/.test(el.tagName || '')) return displayText(el.value); return displayText(el.innerText ?? el.textContent ?? ''); }
 function assistantText() {
   const nodes = queryAll(HOST.assistant).filter(el => el.isConnected && nodeText(el));
@@ -558,8 +608,8 @@ function finalCompletionAuditPrompt() {
 }
 
 async function setComposerText(text) {
-  const expected = semanticText(text); let el = composer();
-  if (!el) return { ok: false, why: 'input-missing' };
+  const expected = semanticText(text); let el = await waitForComposer(5000);
+  if (!el) return { ok: false, why: 'input-missing', selectors: HOST.input.slice(), host: HOST.id };
   try {
     el.focus();
     if (el.isContentEditable) {
@@ -877,8 +927,15 @@ async function play(options = {}) {
     return;
   }
   if (S.uncertain) { S.detail = 'Prior Send is uncertain. Inspect the chat, then use explicit Continue.'; render(); return; }
-  const input = composer();
-  if (!input) { fail('PLAY-INPUT', 'Current chat composer was not found.', { host: HOST.id }); return; }
+  const input = await waitForComposer(5000);
+  if (!input) {
+    fail('PLAY-INPUT', 'Current chat composer was not found after retry.', {
+      host: HOST.id,
+      url: location.href,
+      selectors: HOST.input.slice()
+    });
+    return;
+  }
 
   setNonStopActive(true);
   S.mode = 'RUNNING'; S.detail = resuming ? 'Resuming non-stop…' : 'Starting…';
