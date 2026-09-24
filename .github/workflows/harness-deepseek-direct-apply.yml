@@ -13,148 +13,55 @@ permissions:
 jobs:
   apply:
     runs-on: [self-hosted, linux, docker]
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Verify official DeepSeek API and switch Harness default
+      - name: Switch to official DeepSeek and smoke test
         shell: bash
         run: |
           set -euo pipefail
 
-          CREDS=/root/.dsh/.credentials.yaml
           SETTINGS=/root/.dsh/settings.yaml
+          BACKUP="/root/.dsh/settings.yaml.bak-direct-deepseek-$(date -u +%Y%m%dT%H%M%SZ)"
 
-          KEY="$(sudo -n awk -F': *' '
-            /^[[:space:]]+DEEPSEEK_API_KEY:[[:space:]]*/ {
-              v=$0
-              sub(/^[^:]+:[[:space:]]*/, "", v)
-              gsub(/^["'\'' ]+|["'\'' ]+$/, "", v)
-              print v
-              exit
-            }
-          ' "$CREDS")"
+          sudo -n cp "$SETTINGS" "$BACKUP"
 
-          if [ -z "$KEY" ]; then
-            echo "DIRECT_KEY_PRESENT=false"
-            exit 2
-          fi
-          echo "DIRECT_KEY_PRESENT=true"
+          rollback() {
+            sudo -n cp "$BACKUP" "$SETTINGS"
+            echo "DIRECT_DEEPSEEK_ROLLBACK=PASS"
+          }
 
-          models_code="$(curl -sS -o /tmp/deepseek-models.json -w '%{http_code}' \
-            -H "Authorization: Bearer $KEY" \
-            -H "Accept: application/json" \
-            https://api.deepseek.com/models)"
-          echo "DIRECT_MODELS_HTTP=$models_code"
-          if [ "$models_code" != "200" ]; then
-            python3 - <<'PY'
-import json
-try:
-    d=json.load(open('/tmp/deepseek-models.json'))
-    print("DIRECT_MODELS_ERROR="+str(d.get("error",{}).get("message","unknown"))[:300])
-except Exception:
-    print("DIRECT_MODELS_ERROR=unparseable")
-PY
-            exit 3
+          sudo -n perl -0pi -e 's#^agent-default-model:\n(?:[ \t].*\n)*#agent-default-model:\n  provider: deepseek-official\n  model: deepseek-flash\n#m' "$SETTINGS"
+
+          echo "=== CANDIDATE DEFAULT ==="
+          sudo -n awk '/^agent-default-model:/{show=1} show{print} show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}' "$SETTINGS" | head -10
+
+          set +e
+          sudo -n -H /usr/bin/node /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js --profile headless "Reply with exactly DIRECT_OK. Do not use tools." > /tmp/dsh-direct.out 2> /tmp/dsh-direct.err
+          rc=$?
+          set -e
+
+          echo "DIRECT_HEADLESS_EXIT=$rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "=== DIRECT HEADLESS ERROR ==="
+            tail -80 /tmp/dsh-direct.err | sed -E 's#sk-[A-Za-z0-9_-]+#<REDACTED>#g; s#nvapi-[A-Za-z0-9_-]+#<REDACTED>#g' || true
+            rollback
+            exit "$rc"
           fi
 
-          python3 - <<'PY'
-import json
-d=json.load(open('/tmp/deepseek-models.json'))
-ids=[x.get('id') for x in d.get('data',[]) if isinstance(x,dict)]
-print("DIRECT_MODEL_DEEPSEEK_FLASH="+str('deepseek-flash' in ids).lower())
-print("DIRECT_MODELS="+",".join(x for x in ids if x))
-if 'deepseek-flash' not in ids:
-    raise SystemExit(4)
-PY
-
-          balance_code="$(curl -sS -o /tmp/deepseek-balance.json -w '%{http_code}' \
-            -H "Authorization: Bearer $KEY" \
-            -H "Accept: application/json" \
-            https://api.deepseek.com/user/balance)"
-          echo "DIRECT_BALANCE_HTTP=$balance_code"
-          if [ "$balance_code" = "200" ]; then
-            python3 - <<'PY'
-import json
-from decimal import Decimal, InvalidOperation
-d=json.load(open('/tmp/deepseek-balance.json'))
-def pos(v):
-    try: return Decimal(str(v)) > 0
-    except (InvalidOperation, ValueError): return False
-infos=d.get('balance_infos') or []
-print("DIRECT_BALANCE_AVAILABLE="+str(bool(d.get('is_available'))).lower())
-print("DIRECT_GRANTED_BALANCE_POSITIVE="+str(any(pos(x.get('granted_balance')) for x in infos if isinstance(x,dict))).lower())
-print("DIRECT_TOPPED_UP_BALANCE_POSITIVE="+str(any(pos(x.get('topped_up_balance')) for x in infos if isinstance(x,dict))).lower())
-PY
+          if ! grep -q 'DIRECT_OK' /tmp/dsh-direct.out; then
+            echo "DIRECT_HEADLESS_EXPECTED_MARKER=false"
+            rollback
+            exit 6
           fi
+          echo "DIRECT_HEADLESS_EXPECTED_MARKER=true"
 
-          chat_code="$(curl -sS -o /tmp/deepseek-chat.json -w '%{http_code}' \
-            -H "Authorization: Bearer $KEY" \
-            -H "Content-Type: application/json" \
-            https://api.deepseek.com/chat/completions \
-            --data-binary '{"model":"deepseek-flash","messages":[{"role":"user","content":"Reply with exactly DIRECT_OK"}],"max_tokens":32,"stream":false}')"
-          echo "DIRECT_CHAT_HTTP=$chat_code"
-          if [ "$chat_code" != "200" ]; then
-            python3 - <<'PY'
-import json
-try:
-    d=json.load(open('/tmp/deepseek-chat.json'))
-    print("DIRECT_CHAT_ERROR="+str(d.get("error",{}).get("message","unknown"))[:300])
-except Exception:
-    print("DIRECT_CHAT_ERROR=unparseable")
-PY
-            exit 5
-          fi
+          sleep 1
+          echo "=== FINAL DEFAULT ==="
+          sudo -n awk '/^agent-default-model:/{show=1} show{print} show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}' "$SETTINGS" | head -10
 
-          python3 - <<'PY'
-import json
-d=json.load(open('/tmp/deepseek-chat.json'))
-print("DIRECT_RESPONSE_MODEL="+str(d.get("model","")))
-choices=d.get("choices") or []
-text=""
-if choices and isinstance(choices[0],dict):
-    text=((choices[0].get("message") or {}).get("content") or "").strip()
-print("DIRECT_RESPONSE_NONEMPTY="+str(bool(text)).lower())
-PY
-
-          sudo -n cp "$SETTINGS" "$SETTINGS.bak-direct-deepseek-$(date -u +%Y%m%dT%H%M%SZ)"
-          sudo -n python3 - <<'PY'
-from pathlib import Path
-p=Path('/root/.dsh/settings.yaml')
-text=p.read_text()
-lines=text.splitlines()
-try:
-    start=next(i for i,l in enumerate(lines) if l.strip()=='agent-default-model:' and not l.startswith((' ','\t')))
-except StopIteration:
-    lines += ['agent-default-model:','  provider: deepseek-official','  model: deepseek-flash']
-else:
-    end=len(lines)
-    for i in range(start+1,len(lines)):
-        if lines[i] and not lines[i].startswith((' ','\t','#')):
-            end=i
-            break
-    have_provider=False
-    have_model=False
-    for i in range(start+1,end):
-        s=lines[i].lstrip()
-        indent=lines[i][:len(lines[i])-len(s)]
-        if s.startswith('provider:'):
-            lines[i]=indent+'provider: deepseek-official'
-            have_provider=True
-        elif s.startswith('model:'):
-            lines[i]=indent+'model: deepseek-flash'
-            have_model=True
-    insert=start+1
-    if not have_provider:
-        lines.insert(insert,'  provider: deepseek-official'); insert+=1; end+=1
-    if not have_model:
-        lines.insert(insert,'  model: deepseek-flash')
-p.write_text('\n'.join(lines)+'\n')
-PY
-
-          echo "=== APPLIED DEFAULT ==="
-          sudo -n awk '
-            /^agent-default-model:/{show=1}
-            show{print}
-            show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}
-          ' "$SETTINGS" | head -10
+          systemctl is-active --quiet deepseek-harness.service
+          web_code="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3080/)"
+          echo "HARNESS_WEB_HTTP=$web_code"
+          test "$web_code" = "200"
 
           echo "DIRECT_DEEPSEEK_APPLY=PASS"
