@@ -13,195 +13,82 @@ permissions:
 jobs:
   recover:
     runs-on: self-hosted
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Repair runner device permissions and recover Harness
+      - name: Repair system device and restore Harness production
         shell: bash
         run: |
           set -euo pipefail
           echo "RUNNER=$(hostname) UID=$(id -u) DATE=$(date -u +%FT%TZ)"
-          echo "DEVNULL_BEFORE=$(stat -c '%F %a %U %G %t:%T' /dev/null 2>&1 || true)"
           sudo -n true
-          sudo -n chown root:root /dev/null
-          sudo -n chmod 666 /dev/null
-          echo "DEVNULL_AFTER=$(stat -c '%F %a %U %G %t:%T' /dev/null)"
 
           sudo -n bash -s <<'ROOT'
-          set -euo pipefail
+          set -u
 
-          WS=/root/.dsh/storages/workspace.json
-          SESS=/root/.dsh/sessions
-          BACKUPS=/root/harness-backups
+          echo "=== FIX /dev/null ==="
+          echo "BEFORE=$(stat -c '%F %a %U %G %t:%T' /dev/null 2>&1 || true)"
+          if [ ! -c /dev/null ]; then
+            rm -f /dev/null
+            mknod -m 666 /dev/null c 1 3
+            chown root:root /dev/null
+          else
+            chown root:root /dev/null
+            chmod 666 /dev/null
+          fi
+          echo "AFTER=$(stat -c '%F %a %U %G %t:%T' /dev/null)"
+          test -c /dev/null
 
-          echo "=== PRE-STATE ==="
-          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager || true
-          systemctl show deepseek-harness-proxy.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager || true
-          ss -ltnp | grep -E ':3080|:3081|:13080|:13082|:443 ' || true
-          test -f "$WS"
-          test -d "$SESS"
-          command -v zstdcat >/dev/null
-          mkdir -p "$BACKUPS"
-
+          echo "=== CURRENT WORKSPACES ==="
           python3 - <<'PY'
-          import collections, datetime, json, os, shutil, subprocess
-
-          WS="/root/.dsh/storages/workspace.json"
-          SESS="/root/.dsh/sessions"
-          BACKUPS="/root/harness-backups"
-
-          with open(WS, "r", encoding="utf-8") as f:
-              data=json.load(f)
-
-          workspaces=data["tables"]["workspaces"]
-          path_to_id={os.path.normpath(v["path"]): wid for wid,v in workspaces.items()}
-          assigned={}
-          for wid,w in workspaces.items():
-              for sid in w.get("sessionIds", []):
-                  assigned[sid]=wid
-
-          stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-          backup=os.path.join(BACKUPS, f"workspace-before-membership-recover-{stamp}.json")
-          shutil.copy2(WS, backup)
-
-          def walk_values(obj):
-              if isinstance(obj, dict):
-                  for k,v in obj.items():
-                      yield k,v
-                      yield from walk_values(v)
-              elif isinstance(obj, list):
-                  for v in obj:
-                      yield from walk_values(v)
-
-          def inspect_journal(path):
-              sid=None
-              cwd=None
-              has_message=False
-              try:
-                  p=subprocess.Popen(
-                      ["zstdcat", path],
-                      stdout=subprocess.PIPE,
-                      stderr=subprocess.DEVNULL,
-                      text=True,
-                      errors="replace",
-                  )
-                  assert p.stdout is not None
-                  for line in p.stdout:
-                      if '"user/message"' in line or '"assistant/message"' in line:
-                          has_message=True
-                      try:
-                          obj=json.loads(line)
-                      except Exception:
-                          continue
-                      for k,v in walk_values(obj):
-                          lk=str(k).lower().replace("_","")
-                          if cwd is None and lk in ("cwd","workingdirectory") and isinstance(v,str) and v.startswith("/"):
-                              cwd=os.path.normpath(v)
-                          if sid is None and lk in ("sessionid","session") and isinstance(v,str) and v.startswith("session-"):
-                              sid=v
-                      if sid and cwd and has_message:
-                          p.terminate()
-                          break
-                  try:
-                      p.wait(timeout=2)
-                  except Exception:
-                      p.kill()
-              except Exception:
-                  return None,None,False
-
-              if sid is None:
-                  base=os.path.basename(os.path.dirname(path))
-                  if base.startswith("session-"):
-                      sid=base
-              return sid,cwd,has_message
-
-          def choose_workspace(cwd):
-              if not cwd:
-                  return None
-              cwd=os.path.normpath(cwd)
-              matches=[]
-              for p,wid in path_to_id.items():
-                  if cwd == p:
-                      matches.append((100000 + len(p), wid))
-                  elif p != "/root" and cwd.startswith(p.rstrip("/") + "/"):
-                      matches.append((len(p), wid))
-              return max(matches)[1] if matches else None
-
-          journals=[]
-          for root,dirs,files in os.walk(SESS):
-              if "session.v3.jsonl.zstd" in files:
-                  journals.append(os.path.join(root,"session.v3.jsonl.zstd"))
-
-          found=0
-          nonblank=0
-          missing_meta=0
-          already=0
-          added=collections.Counter()
-          unmatched=collections.Counter()
-          add_by_workspace=collections.defaultdict(list)
-
-          for path in sorted(journals):
-              sid,cwd,has_message=inspect_journal(path)
-              found+=1
-              if has_message:
-                  nonblank+=1
-              if not sid or not cwd:
-                  missing_meta+=1
-                  continue
-              if sid in assigned:
-                  already+=1
-                  continue
-              if not has_message:
-                  continue
-              wid=choose_workspace(cwd)
-              if wid is None:
-                  unmatched[cwd]+=1
-                  continue
-              add_by_workspace[wid].append((os.path.getmtime(path),sid,cwd))
-
-          for wid,rows in add_by_workspace.items():
-              rows.sort(key=lambda x:x[0])
-              current=workspaces[wid].setdefault("sessionIds",[])
-              have=set(current)
-              for _,sid,cwd in rows:
-                  if sid not in have:
-                      current.append(sid)
-                      have.add(sid)
-                      assigned[sid]=wid
-                      added[wid]+=1
-
-          tmp=WS+".membership-recover.tmp"
-          with open(tmp,"w",encoding="utf-8") as f:
-              json.dump(data,f,ensure_ascii=False,indent=2)
-              f.write("\n")
-          os.replace(tmp,WS)
-
-          print("BACKUP",backup)
-          print("JOURNALS",found,"NONBLANK",nonblank,"MISSING_META",missing_meta,"ALREADY_ASSIGNED",already)
-          print("WORKSPACES_AFTER")
-          for wid in data["global"]["workspaceIds"]:
-              w=workspaces.get(wid,{})
-              print(f"  {w.get('title')} | path={w.get('path')} | sessions={len(w.get('sessionIds',[]))} | added={added[wid]}")
-          print("UNMATCHED_CWD_TOP")
-          for cwd,n in unmatched.most_common(40):
-              print(f"  {n}\t{cwd}")
-          print("TOTAL_ADDED",sum(added.values()))
+          import json
+          p="/root/.dsh/storages/workspace.json"
+          d=json.load(open(p))
+          ws=d["tables"]["workspaces"]
+          for wid in d["global"]["workspaceIds"]:
+              w=ws.get(wid,{})
+              print(f"{w.get('title')}|{w.get('path')}|sessions={len(w.get('sessionIds',[]))}")
           PY
 
-          echo "=== RESTART MAIN ==="
+          echo "=== PRE-RECOVERY SERVICES ==="
+          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager || true
+          systemctl show deepseek-harness-proxy.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager || true
+          ss -ltnp | grep -E ':3080|:3081|:13080|:13082|:443 ' || true
+          journalctl -u deepseek-harness.service -n 80 --no-pager || true
+
+          wait_harness() {
+            local i
+            for i in $(seq 1 210); do
+              if systemctl is-active --quiet deepseek-harness.service && curl -fsS --max-time 2 http://127.0.0.1:3080/ >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 2
+            done
+            return 1
+          }
+
+          echo "=== RESTART HARNESS AFTER /dev/null REPAIR ==="
+          systemctl reset-failed deepseek-harness.service || true
           systemctl restart deepseek-harness.service || true
 
-          harness=0
-          for i in $(seq 1 210); do
-            if systemctl is-active --quiet deepseek-harness.service && curl -fsS --max-time 2 http://127.0.0.1:3080/ >/dev/null 2>&1; then
-              harness=1
-              break
+          if ! wait_harness; then
+            echo "FIRST_START_FAILED"
+            systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager || true
+            journalctl -u deepseek-harness.service -n 160 --no-pager || true
+            systemctl kill --kill-who=all -s SIGKILL deepseek-harness.service || true
+            sleep 3
+            systemctl reset-failed deepseek-harness.service || true
+            systemctl start deepseek-harness.service || true
+            if ! wait_harness; then
+              echo "SECOND_START_FAILED"
+              systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager || true
+              journalctl -u deepseek-harness.service -n 220 --no-pager || true
+              exit 20
             fi
-            sleep 2
-          done
-          echo "HARNESS_READY=$harness"
-          test "$harness" = "1"
+          fi
+          echo "HARNESS_READY=1"
 
-          echo "=== ENSURE PROXY ==="
+          echo "=== RESTART PROXY + HELPER ==="
+          systemctl reset-failed deepseek-harness-proxy.service || true
           systemctl restart deepseek-harness-proxy.service || true
 
           helper=0
@@ -211,19 +98,26 @@ jobs:
             sleep 2
           done
           echo "HELPER_READY=$helper"
-          test "$helper" = "1"
+          if [ "$helper" != "1" ]; then
+            systemctl status deepseek-harness-proxy.service --no-pager || true
+            tail -n 80 /var/log/harness-edge-session.log 2>/dev/null || true
+            exit 21
+          fi
 
-          internal=$(curl -sS -o /tmp/harness-internal-probe -w '%{http_code}' --max-time 5 -H 'Host: harness.flyaicrm.com' http://172.19.0.1:13080/ || true)
+          internal=$(curl -sS -o /tmp/harness-internal-probe -w '%{http_code}' --max-time 8 -H 'Host: harness.flyaicrm.com' http://172.19.0.1:13080/ || true)
+          public=$(curl -k -sS -o /tmp/harness-public-probe -w '%{http_code}' --max-time 12 https://harness.flyaicrm.com/ || true)
           echo "INTERNAL_PROXY_HTTP=$internal"
-
-          public=$(curl -k -sS -o /tmp/harness-public-probe -w '%{http_code}' --max-time 10 https://harness.flyaicrm.com/ || true)
           echo "PUBLIC_HTTP=$public"
 
           echo "=== UI PATCH ==="
-          grep -nE 'groupBy:|persist: "dsh.workspace.view' /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js | head -10
-          grep -nE 'groupBy: "flat"|groupBy: "workspace"|dsh.workspace.view.v8' /usr/local/sbin/harness-history-ui-patch.sh | head -20
+          grep -nE 'groupBy:|persist: "dsh.workspace.view' /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js | head -10 || true
+          grep -nE 'groupBy: "flat"|groupBy: "workspace"|dsh.workspace.view.v8' /usr/local/sbin/harness-history-ui-patch.sh | head -20 || true
 
           echo "=== FINAL SERVICES ==="
-          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager
-          systemctl show deepseek-harness-proxy.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager
+          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager
+          systemctl show deepseek-harness-proxy.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager
+          ss -ltnp | grep -E ':3080|:3081|:13080|:13082|:443 ' || true
+
+          test "$internal" = "401"
+          test "$public" = "401"
           ROOT
