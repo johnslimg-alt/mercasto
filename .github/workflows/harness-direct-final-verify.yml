@@ -1,0 +1,38 @@
+name: Harness Direct Final Verify
+
+on:
+  push:
+    branches:
+      - ops/harness-deepseek-direct-20260924
+    paths:
+      - .github/workflows/harness-direct-final-verify.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 5
+    steps:
+      - name: Verify production Harness state
+        shell: bash
+        run: |
+          set -euo pipefail
+          systemctl is-active --quiet deepseek-harness.service
+          echo "HARNESS_SERVICE=active"
+          code="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3080/)"
+          echo "HARNESS_HTTP=$code"
+          test "$code" = "200"
+
+          echo "=== DEFAULT MODEL ==="
+          sudo -n awk '
+            /^agent-default-model:/{show=1}
+            show{print}
+            show && NR>1 && /^[^[:space:]].*:/ && $0 !~ /^agent-default-model:/ {exit}
+          ' /root/.dsh/settings.yaml | head -10
+
+          grep -q 'id: deepseek-flash' /root/.dsh/settings.yaml
+          grep -q 'DeepSeek V4.1 Flash - Direct' /root/.dsh/settings.yaml
+          echo "DIRECT_MODEL_CATALOG_PRESENT=true"
+          echo "FINAL_VERIFY=PASS"
