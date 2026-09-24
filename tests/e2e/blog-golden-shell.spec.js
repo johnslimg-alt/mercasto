@@ -70,6 +70,10 @@ test('unknown blog article uses an honest Golden not-found state', async ({ page
   await expect(page.getByTestId('golden-blog-article-main')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Artículo no encontrado' })).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex,nofollow');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://mercasto.com/blog/no-existe',
+  );
   const overflow = await page.evaluate(() =>
     document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
