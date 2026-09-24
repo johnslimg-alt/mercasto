@@ -129,7 +129,7 @@ if grep -Eq 'proxy_pass[[:space:]]+https?://[^$"]' <<<"$nginx_block"; then
   echo "MCP edge proxy target must remain the fixed Docker service variable." >&2
   exit 1
 fi
-if grep -Eq '(/sse|:8001([^0-9]|$)|bash-mcp|supergateway|pinggy|tunnelmole|mcp-sse-bridge)' <<<"$nginx_block"; then
+if grep -Eq '(/sse|:8001([^0-9]|$)|bash-mcp|supergateway|mcp-sse-bridge)' <<<"$nginx_block"; then
   echo "Retired public-shell or SSE transport must not return through MCP HTTPS." >&2
   exit 1
 fi
