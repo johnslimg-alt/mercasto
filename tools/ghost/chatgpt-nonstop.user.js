@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.10
+// @version      9.0.0-alpha.2-nonstop.11
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.10';
+const VER = '9.0.0-alpha.2-nonstop.11';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -234,8 +234,18 @@ const PROFILES = [
     ],
     send: ['#composer-submit-button', 'button[data-testid="send-button"]', 'button[aria-label="Send prompt"]', 'button[aria-label="Send message"]'],
     stop: ['button[data-testid="stop-button"]', 'button[aria-label="Stop generating"]', 'button[aria-label="Stop streaming"]'],
-    user: ['[data-message-author-role="user"]'],
-    assistant: ['[data-message-author-role="assistant"]']
+    user: [
+      '[data-message-author-role="user"]',
+      '[data-turn="user"]',
+      'section[data-testid^="conversation-turn-"][data-turn="user"]',
+      'article[data-testid^="conversation-turn-"][data-turn="user"]'
+    ],
+    assistant: [
+      '[data-message-author-role="assistant"]',
+      '[data-turn="assistant"]',
+      'section[data-testid^="conversation-turn-"][data-turn="assistant"]',
+      'article[data-testid^="conversation-turn-"][data-turn="assistant"]'
+    ]
   },
   {
     id: 'generic',
@@ -403,13 +413,47 @@ async function waitForComposer(timeoutMs = 5000) {
   return el;
 }
 function nodeText(el) { if (!el) return ''; if (typeof el.value === 'string' && /^(TEXTAREA|INPUT)$/.test(el.tagName || '')) return displayText(el.value); return displayText(el.innerText ?? el.textContent ?? ''); }
-function assistantText() {
-  const nodes = queryAll(HOST.assistant).filter(el => el.isConnected && nodeText(el));
-  return nodes.length ? nodeText(nodes[nodes.length - 1]) : '';
+function conversationTurnNodes() {
+  const selectors = [
+    'section[data-testid^="conversation-turn-"]',
+    'article[data-testid^="conversation-turn-"]',
+    'div[data-testid^="conversation-turn-"]'
+  ];
+  return queryAll(selectors).filter(el => el.isConnected);
 }
-function assistantCount() { return queryAll(HOST.assistant).filter(el => el.isConnected && nodeText(el)).length; }
+function turnRole(el) {
+  if (!el) return '';
+  const explicit = String(el.getAttribute?.('data-turn') || '').toLowerCase();
+  if (explicit === 'assistant' || explicit === 'user') return explicit;
+  if (el.matches?.('[data-message-author-role="assistant"]') || el.querySelector?.('[data-message-author-role="assistant"]')) return 'assistant';
+  if (el.matches?.('[data-message-author-role="user"]') || el.querySelector?.('[data-message-author-role="user"]')) return 'user';
+  const lead = String(el.querySelector?.('.sr-only,h5,h6')?.textContent || '').trim().toLowerCase();
+  if (/^chatgpt said:?/.test(lead)) return 'assistant';
+  if (/^you said:?/.test(lead)) return 'user';
+  return '';
+}
+function cleanTurnText(el, role = turnRole(el)) {
+  let text = nodeText(el);
+  if (!text) return '';
+  text = text.replace(/^\s*(?:ChatGPT said:|You said:)\s*/i, '').trim();
+  return text;
+}
+function assistantNodes() {
+  const direct = queryAll(HOST.assistant).filter(el => el.isConnected && cleanTurnText(el, 'assistant'));
+  const turns = conversationTurnNodes().filter(el => turnRole(el) === 'assistant' && cleanTurnText(el, 'assistant'));
+  return [...new Set([...direct, ...turns])];
+}
+function assistantText() {
+  const nodes = assistantNodes();
+  return nodes.length ? cleanTurnText(nodes[nodes.length - 1], 'assistant') : '';
+}
+function assistantCount() { return assistantNodes().length; }
 function assistantTurnKey(text = assistantText()) { return `${assistantCount()}:${hash(text)}`; }
-function userCount() { return queryAll(HOST.user).filter(el => el.isConnected).length; }
+function userCount() {
+  const direct = queryAll(HOST.user).filter(el => el.isConnected);
+  const turns = conversationTurnNodes().filter(el => turnRole(el) === 'user');
+  return new Set([...direct, ...turns]).size;
+}
 function generating() { return !!queryFirst(HOST.stop); }
 function visibleStopButtons() { return queryAll(HOST.stop).filter(visible); }
 function hash(value) {
@@ -994,12 +1038,24 @@ async function play(options = {}) {
   S.stableHash = ''; S.stableSince = 0; S.drift = 0; S.relay = ''; S.recoveryCount = 0; S.watchdogBusy = false;
   clearGenerationWatchdog(); persistNonStop(); render();
 
-  const draft = nodeText(input); const latest = assistantText(); const parsed = terminal(latest);
+  const draft = nodeText(input);
+  let latest = assistantText();
+  if (!latest && conversationTurnNodes().length) {
+    const waitStarted = now();
+    while (!latest && now() - waitStarted < 3000) {
+      await sleep(150);
+      latest = assistantText();
+    }
+  }
+  const parsed = terminal(latest);
   if (draft.trim()) {
     S.bootstrapped = true;
     if (!await sendOnce(bootstrapPrompt(draft), 'initial task')) return;
   } else if (!latest) {
-    pause('Type a task into the chat first, then press Continue.', { keepActive: false }); return;
+    const turns = conversationTurnNodes();
+    pause(`No assistant turn detected (conversation turns: ${turns.length}). Type a task only if this is actually a new empty chat.`, { keepActive: false });
+    log('history-missing', { host: HOST.id, turnCount: turns.length, assistantSelectors: HOST.assistant.slice() });
+    return;
   } else if (parsed.type !== 'bad') {
     S.bootstrapped = true; S.stableHash = hash(latest); S.stableSince = now() - VALID_QUIET_MS;
   } else if (!resuming) {
