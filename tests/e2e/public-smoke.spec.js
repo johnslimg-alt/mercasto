@@ -223,7 +223,7 @@ test.describe('public launch smoke', () => {
     });
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    const firstCard = page.locator('.mcg-ad').first();
+    const firstCard = page.locator('.mcg-ad:visible').first();
     await expect(firstCard).toBeVisible();
     await firstCard.click();
     await expect(page).toHaveURL(/#ad-\d+$/);
