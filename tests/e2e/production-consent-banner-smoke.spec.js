@@ -15,9 +15,9 @@ import { test, expect } from '@playwright/test';
  *   - visibility is asserted by POLLING (`toBeVisible({ timeout })`), never by a
  *     one-shot isVisible() read that can sample before the banner's 800ms
  *     show-timer commits;
- *   - the banner module that actually ran must be the real component, not
- *     `StaleModuleFallback` -- nginx answers any missing hashed asset in /assets/
- *     with HTTP 200 application/javascript, so a 200 response proves nothing;
+ *   - the banner must expose its real decision controls. CookieBanner is now a
+ *     direct App import on purpose, so there is no consent-owned lazy chunk to
+ *     observe or depend on;
  *   - the stale-module fallback sentinel must never have fired;
  *   - no decision may have been written for the visitor (a "fix" must never
  *     suppress the banner by silently accepting consent).
@@ -34,11 +34,7 @@ test.describe('consent banner for a first-time visitor', () => {
       }
     });
 
-    const bannerResponses = [];
     const fallbackErrors = [];
-    page.on('response', (response) => {
-      if (/\/assets\/CookieBanner-/.test(response.url())) bannerResponses.push(response);
-    });
     page.on('console', (message) => {
       if (message.type() === 'error' && /stale-module fallback/i.test(message.text())) {
         fallbackErrors.push(message.text());
@@ -51,16 +47,11 @@ test.describe('consent banner for a first-time visitor', () => {
     //    800ms timer, so a sample taken earlier reports a false negative.
     await expect(page.getByTestId('cookie-banner')).toBeVisible({ timeout: 15000 });
 
-    // 2. The module that rendered it must be the real component. A missing
-    //    hashed asset is answered 200 with StaleModuleFallback, which renders
-    //    null and raises no error -- so "chunk loaded OK" must not be trusted.
-    expect(bannerResponses.length, 'the CookieBanner chunk was never requested').toBeGreaterThan(0);
-    const bannerBody = await bannerResponses[0].text();
-    expect(
-      bannerBody,
-      'the banner chunk served is StaleModuleFallback (a missing asset answered HTTP 200)',
-    ).not.toContain('StaleModuleFallback');
-    expect(bannerBody, 'the banner module does not render the cookie-banner testid').toContain('cookie-banner');
+    // 2. Verify the visible dialog is the real consent UI. CookieBanner is
+    //    deliberately imported directly by App.jsx, so expecting a
+    //    CookieBanner-*.js request would be a stale test contract.
+    await expect(page.getByTestId('cookie-essential')).toBeVisible();
+    await expect(page.getByTestId('cookie-accept-all')).toBeVisible();
 
     // 3. The fallback's own sentinel must not have fired in this session.
     const sentinel = await page.evaluate(() => {
