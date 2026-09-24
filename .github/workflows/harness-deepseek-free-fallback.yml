@@ -15,16 +15,23 @@ jobs:
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 10
     steps:
-      - name: Enable NVIDIA NIM Free DeepSeek V4.1 Flash
+      - name: Add and enable NVIDIA NIM Free DeepSeek V4.1 Flash
         shell: bash
         run: |
           set -euo pipefail
           SETTINGS=/root/.dsh/settings.yaml
-          BACKUP="/root/.dsh/settings.yaml.bak-nvidia-v41-$(date -u +%Y%m%dT%H%M%SZ)"
+          BACKUP="/root/.dsh/settings.yaml.bak-nvidia-v41-catalog-$(date -u +%Y%m%dT%H%M%SZ)"
           sudo -n cp "$SETTINGS" "$BACKUP"
+
+          if ! sudo -n grep -q 'id: deepseek-ai/deepseek-v4.1-flash' "$SETTINGS"; then
+            sudo -n perl -0pi -e 's{(    nvidia:\n      models:\n)}{$1        - id: deepseek-ai/deepseek-v4.1-flash\n          name: DeepSeek V4.1 Flash - NVIDIA NIM - Free\n}m' "$SETTINGS"
+          fi
+
+          sudo -n grep -q 'id: deepseek-ai/deepseek-v4.1-flash' "$SETTINGS"
 
           sudo -n perl -0pi -e 's{^agent-default-model:\n(?:[ \t].*\n)*}{agent-default-model:\n  provider: nvidia\n  model: deepseek-ai/deepseek-v4.1-flash\n}m' "$SETTINGS"
 
+          echo "CATALOG_MODEL_ADDED=true"
           echo "=== CANDIDATE ==="
           sudo -n awk '
             /^agent-default-model:/{show=1}
