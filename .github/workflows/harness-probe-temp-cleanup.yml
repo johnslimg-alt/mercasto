@@ -1,0 +1,23 @@
+name: Cleanup Harness Probe Temp
+
+on:
+  push:
+    branches:
+      - ops/harness-deepseek-direct-20260924
+    paths:
+      - .github/workflows/harness-probe-temp-cleanup.yml
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 5
+    steps:
+      - name: Remove isolated npm probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/dsh-latest-inspect /tmp/dsh-install.log /tmp/dsh-direct.out /tmp/dsh-direct.err
+          echo "HARNESS_PROBE_TEMP_CLEAN=true"
