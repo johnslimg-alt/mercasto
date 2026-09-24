@@ -1,0 +1,47 @@
+name: One-shot repair dev null
+
+on:
+  push:
+    branches:
+      - ops/repair-dev-null-runner
+    paths:
+      - .github/workflows/repair-dev-null-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    name: Repair runner dev null
+    runs-on: [self-hosted]
+    timeout-minutes: 5
+    steps:
+      - name: Validate and repair canonical null device
+        shell: bash
+        run: |
+          set -euo pipefail
+          dev_type="$(stat -c '%F' /dev/null)"
+          dev_rdev="$(stat -c '%t:%T' /dev/null)"
+          echo "before_type=$dev_type"
+          echo "before_rdev=$dev_rdev"
+          echo "before_owner=$(stat -c '%U:%G' /dev/null)"
+          echo "before_mode=$(stat -c '%a' /dev/null)"
+
+          test "$dev_type" = "character special file"
+          test "$dev_rdev" = "1:3"
+
+          sudo -n chown root:root /dev/null
+          sudo -n chmod 0666 /dev/null
+
+          test "$(stat -c '%F' /dev/null)" = "character special file"
+          test "$(stat -c '%t:%T' /dev/null)" = "1:3"
+          test "$(stat -c '%U:%G' /dev/null)" = "root:root"
+          test "$(stat -c '%a' /dev/null)" = "666"
+          test -r /dev/null
+          test -w /dev/null
+          printf 'probe\n' >/dev/null
+          cat /dev/null >/dev/null
+
+          echo "after_owner=$(stat -c '%U:%G' /dev/null)"
+          echo "after_mode=$(stat -c '%a' /dev/null)"
+          echo "DEV_NULL_REPAIR_OK"
