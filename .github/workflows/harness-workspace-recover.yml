@@ -1,0 +1,211 @@
+name: Temporary Harness workspace recovery
+
+on:
+  push:
+    branches:
+      - ops-harness-workspace-recover
+    paths:
+      - .github/workflows/harness-workspace-recover.yml
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Recover Harness workspace membership
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT=/tmp/harness-workspace-recovery-report.txt
+          : > "$REPORT"
+          exec > >(tee -a "$REPORT") 2>&1
+
+          echo "RUNNER=$(hostname) UID=$(id -u) DATE=$(date -u +%FT%TZ)"
+          test "$(id -u)" = "0"
+          test -f /root/.dsh/storages/workspace.json
+          test -d /root/.dsh/sessions
+          command -v zstdcat >/dev/null
+
+          python3 - <<'PY'
+          import collections, datetime, json, os, re, shutil, subprocess
+
+          WS="/root/.dsh/storages/workspace.json"
+          SESS="/root/.dsh/sessions"
+          BACKUPS="/root/harness-backups"
+          os.makedirs(BACKUPS, exist_ok=True)
+
+          with open(WS, "r", encoding="utf-8") as f:
+              data=json.load(f)
+
+          workspaces=data["tables"]["workspaces"]
+          path_to_id={os.path.normpath(v["path"]): wid for wid,v in workspaces.items()}
+          assigned={}
+          for wid,w in workspaces.items():
+              for sid in w.get("sessionIds", []):
+                  assigned[sid]=wid
+
+          stamp=datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+          backup=os.path.join(BACKUPS, f"workspace-before-membership-recover-{stamp}.json")
+          shutil.copy2(WS, backup)
+
+          def walk_values(obj):
+              if isinstance(obj, dict):
+                  for k,v in obj.items():
+                      yield k,v
+                      yield from walk_values(v)
+              elif isinstance(obj, list):
+                  for v in obj:
+                      yield from walk_values(v)
+
+          def inspect_journal(path):
+              sid=None
+              cwd=None
+              has_message=False
+              try:
+                  p=subprocess.Popen(["zstdcat", path], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, errors="replace")
+                  assert p.stdout is not None
+                  for line in p.stdout:
+                      if '"user/message"' in line or '"assistant/message"' in line:
+                          has_message=True
+                      try:
+                          obj=json.loads(line)
+                      except Exception:
+                          continue
+                      for k,v in walk_values(obj):
+                          lk=str(k).lower().replace("_","")
+                          if cwd is None and lk in ("cwd","workingdirectory") and isinstance(v,str) and v.startswith("/"):
+                              cwd=os.path.normpath(v)
+                          if sid is None and lk in ("sessionid","session") and isinstance(v,str) and v.startswith("session-"):
+                              sid=v
+                      if sid and cwd and has_message:
+                          p.terminate()
+                          break
+                  try:
+                      p.wait(timeout=2)
+                  except Exception:
+                      p.kill()
+              except Exception:
+                  return None,None,False
+
+              if sid is None:
+                  base=os.path.basename(os.path.dirname(path))
+                  if base.startswith("session-"):
+                      sid=base
+              return sid,cwd,has_message
+
+          def choose_workspace(cwd):
+              if not cwd:
+                  return None
+              cwd=os.path.normpath(cwd)
+              matches=[]
+              for p,wid in path_to_id.items():
+                  if cwd == p:
+                      matches.append((len(p)+100000, wid))
+                  elif p != "/root" and cwd.startswith(p.rstrip("/") + "/"):
+                      matches.append((len(p), wid))
+              return max(matches)[1] if matches else None
+
+          found=0
+          nonblank=0
+          missing_meta=0
+          already=0
+          added=collections.Counter()
+          unmatched=collections.Counter()
+          add_by_workspace=collections.defaultdict(list)
+
+          journals=[]
+          for root,dirs,files in os.walk(SESS):
+              if "session.v3.jsonl.zstd" in files:
+                  journals.append(os.path.join(root,"session.v3.jsonl.zstd"))
+
+          for path in sorted(journals):
+              sid,cwd,has_message=inspect_journal(path)
+              found+=1
+              if has_message:
+                  nonblank+=1
+              if not sid or not cwd:
+                  missing_meta+=1
+                  continue
+              if sid in assigned:
+                  already+=1
+                  continue
+              if not has_message:
+                  continue
+              wid=choose_workspace(cwd)
+              if wid is None:
+                  unmatched[cwd]+=1
+                  continue
+              add_by_workspace[wid].append((os.path.getmtime(path),sid,cwd))
+
+          for wid,rows in add_by_workspace.items():
+              rows.sort(key=lambda x:x[0])
+              current=workspaces[wid].setdefault("sessionIds",[])
+              have=set(current)
+              for _,sid,cwd in rows:
+                  if sid not in have:
+                      current.append(sid)
+                      have.add(sid)
+                      assigned[sid]=wid
+                      added[wid]+=1
+
+          tmp=WS+".membership-recover.tmp"
+          with open(tmp,"w",encoding="utf-8") as f:
+              json.dump(data,f,ensure_ascii=False,indent=2)
+              f.write("\n")
+          os.replace(tmp,WS)
+
+          print("BACKUP",backup)
+          print("JOURNALS",found,"NONBLANK",nonblank,"MISSING_META",missing_meta,"ALREADY_ASSIGNED",already)
+          print("WORKSPACES_AFTER")
+          for wid in data["global"]["workspaceIds"]:
+              w=workspaces.get(wid,{})
+              print(f"  {w.get('title')} | path={w.get('path')} | sessions={len(w.get('sessionIds',[]))} | added={added[wid]}")
+          print("UNMATCHED_CWD_TOP")
+          for cwd,n in unmatched.most_common(30):
+              print(f"  {n}\t{cwd}")
+          print("TOTAL_ADDED",sum(added.values()))
+          PY
+
+          echo "RESTARTING_HARNESS"
+          systemctl restart deepseek-harness.service || true
+
+          ok=0
+          for i in $(seq 1 180); do
+            if systemctl is-active --quiet deepseek-harness.service && curl -fsS --max-time 2 http://127.0.0.1:3080/ >/dev/null 2>&1; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          echo "HARNESS_READY=$ok"
+          test "$ok" = "1"
+
+          helper=0
+          for i in $(seq 1 60); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 http://172.19.0.1:13082/cookie || true)
+            if [ "$code" = "204" ]; then helper=1; break; fi
+            sleep 2
+          done
+          echo "HELPER_READY=$helper"
+          test "$helper" = "1"
+
+          grep -nE 'groupBy:|persist: "dsh.workspace.view' /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js | head -10
+          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager
+
+      - name: Commit recovery report to temporary branch
+        if: always()
+        shell: bash
+        run: |
+          set -e
+          mkdir -p .ops
+          cp /tmp/harness-workspace-recovery-report.txt .ops/harness-workspace-recovery-report.txt 2>/dev/null || echo "report unavailable" > .ops/harness-workspace-recovery-report.txt
+          git config user.name "harness-recovery-bot"
+          git config user.email "harness-recovery@localhost"
+          git add .ops/harness-workspace-recovery-report.txt
+          git commit -m "ops: record Harness workspace recovery" || exit 0
+          git push origin HEAD:ops-harness-workspace-recover
