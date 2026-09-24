@@ -126,6 +126,7 @@ jobs:
             echo "== MCP local listeners =="
             ss -lntpH 2>/dev/null | grep -E '127\.0\.0\.1|\[::1\]' | grep -Ei 'mcp|ssh|node|:8001|:8765|:300[0-9]|:30[0-9]{2}' || true
           elif [ "$OPERATION" = "harness_workspace_audit" ]; then
+            # Read-only audit: session directory names and workspace membership only.
             echo "== Harness workspace audit =="
             sudo -n python3 - <<'PY'
           import json
