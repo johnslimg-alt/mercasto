@@ -1,0 +1,44 @@
+name: Harness DeepSeek Direct Inspect
+
+on:
+  push:
+    branches:
+      - ops/harness-deepseek-direct-20260924
+    paths:
+      - .github/workflows/harness-deepseek-direct-inspect.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 15
+    steps:
+      - name: Inspect Harness safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== HOST ==="
+          hostname
+          whoami
+          uname -a
+          echo "=== DOCKER ==="
+          docker ps --format '{{.Names}}|{{.Image}}|{{.Status}}' || true
+          echo "=== SYSTEMD MATCHES ==="
+          systemctl list-units --type=service --all 2>/dev/null | grep -Ei 'harness|deepseek|dsh' || true
+          echo "=== KNOWN HARNESS DIRS ==="
+          for d in /etc/deepseek-harness /opt/deepseek-harness /srv/deepseek-harness /var/lib/deepseek-harness /root/.deepseek-harness /root/.config/deepseek-harness /var/www/harness; do
+            if [ -e "$d" ]; then
+              echo "--- $d"
+              find "$d" -maxdepth 2 -type f -printf '%p\n' 2>/dev/null | sort | head -200
+            fi
+          done
+          echo "=== CONFIG KEYS (VALUES REDACTED) ==="
+          for d in /etc/deepseek-harness /opt/deepseek-harness /srv/deepseek-harness /var/lib/deepseek-harness /root/.deepseek-harness /root/.config/deepseek-harness /var/www/harness; do
+            if [ -d "$d" ]; then
+              grep -RInsE 'deepseek|model|provider|api[_-]?base|base[_-]?url|api[_-]?key' "$d" 2>/dev/null                 | head -300                 | sed -E 's#([A-Za-z0-9_]*(KEY|TOKEN|SECRET|PASSWORD)[A-Za-z0-9_]*[[:space:]]*[:=][[:space:]]*)[^[:space:]]+#\1<REDACTED>#Ig' || true
+            fi
+          done
+          echo "=== PROCESS MATCHES ==="
+          ps -eo pid,user,comm,args --sort=pid | grep -Ei 'deepseek|harness|dsh' | grep -v grep | head -100 || true
