@@ -26,22 +26,12 @@ jobs:
           set_default() {
             provider="$1"
             model="$2"
-            sudo -n python3 - "$provider" "$model" <<'PY'
-from pathlib import Path
-import sys
-provider, model = sys.argv[1], sys.argv[2]
-p = Path('/root/.dsh/settings.yaml')
-lines = p.read_text().splitlines()
-start = next(i for i,l in enumerate(lines) if l.strip() == 'agent-default-model:' and not l.startswith((' ','\t')))
-end = len(lines)
-for i in range(start+1, len(lines)):
-    if lines[i] and not lines[i].startswith((' ','\t','#')):
-        end = i
-        break
-new = ['agent-default-model:', f'  provider: {provider}', f'  model: {model}', '  reasoningEffort: high']
-lines[start:end] = new
-p.write_text('\n'.join(lines) + '\n')
-PY
+            sudo -n env PROVIDER="$provider" MODEL="$model" perl -0pi -e '
+              BEGIN { $p=$ENV{"PROVIDER"}; $m=$ENV{"MODEL"}; }
+              s{^agent-default-model:\n(?:[ \t].*\n)*}{
+                "agent-default-model:\n  provider: $p\n  model: $m\n  reasoningEffort: high\n"
+              }me
+            ' "$SETTINGS"
           }
 
           smoke() {
