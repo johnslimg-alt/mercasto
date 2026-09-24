@@ -149,6 +149,7 @@ class SeoShellControllerTest extends TestCase
         $response = $this->get('https://mercasto.test/blog/no-existe');
 
         $response->assertNotFound();
+        $response->assertHeader('X-Robots-Tag', 'noindex,nofollow');
         $response->assertSee('<title>Artículo no encontrado | Mercasto</title>', false);
         $response->assertSee('<link rel="canonical" href="https://mercasto.test/blog/no-existe" />', false);
         $response->assertSee('content="noindex,nofollow"', false);
