@@ -223,7 +223,10 @@ test.describe('public launch smoke', () => {
     });
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    const firstCard = page.locator('.mcg-ad').first();
+    // Golden home keeps desktop/tablet/mobile layouts in the DOM and hides
+    // inactive breakpoints with CSS. Target the first rendered card, not the
+    // first DOM copy (which is intentionally hidden on mobile).
+    const firstCard = page.locator('.mcg-ad:visible').first();
     await expect(firstCard).toBeVisible();
     await firstCard.click();
     await expect(page).toHaveURL(/#ad-\d+$/);
