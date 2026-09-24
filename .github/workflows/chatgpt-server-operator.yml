@@ -21,6 +21,7 @@ jobs:
         github.event.comment.body == 'RUN:status' ||
         github.event.comment.body == 'RUN:mcp_status' ||
         github.event.comment.body == 'RUN:harness_proxy_status' ||
+        github.event.comment.body == 'RUN:harness_upload_trace' ||
         github.event.comment.body == 'RUN:harness_upload_diag' ||
         github.event.comment.body == 'RUN:harness_workspace_audit' ||
         github.event.comment.body == 'RUN:ghost_access_probe' ||
@@ -61,6 +62,7 @@ jobs:
               'RUN:status': ['status', '', '160'],
               'RUN:mcp_status': ['mcp_status', '', '220'],
               'RUN:harness_proxy_status': ['harness_proxy_status', '', '220'],
+              'RUN:harness_upload_trace': ['harness_upload_trace', '', '320'],
               'RUN:harness_upload_diag': ['harness_upload_diag', '', '360'],
               'RUN:harness_workspace_audit': ['harness_workspace_audit', '', '400'],
               'RUN:ghost_access_probe': ['ghost_access_probe', '', '260'],
@@ -188,6 +190,40 @@ jobs:
             done
             rm -f "$smoke_file"
             trap - EXIT
+          elif [ "$OPERATION" = "harness_upload_trace" ]; then
+            echo "== Harness upload path trace =="
+            tmp=/tmp/harness-upload-trace.bin
+            dd if=/dev/zero of="$tmp" bs=1M count=2 status=none
+            trap 'rm -f "$tmp" /tmp/harness-trace-*' EXIT
+
+            probe() {
+              name="$1"; shift
+              out="/tmp/harness-trace-$name.out"
+              hdr="/tmp/harness-trace-$name.hdr"
+              code="$(curl -ksS -D "$hdr" -o "$out" -w '%{http_code}' --max-time 20 -X POST -H 'Content-Type: application/octet-stream' --data-binary @"$tmp" "$@" || true)"
+              bytes="$(wc -c <"$out" 2>/dev/null || echo 0)"
+              server="$(awk 'BEGIN{IGNORECASE=1} /^server:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print; exit}' "$hdr" 2>/dev/null || true)"
+              echo "probe=$name http=$code response_bytes=$bytes server=${server:-<none>}"
+              sed -n '1,8p' "$hdr" | tr '\r' ' ' || true
+              head -c 240 "$out" 2>/dev/null | tr '\n' ' ' || true
+              echo
+            }
+
+            echo "-- effective size directives --"
+            sudo -n grep -RniE 'client_max_body_size|limit_req_body|body.*size|max.*body' /etc/deepseek-harness /etc/mercasto-edge 2>/dev/null || true
+            docker exec mercasto_frontend_container sh -lc "grep -RniE 'client_max_body_size|limit_req_body|body.*size|max.*body' /etc/nginx 2>/dev/null || true" || true
+
+            echo "-- process/listener context --"
+            ss -lntp | grep -E ':443 |:13080 |:3080 |:3081 ' || true
+            systemctl show deepseek-harness.service deepseek-harness-proxy.service --no-pager -p Id -p ExecStart -p ActiveState -p MainPID 2>/dev/null || true
+
+            probe public https://harness.flyaicrm.com/api/session/uploadFileBinary
+            probe edge_local --resolve harness.flyaicrm.com:443:127.0.0.1 https://harness.flyaicrm.com/api/session/uploadFileBinary
+            probe proxy_13080 -H 'Host: harness.flyaicrm.com' http://172.19.0.1:13080/api/session/uploadFileBinary
+            probe app_3081 -H 'Host: harness.flyaicrm.com' http://127.0.0.1:3081/api/session/uploadFileBinary
+            probe app_3080 -H 'Host: harness.flyaicrm.com' http://127.0.0.1:3080/api/session/uploadFileBinary
+
+            rm -f "$tmp"
           elif [ "$OPERATION" = "harness_workspace_audit" ]; then
             # Read-only audit: session directory names and workspace membership only.
             echo "== Harness workspace audit =="
