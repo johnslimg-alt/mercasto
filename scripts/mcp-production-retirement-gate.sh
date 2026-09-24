@@ -99,12 +99,12 @@ plugin_block="$(
     in_plugin { print }
   ' "$COMPOSE"
 )"
-printf '%s\n' "$plugin_block" | grep -qF 'read_only: true'
-printf '%s\n' "$plugin_block" | grep -qF 'no-new-privileges:true'
-printf '%s\n' "$plugin_block" | grep -qF 'cap_drop:'
-printf '%s\n' "$plugin_block" | grep -qF -- '- ALL'
-printf '%s\n' "$plugin_block" | grep -qF 'expose:'
-if printf '%s\n' "$plugin_block" | grep -qE '^[[:space:]]+ports:|/var/run/docker.sock|^[[:space:]]+volumes:'; then
+grep -qF 'read_only: true' <<<"$plugin_block"
+grep -qF 'no-new-privileges:true' <<<"$plugin_block"
+grep -qF 'cap_drop:' <<<"$plugin_block"
+grep -qF -- '- ALL' <<<"$plugin_block"
+grep -qF 'expose:' <<<"$plugin_block"
+if grep -qE '^[[:space:]]+ports:|/var/run/docker.sock|^[[:space:]]+volumes:' <<<"$plugin_block"; then
   echo "MCP plugin Compose service must not expose host ports, Docker socket or host volumes." >&2
   exit 1
 fi
@@ -114,22 +114,22 @@ fi
 nginx_block="$(
   sed -n '/# MERCASTO_MCP_PLUGIN_HTTP_BOOTSTRAP_BEGIN/,/# MERCASTO_MCP_PLUGIN_HTTP_BOOTSTRAP_END/p' "$NGINX"
 )"
-printf '%s\n' "$nginx_block" | grep -qF 'server_name mcp.mercasto.com;'
-printf '%s\n' "$nginx_block" | grep -qF 'location ^~ /.well-known/acme-challenge/'
-printf '%s\n' "$nginx_block" | grep -qF 'return 308 https://$host$request_uri;'
-printf '%s\n' "$nginx_block" | grep -qF 'listen 443 ssl;'
-printf '%s\n' "$nginx_block" | grep -qF 'ssl_certificate /etc/letsencrypt/live/mcp.mercasto.com-0001/fullchain.pem;'
-printf '%s\n' "$nginx_block" | grep -qF 'ssl_certificate_key /etc/letsencrypt/live/mcp.mercasto.com-0001/privkey.pem;'
-printf '%s\n' "$nginx_block" | grep -qF 'location = /healthz'
-printf '%s\n' "$nginx_block" | grep -qF 'location = /mcp'
-printf '%s\n' "$nginx_block" | grep -qF 'proxy_buffering off;'
-printf '%s\n' "$nginx_block" | grep -qF 'proxy_request_buffering off;'
-printf '%s\n' "$nginx_block" | grep -qF 'add_header Cache-Control "no-store" always;'
-if printf '%s\n' "$nginx_block" | grep -Eq 'proxy_pass[[:space:]]+https?://[^$"]'; then
+grep -qF 'server_name mcp.mercasto.com;' <<<"$nginx_block"
+grep -qF 'location ^~ /.well-known/acme-challenge/' <<<"$nginx_block"
+grep -qF 'return 308 https://$host$request_uri;' <<<"$nginx_block"
+grep -qF 'listen 443 ssl;' <<<"$nginx_block"
+grep -qF 'ssl_certificate /etc/letsencrypt/live/mcp.mercasto.com-0001/fullchain.pem;' <<<"$nginx_block"
+grep -qF 'ssl_certificate_key /etc/letsencrypt/live/mcp.mercasto.com-0001/privkey.pem;' <<<"$nginx_block"
+grep -qF 'location = /healthz' <<<"$nginx_block"
+grep -qF 'location = /mcp' <<<"$nginx_block"
+grep -qF 'proxy_buffering off;' <<<"$nginx_block"
+grep -qF 'proxy_request_buffering off;' <<<"$nginx_block"
+grep -qF 'add_header Cache-Control "no-store" always;' <<<"$nginx_block"
+if grep -Eq 'proxy_pass[[:space:]]+https?://[^$"]' <<<"$nginx_block"; then
   echo "MCP edge proxy target must remain the fixed Docker service variable." >&2
   exit 1
 fi
-if printf '%s\n' "$nginx_block" | grep -Eq '(/sse|:8001([^0-9]|$)|bash-mcp|supergateway|mcp-sse-bridge)'; then
+if grep -Eq '(/sse|:8001([^0-9]|$)|bash-mcp|supergateway|mcp-sse-bridge)' <<<"$nginx_block"; then
   echo "Retired public-shell or SSE transport must not return through MCP HTTPS." >&2
   exit 1
 fi
