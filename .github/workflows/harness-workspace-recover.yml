@@ -1,4 +1,4 @@
-name: Temporary Harness workspace recovery
+name: Temporary Harness MCP recovery
 
 on:
   push:
@@ -9,115 +9,82 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
-  recover:
-    runs-on: self-hosted
-    timeout-minutes: 20
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Repair system device and restore Harness production
+      - name: Cancel stale self-hosted recovery run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/runs/36036826777/cancel || true
+
+      - name: Probe Mercasto MCP tools
         shell: bash
         run: |
-          set -euo pipefail
-          echo "RUNNER=$(hostname) UID=$(id -u) DATE=$(date -u +%FT%TZ)"
-          sudo -n true
-
-          sudo -n bash -s <<'ROOT'
-          set -u
-
-          echo "=== FIX /dev/null ==="
-          echo "BEFORE=$(stat -c '%F %a %U %G %t:%T' /dev/null 2>&1 || true)"
-          if [ ! -c /dev/null ]; then
-            rm -f /dev/null
-            mknod -m 666 /dev/null c 1 3
-            chown root:root /dev/null
-          else
-            chown root:root /dev/null
-            chmod 666 /dev/null
-          fi
-          echo "AFTER=$(stat -c '%F %a %U %G %t:%T' /dev/null)"
-          test -c /dev/null
-
-          echo "=== CURRENT WORKSPACES ==="
           python3 - <<'PY'
-          import json
-          p="/root/.dsh/storages/workspace.json"
-          d=json.load(open(p))
-          ws=d["tables"]["workspaces"]
-          for wid in d["global"]["workspaceIds"]:
-              w=ws.get(wid,{})
-              print(f"{w.get('title')}|{w.get('path')}|sessions={len(w.get('sessionIds',[]))}")
-          PY
+          import json, urllib.request, urllib.error
 
-          echo "=== PRE-RECOVERY SERVICES ==="
-          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager || true
-          systemctl show deepseek-harness-proxy.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager || true
-          ss -ltnp | grep -E ':3080|:3081|:13080|:13082|:443 ' || true
-          journalctl -u deepseek-harness.service -n 80 --no-pager || true
+          URL="https://mcp.mercasto.com/mcp"
 
-          wait_harness() {
-            local i
-            for i in $(seq 1 210); do
-              if systemctl is-active --quiet deepseek-harness.service && curl -fsS --max-time 2 http://127.0.0.1:3080/ >/dev/null 2>&1; then
-                return 0
-              fi
-              sleep 2
-            done
-            return 1
+          def parse_body(body):
+              body=body.strip()
+              if not body:
+                  return None
+              if body.startswith("{") or body.startswith("["):
+                  return json.loads(body)
+              events=[]
+              for line in body.splitlines():
+                  if line.startswith("data:"):
+                      raw=line[5:].strip()
+                      if raw and raw != "[DONE]":
+                          try:
+                              events.append(json.loads(raw))
+                          except Exception:
+                              pass
+              return events[-1] if events else {"raw": body[:2000]}
+
+          def post(payload, session=None, expect_response=True):
+              data=json.dumps(payload).encode()
+              headers={
+                  "Content-Type":"application/json",
+                  "Accept":"application/json, text/event-stream",
+                  "User-Agent":"harness-recovery-probe/1.0",
+              }
+              if session:
+                  headers["Mcp-Session-Id"]=session
+              req=urllib.request.Request(URL,data=data,headers=headers,method="POST")
+              try:
+                  with urllib.request.urlopen(req,timeout=30) as r:
+                      body=r.read().decode("utf-8","replace")
+                      sid=r.headers.get("Mcp-Session-Id") or session
+                      print("HTTP",r.status,"SESSION",bool(sid),"TYPE",r.headers.get("Content-Type"))
+                      return sid, parse_body(body)
+              except urllib.error.HTTPError as e:
+                  body=e.read().decode("utf-8","replace")
+                  print("HTTP_ERROR",e.code,body[:3000])
+                  raise
+
+          init={
+              "jsonrpc":"2.0","id":1,"method":"initialize",
+              "params":{
+                  "protocolVersion":"2025-03-26",
+                  "capabilities":{},
+                  "clientInfo":{"name":"harness-recovery","version":"1.0"}
+              }
           }
+          sid,res=post(init)
+          print("INIT",json.dumps(res,ensure_ascii=False)[:4000])
+          if not sid:
+              raise SystemExit("No MCP session id returned")
 
-          echo "=== RESTART HARNESS AFTER /dev/null REPAIR ==="
-          systemctl reset-failed deepseek-harness.service || true
-          systemctl restart deepseek-harness.service || true
-
-          if ! wait_harness; then
-            echo "FIRST_START_FAILED"
-            systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager || true
-            journalctl -u deepseek-harness.service -n 160 --no-pager || true
-            systemctl kill --kill-who=all -s SIGKILL deepseek-harness.service || true
-            sleep 3
-            systemctl reset-failed deepseek-harness.service || true
-            systemctl start deepseek-harness.service || true
-            if ! wait_harness; then
-              echo "SECOND_START_FAILED"
-              systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager || true
-              journalctl -u deepseek-harness.service -n 220 --no-pager || true
-              exit 20
-            fi
-          fi
-          echo "HARNESS_READY=1"
-
-          echo "=== RESTART PROXY + HELPER ==="
-          systemctl reset-failed deepseek-harness-proxy.service || true
-          systemctl restart deepseek-harness-proxy.service || true
-
-          helper=0
-          for i in $(seq 1 90); do
-            code=$(curl -sS -o /tmp/harness-helper-probe -w '%{http_code}' --max-time 3 http://172.19.0.1:13082/cookie || true)
-            if [ "$code" = "204" ]; then helper=1; break; fi
-            sleep 2
-          done
-          echo "HELPER_READY=$helper"
-          if [ "$helper" != "1" ]; then
-            systemctl status deepseek-harness-proxy.service --no-pager || true
-            tail -n 80 /var/log/harness-edge-session.log 2>/dev/null || true
-            exit 21
-          fi
-
-          internal=$(curl -sS -o /tmp/harness-internal-probe -w '%{http_code}' --max-time 8 -H 'Host: harness.flyaicrm.com' http://172.19.0.1:13080/ || true)
-          public=$(curl -k -sS -o /tmp/harness-public-probe -w '%{http_code}' --max-time 12 https://harness.flyaicrm.com/ || true)
-          echo "INTERNAL_PROXY_HTTP=$internal"
-          echo "PUBLIC_HTTP=$public"
-
-          echo "=== UI PATCH ==="
-          grep -nE 'groupBy:|persist: "dsh.workspace.view' /opt/dsh-rc2/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js | head -10 || true
-          grep -nE 'groupBy: "flat"|groupBy: "workspace"|dsh.workspace.view.v8' /usr/local/sbin/harness-history-ui-patch.sh | head -20 || true
-
-          echo "=== FINAL SERVICES ==="
-          systemctl show deepseek-harness.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager
-          systemctl show deepseek-harness-proxy.service -p ActiveState -p SubState -p MainPID -p NRestarts -p Result --no-pager
-          ss -ltnp | grep -E ':3080|:3081|:13080|:13082|:443 ' || true
-
-          test "$internal" = "401"
-          test "$public" = "401"
-          ROOT
+          post({"jsonrpc":"2.0","method":"notifications/initialized","params":{}},sid,False)
+          sid,res=post({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}},sid)
+          print("TOOLS_JSON",json.dumps(res,ensure_ascii=False)[:30000])
+          PY
