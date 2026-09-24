@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ghost in the Loop
 // @namespace    https://github.com/MShneur/ghost-in-the-loop
-// @version      9.0.0-alpha.2-nonstop.12
+// @version      9.0.0-alpha.2-nonstop.13
 // @description  Persistent non-stop Ghost loop with audited HALT, recovery, and a collapsible right-side control rail.
 // @author       Michael S (CTRL-AI)
 // @match        https://chatgpt.com/*
@@ -35,7 +35,7 @@ if (window.__GITL_V9__ === true) return;
 if (window.__GITL_V9_BOOTING__ && Date.now() - window.__GITL_V9_BOOTING__ < 15000) return;
 window.__GITL_V9_BOOTING__ = Date.now();
 
-const VER = '9.0.0-alpha.2-nonstop.12';
+const VER = '9.0.0-alpha.2-nonstop.13';
 const TICK_MS = 1000;
 const VALID_QUIET_MS = 1400;
 const DRIFT_QUIET_MS = 9000;
@@ -232,7 +232,17 @@ const PROFILES = [
       'textarea[name="prompt-textarea"]',
       'textarea[data-id="root"]'
     ],
-    send: ['#composer-submit-button', 'button[data-testid="send-button"]', 'button[aria-label="Send prompt"]', 'button[aria-label="Send message"]'],
+    send: [
+      '#composer-submit-button',
+      'button[data-testid="send-button"]',
+      'button[data-testid="composer-submit-button"]',
+      'button[aria-label="Send prompt"]',
+      'button[aria-label="Send message"]',
+      'button[aria-label="Send"]',
+      'button.composer-submit-button-color',
+      'form[data-type="unified-composer"] button[type="submit"]',
+      'form:has(#prompt-textarea) button[type="submit"]'
+    ],
     stop: ['button[data-testid="stop-button"]', 'button[aria-label="Stop generating"]', 'button[aria-label="Stop streaming"]'],
     user: [
       '[data-message-author-role="user"]',
@@ -772,20 +782,68 @@ async function setComposerText(text) {
   return { ok: false, why: 'visible-text-mismatch', expectedLength: expected.length, observedLength: observed.length };
 }
 
+function composerForm(el = composer()) {
+  return el?.closest?.('form') || null;
+}
+function usableSendButton(button, el = composer()) {
+  if (!button || !button.isConnected || button.closest?.('#gitl9')) return false;
+  if (button.disabled || button.getAttribute?.('aria-disabled') === 'true') return false;
+  // ChatGPT can reuse the same visual button slot for voice/microphone when no text is ready.
+  if (button.querySelector?.('use[href*="voice" i],use[href*="microphone" i],[data-icon*="microphone" i]')) return false;
+  if (el && !semanticText(nodeText(el))) return false;
+  return visible(button);
+}
 function localSendButton(el = composer()) {
   if (!el) return null;
-  for (let node = el, depth = 0; node && depth < 9; node = node.parentElement, depth++) {
-    const btn = queryFirst(HOST.send, node); if (btn) return btn;
+  const form = composerForm(el);
+  if (form) {
+    for (const selector of HOST.send || []) {
+      let nodes = [];
+      try { nodes = [...form.querySelectorAll(selector)]; } catch (_) {}
+      const button = nodes.find(node => usableSendButton(node, el));
+      if (button) return button;
+    }
+    const submit = [...form.querySelectorAll('button[type="submit"]')].find(node => usableSendButton(node, el));
+    if (submit) return submit;
   }
-  return queryFirst(HOST.send);
+  return queryAll(HOST.send).find(node => usableSendButton(node, el)) || null;
 }
-async function waitForSendButton(el) {
+async function waitForSendReady(el) {
   const started = now();
   while (now() - started < SEND_WAIT_MS) {
-    const btn = localSendButton(composer() || el); if (btn) return btn;
+    const current = composer() || el;
+    if (!current) { await sleep(100); continue; }
+    const form = composerForm(current);
+    const button = localSendButton(current);
+    if (button || form) return { el: current, form, button };
     await sleep(100);
   }
-  return null;
+  const current = composer() || el;
+  return current ? { el: current, form: composerForm(current), button: localSendButton(current) } : null;
+}
+function pressComposerEnter(el) {
+  if (!el) return false;
+  const init = { key:'Enter', code:'Enter', keyCode:13, which:13, bubbles:true, cancelable:true, composed:true };
+  try {
+    el.focus();
+    el.dispatchEvent(new KeyboardEvent('keydown', init));
+    el.dispatchEvent(new KeyboardEvent('keypress', init));
+    el.dispatchEvent(new KeyboardEvent('keyup', init));
+    return true;
+  } catch (_) { return false; }
+}
+function actuateSend(ready) {
+  const { el, form, button } = ready || {};
+  if (button && usableSendButton(button, el)) {
+    button.click();
+    return 'button';
+  }
+  if (form && typeof form.requestSubmit === 'function') {
+    form.requestSubmit();
+    return 'requestSubmit';
+  }
+  if (pressComposerEnter(el)) return 'enter';
+  return '';
 }
 async function confirmSend(beforeUsers, beforeComposer, beforeAssistantHash) {
   const started = now();
@@ -822,17 +880,29 @@ async function sendOnce(text, reason) {
   if (!staged.ok) {
     S.sending = false; fail('PLAY-WRITE', `Could not reliably stage the prompt (${staged.why}).`, staged); return false;
   }
-  const button = await waitForSendButton(staged.el);
-  if (!button) {
-    S.sending = false; fail('PLAY-SEND', 'Prompt is staged, but the current host Send control did not become available.', { host: HOST.id }); return false;
+  const ready = await waitForSendReady(staged.el);
+  if (!ready?.el || (!ready.button && !ready.form)) {
+    S.sending = false;
+    fail('PLAY-SEND', 'Prompt is staged, but no safe ChatGPT submit path became available.', {
+      host: HOST.id,
+      hasForm: !!ready?.form,
+      hasButton: !!ready?.button
+    });
+    return false;
   }
-  const beforeComposer = semanticText(nodeText(composer()));
+  const beforeComposer = semanticText(nodeText(ready.el));
   writeSendFence({ at: now(), beforeUsers, beforeAssistantHash, beforeAssistantCount, reason: String(reason || '') });
-  log('send-click', { reason, round: S.round + 1, host: HOST.id });
-  try { button.click(); }
-  catch (error) {
+  let strategy = '';
+  try {
+    strategy = actuateSend(ready);
+    if (!strategy) throw new Error('No send strategy available');
+    log('send-actuated', { strategy, reason, round: S.round + 1, host: HOST.id });
+  } catch (error) {
     S.sending = false; S.uncertain = true;
-    fail('PLAY-SEND-THREW', 'Send threw after actuation. Ghost stopped to prevent a duplicate.', { message: String(error?.message || error) }); return false;
+    fail('PLAY-SEND-THREW', 'Send threw after actuation. Ghost stopped to prevent a duplicate.', {
+      message: String(error?.message || error)
+    });
+    return false;
   }
   const confirmed = await confirmSend(beforeUsers, beforeComposer, beforeAssistantHash);
   S.sending = false;
@@ -1404,7 +1474,7 @@ function report() {
     sending: S.sending, uncertain: S.uncertain, driftCount: S.drift,
     watchdog: { state: S.stallState, stopAttempts: S.stopAttempts, recoveryCount: S.recoveryCount, lastProgressAt: S.lastProgressAt || null },
     progress: { round: S.round, maxRounds: S.max, workflow: allWorkflows()[workflowId]?.label || 'Manual', stage: S.stageProgress, soundOn, notifyOn },
-    capabilities: { input: !!composer(), send: !!localSendButton(), stop: generating(), assistant: !!assistantText(), top: S.mode !== 'RUNNING' && !S.topBusy },
+    capabilities: { input: !!composer(), send: !!localSendButton() || !!composerForm(), stop: generating(), assistant: !!assistantText(), top: S.mode !== 'RUNNING' && !S.topBusy },
     lastError: S.lastError, relayRequested: S.relay || null, events: S.events.slice(-20), when: new Date().toISOString()
   };
 }
@@ -1414,15 +1484,14 @@ function copyReport() {
   S.detail = 'Diagnostic report copied.'; render();
 }
 
-function legacyGhostCandidates() {
-  const out = new Set(document.querySelectorAll('#gitl9, #gitl8, #gitl-panel, [data-gitl-root], [id*="gitl" i], [class*="gitl" i]'));
-  for (const el of document.querySelectorAll('body > div, body > aside, body > section')) {
-    if (!el || el === canonicalPanel) continue;
-    const text = String(el.innerText || el.textContent || '').slice(0, 240);
-    if (!/GHOST|Ghost in the Loop|PLAY-INPUT|round\s+\d+\/\d+/i.test(text)) continue;
-    let pos = '';
-    try { pos = getComputedStyle(el).position; } catch (_) {}
-    if (pos === 'fixed' || pos === 'sticky') out.add(el);
+function legacyGhostCandidates(root = document) {
+  const out = new Set();
+  const selectors = ['#gitl9', '#gitl8', '#gitl-panel', '[data-gitl-root]', '[data-gitl-owner]'];
+  for (const selector of selectors) {
+    try {
+      if (root instanceof Element && root.matches?.(selector)) out.add(root);
+      for (const el of root.querySelectorAll?.(selector) || []) out.add(el);
+    } catch (_) {}
   }
   return [...out];
 }
@@ -1461,15 +1530,21 @@ const style = document.createElement('style');
 style.textContent = `#gitl9{position:fixed;z-index:2147483646;top:70px;right:8px;width:min(270px,calc(100vw - 16px));background:var(--g-bg);color:var(--g-text);border:1px solid var(--g-border);border-radius:var(--g-radius);box-shadow:var(--g-shadow);font:12px/1.35 system-ui,sans-serif;padding:8px}#gitl9 *{box-sizing:border-box}#gitl9 .head{display:flex;align-items:center;justify-content:space-between;gap:6px}#gitl9 .brand{font-weight:750}#gitl9 .meta{font-size:10px;opacity:.65}#gitl9 .tabs{display:flex;gap:4px;margin:7px 0}#gitl9 button{border:1px solid #494550;background:var(--g-surface);color:var(--g-text);border-radius:8px;padding:7px 6px;font:inherit}#gitl9 button.on{background:var(--g-accent-bg);border-color:var(--g-accent);color:var(--g-text)}#gitl9 button.stop{background:#46191d;border-color:#85333a}#gitl9 button:disabled{opacity:.45;cursor:not-allowed}#gitl9 .tabs button{flex:1;padding:5px 3px}#gitl9 .status{background:var(--g-panel);border-radius:8px;padding:7px;min-height:42px;margin:5px 0 7px;word-break:break-word}#gitl9 .row{display:flex;gap:5px}#gitl9 .row>*{flex:1;min-width:0}#gitl9 .grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}#gitl9 label{display:flex;align-items:center;gap:5px;padding:5px;border:1px solid #35323a;border-radius:7px;background:var(--g-surface)}#gitl9 input[type="text"],#gitl9 input[type="number"],#gitl9 select,#gitl9 textarea{width:100%;background:var(--g-panel);color:var(--g-text);border:1px solid var(--g-border);border-radius:7px;padding:6px}#gitl9 .pane{display:none}#gitl9 .pane.show{display:block}#gitl9 .tiny{font-size:10px;color:var(--g-muted);margin-top:5px}.helpbox{background:var(--g-panel);border:1px solid var(--g-border);border-radius:9px;padding:7px;margin:5px 0}.helpbox b{color:var(--g-accent)}.swatches{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}.swatches button{flex:0 0 28px;height:28px;padding:0}.headtools{display:flex;align-items:center;gap:5px}.helpbtn{padding:3px 6px!important;font-size:10px!important}.rail{display:none}.collapsebtn{padding:3px 7px!important;font-size:12px!important}#gitl9.collapsed{right:0!important;top:34vh!important;width:42px!important;min-width:42px!important;max-width:42px!important;padding:5px!important;border-right:0!important;border-radius:12px 0 0 12px!important}#gitl9.collapsed>*:not(.rail){display:none!important}#gitl9.collapsed .rail{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:92px;cursor:pointer;user-select:none}#gitl9.collapsed .rail .ghost{font-size:20px;line-height:1}#gitl9.collapsed .rail .arrow{font-size:18px;color:var(--g-accent)}#gitl9.collapsed .rail .railstate{font-size:9px;color:var(--g-accent);line-height:1}#gitl9.collapsed .rail .mini{font-size:9px;color:var(--g-muted);writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.5px}.progline{height:4px;background:var(--g-surface);border-radius:99px;overflow:hidden;margin-top:5px}.progline span{display:block;height:100%;background:var(--g-accent);transition:width .15s ease}@media(max-width:520px){#gitl9{top:58px;width:min(238px,calc(100vw - 12px));right:6px;padding:7px}#gitl9.collapsed{right:0!important;top:32vh!important;width:42px!important;min-width:42px!important;padding:4px!important}#gitl9 .tabs{display:grid;grid-template-columns:repeat(3,1fr)}#gitl9 .tabs button{min-height:38px}#gitl9 .transport{display:grid;grid-template-columns:1fr 1fr}#gitl9 .transport button,#gitl9 .helpbox button{min-height:40px}#gitl9 button{padding:7px 5px}}`;
 document.documentElement.appendChild(style);
 const panel = document.createElement('div'); canonicalPanel = panel; panel.id = 'gitl9'; panel.dataset.gitlOwner = VER; panel.dataset.gitlRoot = '1'; (document.body || document.documentElement).appendChild(panel);
-const legacyObserver = new MutationObserver(() => {
-  // Defer one microtask so a just-mounted legacy panel can finish rendering its Stop button.
-  queueMicrotask(() => retireLegacyGhostPanels());
+const legacyObserver = new MutationObserver(records => {
+  // Observe only direct additions and inspect only the added subtree. Never rescan the ChatGPT document.
+  for (const record of records) {
+    for (const node of record.addedNodes || []) {
+      if (!(node instanceof Element)) continue;
+      for (const candidate of legacyGhostCandidates(node)) retireLegacyGhostPanel(candidate);
+    }
+  }
 });
-legacyObserver.observe(document.documentElement, { childList: true, subtree: true });
+for (const root of [document.body, document.documentElement]) {
+  if (root) legacyObserver.observe(root, { childList: true, subtree: false });
+}
 setTimeout(() => retireLegacyGhostPanels(), 100);
-setTimeout(() => retireLegacyGhostPanels(), 500);
-setTimeout(() => retireLegacyGhostPanels(), 1500);
-setInterval(() => retireLegacyGhostPanels(), 2000);
+setTimeout(() => retireLegacyGhostPanels(), 700);
+setTimeout(() => retireLegacyGhostPanels(), 2500);
 function applyAppearance() {
   const skin = SKINS[skinId] || SKINS.classic;
   const accent = ACCENTS[accentId] || skin.accent;
@@ -1490,7 +1565,7 @@ function render() {
   const prog = progressSummary();
   panel.classList.toggle('collapsed', panelCollapsed);
   panel.innerHTML = trustedHTML(`
-    <div class="rail" data-a="expand" title="Expand Ghost · ${esc(S.mode)} · ${VER}"><span class="ghost">👻</span><span class="arrow">◀</span><span class="railstate">${S.mode==='RUNNING'?'●':'○'}</span><span class="mini">GHOST · .9</span></div>
+    <div class="rail" data-a="expand" title="Expand Ghost · ${esc(S.mode)} · ${VER}"><span class="ghost">👻</span><span class="arrow">◀</span><span class="railstate">${S.mode==='RUNNING'?'●':'○'}</span><span class="mini">GHOST · .13</span></div>
     <div class="head"><span class="brand">👻 GHOST</span><span class="headtools"><button class="collapsebtn" data-a="collapse" title="Minimize Ghost to the side">▶</button><button class="helpbtn" data-a="help">? Help</button><span class="meta">${esc(HOST.id)} · ${VER}</span></span></div>
     <div class="tabs"><button data-tab="play" class="${S.tab==='play'?'on':''}">Play</button><button data-tab="prompt" class="${S.tab==='prompt'?'on':''}">Prompt</button><button data-tab="aoa" class="${S.tab==='aoa'?'on':''}">AoA</button><button data-tab="export" class="${S.tab==='export'?'on':''}">Export</button><button data-tab="settings" class="${S.tab==='settings'?'on':''}">Settings</button></div>
     <div class="status"><b>${esc(S.mode)}</b> · round ${S.round}/${S.max} · <b>${VER}</b><br>${esc(S.detail)}<div class="progline"><span style="width:${prog.roundPct}%"></span></div><div class="tiny">${prog.stages ? "Workflow: "+esc(prog.workflow)+" · "+(prog.stage ? "stage "+prog.stage.step+"/"+prog.stage.total : prog.stages+" stages · waiting for explicit stage") : "Manual workflow"}</div></div>
