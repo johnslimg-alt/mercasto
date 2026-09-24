@@ -1103,7 +1103,7 @@ async function goTop() {
   const scroller = conversationScrollContainer();
   let previous = '';
   let stable = 0;
-  let passes = 0;
+  let passes;
   try {
     for (passes = 0; passes < TOP_MAX_PASSES; passes++) {
       S.detail = passes ? 'Loading older chat…' : 'Going to first prompt…'; render();
