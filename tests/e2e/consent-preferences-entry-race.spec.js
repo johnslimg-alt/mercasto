@@ -67,24 +67,15 @@ async function interceptTraffic(page, { failConsentChunks = false } = {}) {
 // whichever is usable also makes this an assertion of the invariant itself -- if both
 // collapse, this returns nothing and the test fails.
 async function laidOutConsentEntry(page) {
-  // POLLED, never one-shot: a single boundingBox() sample right after domcontentloaded
-  // races the second footer's mount and reports "no entry point" while one is still
-  // arriving -- the same false-negative shape as sampling a banner before its show timer
-  // commits. Poll until the invariant holds (or fail, naming how many candidates existed).
-  const all = page.locator('[data-testid="golden-cookie-settings"], [data-testid="cookie-settings"]');
-  const deadline = Date.now() + 15_000;
-  let count;
-  for (;;) {
-    count = await all.count();
-    for (let i = 0; i < count; i += 1) {
-      const candidate = all.nth(i);
-      const box = await candidate.boundingBox();
-      if (box && box.width > 0 && box.height > 0) return candidate;
-    }
-    if (Date.now() > deadline) break;
-    await page.waitForTimeout(150);
-  }
-  throw new Error(`no cookie-settings entry point is laid out at this viewport (candidates: ${count})`);
+  // Keep this locator dynamic. Both responsive footer variants can coexist in the
+  // DOM, and a fixed nth() can become the hidden variant after scroll/layout settles.
+  // :visible is re-evaluated at action time, so the returned locator always targets
+  // the entry point a user can actually click at the active breakpoint.
+  const visible = page.locator(
+    '[data-testid="golden-cookie-settings"]:visible, [data-testid="cookie-settings"]:visible',
+  ).first();
+  await expect(visible).toBeVisible({ timeout: 15_000 });
+  return visible;
 }
 
 test.describe('cookie preferences entry point', () => {
