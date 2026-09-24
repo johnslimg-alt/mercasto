@@ -1,0 +1,82 @@
+name: Harness DeepSeek Free Fallback
+
+on:
+  push:
+    branches:
+      - ops/harness-deepseek-direct-20260924
+    paths:
+      - .github/workflows/harness-deepseek-free-fallback.yml
+
+permissions:
+  contents: read
+
+jobs:
+  select:
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 15
+    steps:
+      - name: Select first working free DeepSeek route
+        shell: bash
+        run: |
+          set -euo pipefail
+          SETTINGS=/root/.dsh/settings.yaml
+          BACKUP="/root/.dsh/settings.yaml.bak-free-fallback-$(date -u +%Y%m%dT%H%M%SZ)"
+          sudo -n cp "$SETTINGS" "$BACKUP"
+
+          set_default() {
+            provider="$1"
+            model="$2"
+            sudo -n python3 - "$provider" "$model" <<'PY'
+from pathlib import Path
+import sys
+provider, model = sys.argv[1], sys.argv[2]
+p = Path('/root/.dsh/settings.yaml')
+lines = p.read_text().splitlines()
+start = next(i for i,l in enumerate(lines) if l.strip() == 'agent-default-model:' and not l.startswith((' ','\t')))
+end = len(lines)
+for i in range(start+1, len(lines)):
+    if lines[i] and not lines[i].startswith((' ','\t','#')):
+        end = i
+        break
+new = ['agent-default-model:', f'  provider: {provider}', f'  model: {model}', '  reasoningEffort: high']
+lines[start:end] = new
+p.write_text('\n'.join(lines) + '\n')
+PY
+          }
+
+          smoke() {
+            label="$1"
+            rm -f /tmp/dsh-fallback.out /tmp/dsh-fallback.err
+            set +e
+            sudo -n -H /usr/bin/node /opt/dsh-rc2/node_modules/@deepseek-ai/dsh/lib/bin.js               --profile headless "Reply with exactly FREE_ROUTE_OK. Do not use tools."               >/tmp/dsh-fallback.out 2>/tmp/dsh-fallback.err
+            rc=$?
+            set -e
+            if [ "$rc" -eq 0 ] && grep -q 'FREE_ROUTE_OK' /tmp/dsh-fallback.out; then
+              echo "$label=PASS"
+              return 0
+            fi
+            echo "$label=FAIL"
+            tail -20 /tmp/dsh-fallback.err               | sed -E 's#sk-[A-Za-z0-9_-]+#<REDACTED>#g; s#nvapi-[A-Za-z0-9_-]+#<REDACTED>#g; s#Your api key: [^ ]+#Your api key: <REDACTED>#g'               || true
+            return 1
+          }
+
+          set_default nvidia-deepseek deepseek-ai/deepseek-v4.1-flash
+          if smoke NVIDIA_DEEPSEEK_V41; then
+            echo "SELECTED_PROVIDER=nvidia-deepseek"
+            echo "SELECTED_MODEL=deepseek-ai/deepseek-v4.1-flash"
+            echo "FALLBACK_SELECTION=PASS"
+            exit 0
+          fi
+
+          set_default nvidia deepseek-ai/deepseek-v4-flash-0731
+          if smoke NVIDIA_DEEPSEEK_V4_0731; then
+            echo "SELECTED_PROVIDER=nvidia"
+            echo "SELECTED_MODEL=deepseek-ai/deepseek-v4-flash-0731"
+            echo "FALLBACK_SELECTION=PASS"
+            exit 0
+          fi
+
+          sudo -n cp "$BACKUP" "$SETTINGS"
+          echo "FALLBACK_SELECTION=NONE"
+          echo "RESTORED_ORIGINAL=true"
+          exit 1
