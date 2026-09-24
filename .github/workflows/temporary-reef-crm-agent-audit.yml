@@ -1,0 +1,117 @@
+name: Temporary Reef CRM Agent Audit
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  audit:
+    if: >-
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      github.event.comment.body == 'RUN:reef_crm_agent_audit'
+    runs-on: [self-hosted]
+    timeout-minutes: 10
+    steps:
+      - name: Sanitized read-only CRM AI audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'CRM_AI_AUDIT_BEGIN'
+          echo '== candidate containers =='
+          docker ps -a --format '{{.Names}}|{{.Image}}|{{.Status}}' |
+            grep -Ei 'reef|crm|whatsapp|n8n|bot|ai' || true
+
+          mapfile -t containers < <(
+            docker ps -a --format '{{.Names}}' |
+              grep -Ei 'reef|crm|whatsapp|n8n|bot|ai' || true
+          )
+
+          if printf '%s\n' "${containers[@]:-}" | grep -qx 'reef-crm'; then
+            ordered=(reef-crm)
+            for c in "${containers[@]:-}"; do
+              [ "$c" = 'reef-crm' ] || ordered+=("$c")
+            done
+            containers=("${ordered[@]}")
+          fi
+
+          for c in "${containers[@]:-}"; do
+            [ -n "$c" ] || continue
+            echo "== container:$c =="
+
+            echo '-- selected AI env --'
+            docker inspect "$c" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null |
+              awk -F= '
+                BEGIN { IGNORECASE=1 }
+                {
+                  key=$1
+                  if (key ~ /(MODEL|AGENT|PROVIDER|LLM|ROUTER|DEEPSEEK|MIMO|OPENAI|GPT|CLAUDE|SONNET|HAIKU|QWEN|GLM|GEMINI|KIMI|MINIMAX|OLLAMA)/) {
+                    if (key ~ /(KEY|TOKEN|SECRET|PASSWORD|PASS|AUTH|COOKIE|DSN|URL|URI|CREDENTIAL)/) {
+                      print key "=<redacted>"
+                    } else {
+                      val=substr($0,index($0,"=")+1)
+                      if (length(val)>180) val=substr(val,1,180) "..."
+                      print key "=" val
+                    }
+                  }
+                }' | sort -u || true
+
+            echo '-- app code model identifiers --'
+            docker exec "$c" sh -lc '
+              roots=""
+              for d in /app /usr/src/app /workspace /opt/app /srv/app; do
+                [ -d "$d" ] && roots="$roots $d"
+              done
+              [ -n "$roots" ] || exit 0
+              find $roots -type f \
+                \( -name "*.js" -o -name "*.mjs" -o -name "*.cjs" -o -name "*.ts" -o -name "*.tsx" -o -name "*.jsx" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" -o -name "*.py" -o -name "*.php" \) \
+                -not -path "*/node_modules/*" -not -path "*/vendor/*" -not -path "*/.git/*" \
+                -size -2M -print0 2>/dev/null |
+              xargs -0 -r grep -hoEi "(deepseek[-_./:a-zA-Z0-9]*|mimo[-_./:a-zA-Z0-9]*|gpt[-_./:a-zA-Z0-9]*|openai|claude[-_./:a-zA-Z0-9]*|sonnet[-_./:a-zA-Z0-9]*|haiku[-_./:a-zA-Z0-9]*|qwen[-_./:a-zA-Z0-9]*|glm[-_./:a-zA-Z0-9]*|gemini[-_./:a-zA-Z0-9]*|kimi[-_./:a-zA-Z0-9]*|minimax[-_./:a-zA-Z0-9]*|ollama|openrouter)" |
+              tr -d "\"'\''" | sort -fu | head -120
+            ' 2>/dev/null || true
+
+            echo '-- agent/config filenames --'
+            docker exec "$c" sh -lc '
+              for d in /app /usr/src/app /workspace /opt/app /srv/app; do
+                [ -d "$d" ] || continue
+                find "$d" -maxdepth 6 -type f \
+                  \( -iname "*agent*" -o -iname "*model*" -o -iname "*llm*" -o -iname "*prompt*" -o -iname "*sales*" -o -iname "*seller*" \) \
+                  -not -path "*/node_modules/*" -not -path "*/vendor/*" -not -path "*/.git/*" \
+                  -print 2>/dev/null
+              done | sort -u | head -160
+            ' 2>/dev/null || true
+          done
+
+          echo '== host unit names =='
+          systemctl list-units --type=service --all --no-legend 2>/dev/null |
+            awk '{print $1}' | grep -Ei 'reef|crm|whatsapp|n8n|bot|ai' | head -120 || true
+          echo 'CRM_AI_AUDIT_END'
+
+      - name: Report completion
+        if: always()
+        uses: actions/github-script@v9
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const status = process.env.JOB_STATUS || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body: [
+                'REEF_CRM_AGENT_AUDIT_RESULT',
+                `status=${status}`,
+                `run_id=${context.runId}`,
+                `run=${runUrl}`
+              ].join('\n')
+            });
