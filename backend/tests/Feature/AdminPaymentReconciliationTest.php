@@ -66,9 +66,16 @@ class AdminPaymentReconciliationTest extends TestCase
 
         $payload = $response->json();
         $this->assertSame('MXN', $payload['summary']['currency']);
-        $this->assertSame('not_configured', $payload['summary']['refund_tracking']);
+        $this->assertSame('tracked', $payload['summary']['refund_tracking']);
+        $this->assertSame(0, $payload['summary']['refund_records']);
         $this->assertSame(2, $payload['summary']['records']);
         $this->assertSame(350.0, (float) $payload['summary']['paid_amount']);
+        // Only the provider webhook proves cash; the headline paid amount is
+        // reported next to the verified bucket, never instead of it.
+        $this->assertSame(350.0, (float) $payload['summary']['verified_cash_amount']);
+        $this->assertSame(0.0, (float) $payload['summary']['claimed_unverified_amount']);
+        $this->assertSame(0.0, (float) $payload['summary']['internal_balance_amount']);
+        $this->assertSame(350.0, (float) $payload['summary']['by_funding_source']['clip_webhook']['amount']);
         $this->assertArrayHasKey('paid', $payload['summary']['by_status']);
         $this->assertArrayHasKey('expired', $payload['summary']['by_status']);
         $this->assertSame(2, $payload['summary']['unmatched_listing_reference']);
@@ -82,13 +89,19 @@ class AdminPaymentReconciliationTest extends TestCase
         $this->assertSame(350.0, (float) $paid['amount']);
         $this->assertSame('provider_webhook', $paid['settled_via']);
         $this->assertSame('2026-06-10T22:26:23+00:00', $paid['settled_at']);
-        $this->assertSame('not_tracked', $paid['refund_state']);
+        $this->assertSame('none_recorded', $paid['refund_state']);
+        $this->assertSame('clip_webhook', $paid['funding_source']);
+        $this->assertSame('verified_cash', $paid['settlement_class']);
+        $this->assertTrue($paid['verified_cash']);
+        $this->assertSame(0.0, (float) $paid['refunded_amount']);
         $this->assertNull($paid['listing_reference']);
         $this->assertFalse($paid['promotion']['delivered']);
 
         $expired = $rows[$expiredId];
         $this->assertNull($expired['settled_at']);
         $this->assertNull($expired['settled_via']);
+        $this->assertSame('not_settled', $expired['settlement_class']);
+        $this->assertFalse($expired['verified_cash']);
 
         $serialized = json_encode($payload);
         $this->assertStringNotContainsString('payer@example.test', $serialized);
