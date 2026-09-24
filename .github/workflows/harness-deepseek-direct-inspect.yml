@@ -13,33 +13,14 @@ permissions:
 jobs:
   inspect:
     runs-on: [self-hosted, linux, docker]
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
-      - name: Test current Harness release in isolated install
+      - name: Inspect NVIDIA provider catalog structure
         shell: bash
         run: |
           set -euo pipefail
-          echo "PRODUCTION_DSH_VERSION=$(sudo -n -H node -p "require('/opt/dsh-rc2/node_modules/@deepseek-ai/dsh/package.json').version")"
-          latest="$(npm view @deepseek-ai/dsh version)"
-          echo "NPM_LATEST_DSH_VERSION=$latest"
-
-          testroot="/tmp/dsh-latest-inspect"
-          rm -rf "$testroot"
-          mkdir -p "$testroot"
-          cd "$testroot"
-          npm init -y >/dev/null 2>&1
-          npm install --no-audit --no-fund --ignore-scripts "@deepseek-ai/dsh@$latest" >/tmp/dsh-install.log 2>&1
-
-          echo "ISOLATED_DSH_VERSION=$(node -p "require('$testroot/node_modules/@deepseek-ai/dsh/package.json').version")"
-          for pkg in dsh-deepseek-account-platform dsh-llm-deepseek; do
-            if [ -d "$testroot/node_modules/@deepseek-ai/$pkg" ]; then
-              echo "LATEST_PACKAGE_PRESENT=$pkg"
-            else
-              echo "LATEST_PACKAGE_MISSING=$pkg"
-            fi
-          done
-
-          echo "=== ACCOUNT ROUTE IN LATEST ==="
-          grep -RIl --exclude='*.map' -E 'deepseek-account|deepseekAccount'             "$testroot/node_modules/@deepseek-ai/dsh-base"             "$testroot/node_modules/@deepseek-ai/dsh-llm-deepseek"             "$testroot/node_modules/@deepseek-ai/dsh-deepseek-account-platform"             2>/dev/null | head -40 || true
-
-          echo "PRODUCTION_UNCHANGED=true"
+          sudo -n awk '
+            /^    nvidia:$/ {inside=1}
+            inside {print}
+            inside && /^    kimi-direct:$/ {exit}
+          ' /root/.dsh/settings.yaml           | sed -E 's#(^[[:space:]]*(apiKey|token|secret|password)[A-Za-z0-9_-]*:[[:space:]]*).*#\1<REDACTED>#Ig'           | head -120
