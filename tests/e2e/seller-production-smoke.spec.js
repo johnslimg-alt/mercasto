@@ -13,10 +13,8 @@ const authModal = (page) => page.locator('.fixed.inset-0')
 async function login(page) {
   await page.goto('/');
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('cookiesAccepted', 'true'); });
-  const userButton = page.locator(
-    '[data-testid="golden-account-button"]:visible, [data-testid="golden-mobile-account-tab"]:visible, .header-user-button:visible, .mobile-account-button:visible'
-  ).first();
-  await expect(userButton).toBeVisible({ timeout: 25000 });
+  const userButton = page.locator('[data-testid="golden-account-button"], [data-testid="golden-mobile-account-tab"]').filter({ visible: true }).first();
+  await expect(userButton).toBeVisible({ timeout: 10000 });
   await userButton.click();
   const modal = authModal(page);
   await expect(modal).toBeVisible({ timeout: 5000 });

@@ -2,6 +2,9 @@ name: Seller Production E2E Tests
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
   schedule:
     # Runs daily at 07:00 UTC (01:00 CST)
     - cron: '0 7 * * *'
