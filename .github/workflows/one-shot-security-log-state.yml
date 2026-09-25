@@ -1,0 +1,35 @@
+name: One-shot security log state probe
+
+on:
+  push:
+    branches:
+      - ops/security-log-permission-repair-20260925
+    paths:
+      - .github/workflows/one-shot-security-log-state.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Read security log metadata
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 5
+    steps:
+      - name: Guard and report metadata only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/ops/security-log-permission-repair-20260925"
+          test -d /var/www/mercasto/.git
+          cd /var/www/mercasto
+          test "$(git branch --show-current)" = main
+          echo "production_head=$(git rev-parse HEAD)"
+          docker exec mercasto_backend_container sh -lc '
+            set -eu
+            LOG_DIR=/var/www/storage/logs
+            echo "log_dir=$(stat -c "%U:%G mode=%a" "$LOG_DIR")"
+            current="$(find "$LOG_DIR" -maxdepth 1 -type f -name "security*.log" -printf "%T@ %p\n" | sort -n | tail -1 | cut -d" " -f2-)"
+            test -n "$current"
+            echo "current_security=$(basename "$current") $(stat -c "uid=%u gid=%g user=%U group=%G mode=%a size=%s" "$current")"
+          '
