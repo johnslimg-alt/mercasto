@@ -78,7 +78,7 @@ return [
             'path' => storage_path('logs/security.log'),
             'level' => 'warning',
             'days' => env('SECURITY_LOG_DAYS', 30),
-            'permission' => 0640,
+            'permission' => 0660,
             'replace_placeholders' => true,
         ],
 

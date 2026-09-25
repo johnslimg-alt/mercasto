@@ -24,7 +24,7 @@ The log contains only:
 
 ## Retention and access
 
-The `security` channel rotates daily, retains 30 days by default, and creates files with mode `0640`. Access is limited to authorized server operators and the application runtime group. Security logs must not be copied into issues or chat without redaction.
+The `security` channel rotates daily, retains 30 days by default, and creates files with mode `0660` inside a setgid `root:www-data` log directory. This keeps root-run workers/schedulers and PHP-FPM on the same writable runtime group across daily rotation without making logs world-readable. Access is limited to authorized server operators and the application runtime group. Security logs must not be copied into issues or chat without redaction.
 
 ## Investigation
 
