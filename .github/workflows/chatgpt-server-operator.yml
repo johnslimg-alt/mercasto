@@ -346,6 +346,69 @@ jobs:
             else
               echo "gh_not_installed=true"
             fi
+          elif [ "$OPERATION" = "defapi_jev_prepare" ]; then
+            test "$CONFIRM" = "MERCASTO"
+            BENCH_DIR=/root/.config/defapi-jev-bench
+            echo "== Prepare one-time encrypted DefAPI Jev benchmark channel =="
+            sudo -n rm -rf "$BENCH_DIR"
+            sudo -n install -d -m 0700 "$BENCH_DIR"
+            transfer_id="$(openssl rand -hex 12)"
+            printf '%s\n' "$transfer_id" | sudo -n tee "$BENCH_DIR/transfer-id" >/dev/null
+            sudo -n openssl genpkey -quiet -algorithm RSA -pkeyopt rsa_keygen_bits:3072 \
+              -out "$BENCH_DIR/private.pem"
+            sudo -n chmod 0600 "$BENCH_DIR/private.pem"
+            sudo -n openssl pkey -in "$BENCH_DIR/private.pem" -pubout \
+              -out "$BENCH_DIR/public.pem"
+            sudo -n chmod 0644 "$BENCH_DIR/public.pem"
+            public_b64="$(sudo -n base64 -w0 "$BENCH_DIR/public.pem")"
+            echo "defapi_transfer_id=$transfer_id"
+            echo "defapi_public_key_b64=$public_b64"
+            echo "DEFAPI_JEV_PREPARE_OK"
+          elif [ "$OPERATION" = "defapi_jev_bench" ]; then
+            test "$CONFIRM" = "MERCASTO"
+            BENCH_DIR=/root/.config/defapi-jev-bench
+            test -n "$DEFAPI_TRANSFER_ID"
+            test -n "$DEFAPI_CIPHERTEXT_B64"
+            echo "::add-mask::$DEFAPI_CIPHERTEXT_B64"
+            stored_id="$(sudo -n cat "$BENCH_DIR/transfer-id")"
+            test "$stored_id" = "$DEFAPI_TRANSFER_ID"
+            sudo -n test -s "$BENCH_DIR/private.pem"
+
+            bench_tmp="$(mktemp -d /tmp/defapi-jev-bench.XXXXXX)"
+            cleanup_defapi_bench() {
+              unset DEFAPI_KEY || true
+              rm -rf "$bench_tmp" || true
+              sudo -n rm -rf "$BENCH_DIR" || true
+            }
+            trap cleanup_defapi_bench EXIT
+
+            echo "== Fetch benchmark script from protected main =="
+            sudo -n git -C /var/www/mercasto fetch origin main --prune
+            sudo -n git -C /var/www/mercasto show origin/main:scripts/defapi-jev-bench.py \
+              >"$bench_tmp/defapi-jev-bench.py"
+            python3 -m py_compile "$bench_tmp/defapi-jev-bench.py"
+
+            printf '%s' "$DEFAPI_CIPHERTEXT_B64" | base64 -d >"$bench_tmp/key.enc"
+            DEFAPI_KEY="$(sudo -n openssl pkeyutl -decrypt \
+              -inkey "$BENCH_DIR/private.pem" \
+              -pkeyopt rsa_padding_mode:oaep \
+              -pkeyopt rsa_oaep_md:sha256 \
+              -pkeyopt rsa_mgf1_md:sha256 \
+              -in "$bench_tmp/key.enc")"
+            test -n "$DEFAPI_KEY"
+            echo "::add-mask::$DEFAPI_KEY"
+            case "$DEFAPI_KEY" in
+              dk-*) ;;
+              *) echo "Decrypted value does not look like a DefAPI key." >&2; exit 73 ;;
+            esac
+
+            sudo -n rm -rf "$BENCH_DIR"
+            rm -f "$bench_tmp/key.enc"
+            export DEFAPI_KEY
+            echo "== Run bounded Jev quality + load benchmark =="
+            python3 "$bench_tmp/defapi-jev-bench.py"
+            unset DEFAPI_KEY
+            echo "DEFAPI_JEV_BENCH_RUN_OK"
           else
             OPERATION="$OPERATION" CONFIRM="$CONFIRM" TAIL_LINES="$TAIL_LINES" \
               bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
