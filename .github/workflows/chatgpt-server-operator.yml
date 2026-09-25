@@ -33,6 +33,8 @@ jobs:
         github.event.comment.body == 'RUN:seo_aeo_smoke' ||
         github.event.comment.body == 'RUN:content_quality_audit' ||
         github.event.comment.body == 'RUN:runner_health' ||
+        github.event.comment.body == 'RUN:defapi_jev_prepare:MERCASTO' ||
+        startsWith(github.event.comment.body, 'RUN:defapi_jev_bench:') ||
         github.event.comment.body == 'RUN:logs_frontend' ||
         github.event.comment.body == 'RUN:logs_backend' ||
         github.event.comment.body == 'RUN:deploy_main:MERCASTO' ||
@@ -73,6 +75,7 @@ jobs:
               'RUN:seo_aeo_smoke': ['seo_aeo_smoke', '', '160'],
               'RUN:content_quality_audit': ['content_quality_audit', '', '160'],
               'RUN:runner_health': ['runner_health', '', '160'],
+              'RUN:defapi_jev_prepare:MERCASTO': ['defapi_jev_prepare', 'MERCASTO', '220'],
               'RUN:logs_frontend': ['logs_frontend', '', '200'],
               'RUN:logs_backend': ['logs_backend', '', '200'],
               'RUN:deploy_main:MERCASTO': ['deploy_main', 'MERCASTO', '160'],
@@ -85,7 +88,19 @@ jobs:
               'RUN:cleanup_docker:MERCASTO': ['cleanup_docker', 'MERCASTO', '160'],
               'RUN:maintenance_reboot:MERCASTO': ['maintenance_reboot', 'MERCASTO', '220'],
             };
-            const selected = commands[body];
+            let selected = commands[body];
+            let transferId = '';
+            let ciphertextB64 = '';
+            if (!selected && body.startsWith('RUN:defapi_jev_bench:')) {
+              const match = body.match(/^RUN:defapi_jev_bench:([a-f0-9]{24}):([A-Za-z0-9+/=]{100,2000}):MERCASTO$/);
+              if (!match) {
+                core.setFailed('Malformed DefAPI Jev benchmark payload.');
+                return;
+              }
+              transferId = match[1];
+              ciphertextB64 = match[2];
+              selected = ['defapi_jev_bench', 'MERCASTO', '500'];
+            }
             if (!selected) {
               core.setFailed(`Unsupported operator command: ${body}`);
               return;
@@ -93,6 +108,8 @@ jobs:
             core.setOutput('operation', selected[0]);
             core.setOutput('confirm', selected[1]);
             core.setOutput('tail_lines', selected[2]);
+            core.setOutput('transfer_id', transferId);
+            core.setOutput('ciphertext_b64', ciphertextB64);
             core.info(`Validated allowlisted operation: ${selected[0]}`);
 
       - name: Verify production operator boundary
@@ -111,6 +128,8 @@ jobs:
           OPERATION: ${{ steps.request.outputs.operation }}
           CONFIRM: ${{ steps.request.outputs.confirm }}
           TAIL_LINES: ${{ steps.request.outputs.tail_lines }}
+          DEFAPI_TRANSFER_ID: ${{ steps.request.outputs.transfer_id }}
+          DEFAPI_CIPHERTEXT_B64: ${{ steps.request.outputs.ciphertext_b64 }}
         run: |
           set -euo pipefail
           cd /var/www/mercasto
