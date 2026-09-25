@@ -89,6 +89,11 @@ fi
 grep -qF "fs.statfs('/')" "$PLUGIN"
 
 grep -qF 'USER node' "$PLUGIN_DOCKERFILE"
+grep -qF -- '--mount=type=cache,target=/root/.npm,sharing=locked' "$PLUGIN_DOCKERFILE"
+if grep -qF 'npm cache clean --force' "$PLUGIN_DOCKERFILE"; then
+  echo "MCP Dockerfile must not clean a shared BuildKit npm cache during image builds." >&2
+  exit 1
+fi
 grep -qF 'MCP_BIND_HOST=0.0.0.0' "$PLUGIN_DOCKERFILE"
 grep -qF 'EXPOSE 8780' "$PLUGIN_DOCKERFILE"
 
