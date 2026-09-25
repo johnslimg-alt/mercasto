@@ -25,7 +25,7 @@ grep -qF "public function terminate" "$MIDDLEWARE"
 grep -qF "prependToGroup('api', \\App\\Http\\Middleware\\SecurityAuditMiddleware::class)" "$BOOTSTRAP"
 grep -qF "'path' => storage_path('logs/security.log')" "$LOGGING"
 grep -qF "'days' => env('SECURITY_LOG_DAYS', 30)" "$LOGGING"
-grep -qF "'permission' => 0640" "$LOGGING"
+grep -qF "'permission' => 0660" "$LOGGING"
 
 for event in auth_rejected authorization_denied upload_rejected webhook_rejected rate_limited authentication_required; do
   grep -qF "'$event'" "$AUDIT"
