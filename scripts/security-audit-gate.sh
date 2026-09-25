@@ -11,10 +11,11 @@ LOGGING="backend/config/logging.php"
 TEST="backend/tests/Feature/SecurityAuditTest.php"
 SCAN="scripts/repository-sensitive-artifact-scan.sh"
 DOC="docs/security/SECURITY_AUDIT_LOGGING.md"
+RUNTIME_ENTRYPOINT="backend/docker/runtime-env-entrypoint.sh"
 
 echo "== Security audit logging gate =="
 
-for file in "$AUDIT" "$MIDDLEWARE" "$BOOTSTRAP" "$LOGGING" "$TEST" "$SCAN" "$DOC"; do
+for file in "$AUDIT" "$MIDDLEWARE" "$BOOTSTRAP" "$LOGGING" "$TEST" "$SCAN" "$DOC" "$RUNTIME_ENTRYPOINT"; do
   test -f "$file"
 done
 
@@ -25,7 +26,11 @@ grep -qF "public function terminate" "$MIDDLEWARE"
 grep -qF "prependToGroup('api', \\App\\Http\\Middleware\\SecurityAuditMiddleware::class)" "$BOOTSTRAP"
 grep -qF "'path' => storage_path('logs/security.log')" "$LOGGING"
 grep -qF "'days' => env('SECURITY_LOG_DAYS', 30)" "$LOGGING"
-grep -qF "'permission' => 0640" "$LOGGING"
+grep -qF "'permission' => 0660" "$LOGGING"
+grep -qF 'chown root:www-data "$LOG_DIR"' "$RUNTIME_ENTRYPOINT"
+grep -qF 'chmod 2770 "$LOG_DIR"' "$RUNTIME_ENTRYPOINT"
+grep -qF "find \"\$LOG_DIR\" -maxdepth 1 -type f -name '*.log'" "$RUNTIME_ENTRYPOINT"
+grep -qF 'chmod 0660 {}' "$RUNTIME_ENTRYPOINT"
 
 for event in auth_rejected authorization_denied upload_rejected webhook_rejected rate_limited authentication_required; do
   grep -qF "'$event'" "$AUDIT"
