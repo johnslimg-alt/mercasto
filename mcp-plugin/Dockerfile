@@ -8,9 +8,8 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 COPY package.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm install --omit=dev --ignore-scripts --no-audit --no-fund \
-    && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm install --omit=dev --ignore-scripts --no-audit --no-fund
 
 COPY server.mjs ./
 
