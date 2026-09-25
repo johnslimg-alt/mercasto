@@ -1,0 +1,61 @@
+name: One-shot security log permission repair
+
+on:
+  push:
+    branches:
+      - ops/security-log-permission-repair-20260925
+    paths:
+      - .github/workflows/one-shot-security-log-permission-repair.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: one-shot-security-log-permission-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    name: Repair shared Laravel log permissions
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
+    steps:
+      - name: Guard one-shot scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/ops/security-log-permission-repair-20260925"
+          test -d /var/www/mercasto/.git
+          cd /var/www/mercasto
+          test "$(git branch --show-current)" = main
+          test "$(git rev-parse HEAD)" = "e2285004135c919997940abfda98c91e7e08ae80"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          docker inspect mercasto_backend_container >/dev/null
+
+      - name: Normalize shared log directory and files
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker exec -u 0 mercasto_backend_container sh -lc '
+            set -eu
+            LOG_DIR=/var/www/storage/logs
+            test -d "$LOG_DIR"
+            chown root:www-data "$LOG_DIR"
+            chmod 2770 "$LOG_DIR"
+            find "$LOG_DIR" -maxdepth 1 -type f -name "*.log" -exec chgrp www-data {} \;
+            find "$LOG_DIR" -maxdepth 1 -type f -name "*.log" -exec chmod 0660 {} \;
+            test "$(stat -c %a "$LOG_DIR")" = 2770
+            test "$(stat -c %G "$LOG_DIR")" = www-data
+            bad="$(find "$LOG_DIR" -maxdepth 1 -type f -name "*.log" \( ! -group www-data -o ! -perm -g=w \) -print -quit)"
+            test -z "$bad"
+          '
+          echo "SECURITY_LOG_PERMISSION_REPAIR_OK"
+
+      - name: Verify security audit logging and full production gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          sudo -n bash scripts/security-audit-smoke.sh
+          sudo -n bash scripts/server-operator.sh verify_quick
+          echo "SECURITY_LOG_PERMISSION_REPAIR_VERIFIED"
