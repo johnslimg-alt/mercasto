@@ -1,0 +1,32 @@
+name: One-shot seller production Golden account verify
+
+on:
+  push:
+    branches:
+      - fix/seller-production-golden-account-20260925
+    paths:
+      - .github/workflows/one-shot-seller-production-golden-account.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify seller production smoke on patched branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE_URL: https://mercasto.com
+      E2E_SELLER_EMAIL: ${{ secrets.E2E_SELLER_EMAIL }}
+      E2E_SELLER_PASSWORD: ${{ secrets.E2E_SELLER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/stabilize-playwright-apt.sh
+      - run: npm run e2e:install
+      - name: Verify seller production read-only smoke
+        run: CI=1 npx playwright test tests/e2e/seller-production-smoke.spec.js --workers=1 --retries=1 --reporter=list
