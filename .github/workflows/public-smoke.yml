@@ -46,6 +46,11 @@ jobs:
           retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers | grep -Eq 'google|\\{'"
           retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/categories | grep -q '\"slug\"'"
           retry bash -c "curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | grep -Eq '\"data\"|\"id\"|\\['"
+
+          retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/blog/comprar-con-seguridad -o /tmp/blog-article.html && grep -Fq '<link rel=\"canonical\" href=\"https://mercasto.com/blog/comprar-con-seguridad\"' /tmp/blog-article.html && grep -Fq '\"@type\":\"Article\"' /tmp/blog-article.html && grep -Fq '\"headline\":\"Guía para comprar con seguridad\"' /tmp/blog-article.html"
+
+          retry bash -c "status=\$(curl -sS --max-time 30 -D /tmp/blog-404.headers -o /tmp/blog-404.html -w '%{http_code}' https://mercasto.com/blog/no-existe); [ \"\$status\" = 404 ] && grep -qi '^x-robots-tag: *noindex,nofollow' /tmp/blog-404.headers && grep -Fq '<link rel=\"canonical\" href=\"https://mercasto.com/blog/no-existe\"' /tmp/blog-404.html && grep -Fq '<meta name=\"robots\" content=\"noindex,nofollow\"' /tmp/blog-404.html"
+
           retry bash -c "curl -fsS --max-time 30 -D /tmp/assetlinks.headers https://mercasto.com/.well-known/assetlinks.json -o /tmp/assetlinks.json && grep -qi '^content-type: *application/json' /tmp/assetlinks.headers && python3 -c 'import json; d=json.load(open(\"/tmp/assetlinks.json\")); assert any(x.get(\"target\",{}).get(\"package_name\")==\"com.mercasto.app\" for x in d)'"
           retry bash -c "status=\$(curl -sS --max-time 30 -o /tmp/aasa.body -D /tmp/aasa.headers -w '%{http_code}' https://mercasto.com/.well-known/apple-app-site-association); [ \"\$status\" = 404 ] || { [ \"\$status\" = 200 ] && grep -qi '^content-type: *application/json' /tmp/aasa.headers && python3 -m json.tool /tmp/aasa.body >/dev/null; }"
 
