@@ -72,6 +72,7 @@ const serverOperatorCommands = [
   'RUN:logs_backend',
   'RUN:deploy_main:MERCASTO',
   'RUN:ghost_access_probe',
+  'RUN:harness_models_diag',
   'RUN:harness_proxy_status',
   'RUN:harness_upload_diag',
   'RUN:harness_upload_fix:MERCASTO',
