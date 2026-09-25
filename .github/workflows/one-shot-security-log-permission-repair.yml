@@ -10,15 +10,11 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: one-shot-security-log-permission-repair
-  cancel-in-progress: false
-
 jobs:
   repair:
-    name: Diagnose shared Laravel security logging
+    name: Bridge current security log ownership
     runs-on: [self-hosted, linux]
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - name: Guard one-shot scope
         shell: bash
@@ -32,7 +28,7 @@ jobs:
           test -z "$(git status --porcelain --untracked-files=all)"
           docker inspect mercasto_backend_container >/dev/null
 
-      - name: Normalize and report security log metadata
+      - name: Make current security log writable by PHP-FPM owner
         shell: bash
         run: |
           set -euo pipefail
@@ -41,49 +37,25 @@ jobs:
             LOG_DIR=/var/www/storage/logs
             chown root:www-data "$LOG_DIR"
             chmod 2770 "$LOG_DIR"
-            find "$LOG_DIR" -maxdepth 1 -type f -name "*.log" -exec chgrp www-data {} \;
-            find "$LOG_DIR" -maxdepth 1 -type f -name "*.log" -exec chmod 0660 {} \;
-            echo "log_dir=$(stat -c "%U:%G mode=%a" "$LOG_DIR")"
-            find "$LOG_DIR" -maxdepth 1 -type f -name "security*.log" -printf "security_file=%f uid=%u gid=%g mode=%m size=%s\n" | sort
-            echo "php_fpm_processes:"
-            ps -eo user,pid,comm | grep "[p]hp-fpm" || true
+            current="$(find "$LOG_DIR" -maxdepth 1 -type f -name "security*.log" -printf "%T@ %p\n" | sort -n | tail -1 | cut -d" " -f2-)"
+            test -n "$current"
+            chown www-data:www-data "$current"
+            chmod 0660 "$current"
+            test "$(stat -c %U "$current")" = www-data
+            test "$(stat -c %G "$current")" = www-data
+            test "$(stat -c %a "$current")" = 660
+            echo "SECURITY_LOG_OWNER_BRIDGE_OK file=$(basename "$current")"
           '
 
-      - name: Prove direct security-channel write as www-data
+      - name: Verify web audit event survives old 0640 config
         shell: bash
         run: |
           set -euo pipefail
-          docker exec -u www-data mercasto_backend_container php -r '
-            require "vendor/autoload.php";
-            $app = require "bootstrap/app.php";
-            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-            Illuminate\Support\Facades\Log::channel("security")->warning(
-              "security_permission_probe",
-              ["event" => "permission_probe", "status" => 499, "route" => "diagnostic"]
-            );
-            echo "DIRECT_SECURITY_LOG_WRITE_OK\n";
+          cd /var/www/mercasto
+          sudo -n bash scripts/security-audit-smoke.sh
+          docker exec mercasto_backend_container sh -lc '
+            current="$(find /var/www/storage/logs -maxdepth 1 -type f -name "security*.log" -printf "%T@ %p\n" | sort -n | tail -1 | cut -d" " -f2-)"
+            echo "post_smoke=$(basename "$current") $(stat -c "user=%U group=%G mode=%a" "$current")"
+            test "$(stat -c %U "$current")" = www-data
           '
-
-      - name: Probe web middleware event without exposing log contents
-        shell: bash
-        run: |
-          set -euo pipefail
-          count_events() {
-            docker exec mercasto_backend_container sh -lc               "grep -h -c '\"event\":\"authentication_required\"' storage/logs/security*.log 2>/dev/null | awk '{s+=\$1} END {print s+0}'"
-          }
-          before="$(count_events)"
-          status="$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 20 https://mercasto.com/api/user)"
-          sleep 2
-          after="$(count_events)"
-          catch_count="$(docker logs --since 2m mercasto_backend_container 2>&1 | grep -c 'Mercasto security audit logging failed' || true)"
-          echo "web_status=$status"
-          echo "auth_event_before=$before"
-          echo "auth_event_after=$after"
-          echo "security_audit_catch_count=$catch_count"
-          test "$status" = 401
-          if [ "$after" -gt "$before" ]; then
-            echo "WEB_SECURITY_AUDIT_WRITE_OK"
-          else
-            echo "WEB_SECURITY_AUDIT_WRITE_MISSING"
-            exit 23
-          fi
+          echo "SECURITY_LOG_OWNER_BRIDGE_VERIFIED"
