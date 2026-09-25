@@ -21,7 +21,7 @@ cfg = json.loads(sys.argv[1])
 assert cfg['driver'] == 'daily', cfg
 assert cfg['level'] == 'warning', cfg
 assert int(cfg['days']) >= 30, cfg
-assert int(cfg['permission']) == 416, cfg  # PHP 0640 in decimal
+assert int(cfg['permission']) == 432, cfg  # PHP 0660 in decimal
 print('security log channel config OK')
 PY
 
