@@ -6,6 +6,8 @@ ENV_PROD="backend/.env.production.example"
 READINESS="scripts/production-env-readiness-smoke.sh"
 ENV_WORKFLOW=".github/workflows/env-readiness.yml"
 DOC="docs/production-runtime-security.md"
+LOGGING="backend/config/logging.php"
+RUNTIME_ENTRYPOINT="backend/docker/runtime-env-entrypoint.sh"
 
 echo "== Runtime host privilege and session gate =="
 # The four host-privilege guards below all read $COMPOSE; if it is missing they
@@ -33,4 +35,8 @@ grep -qF 'bash -s < scripts/production-env-readiness-smoke.sh' "$ENV_WORKFLOW"
 [[ $(grep -c 'command: php artisan queue:work' "$COMPOSE") -eq 2 ]]
 [[ $(grep -c 'memory: 1G' "$COMPOSE") -ge 2 ]]
 grep -qF '25% of host RAM' "$DOC"
+grep -qF "'permission' => 0660" "$LOGGING"
+grep -qF 'chgrp -R www-data "$LOG_DIR"' "$RUNTIME_ENTRYPOINT"
+grep -qF 'chmod 2770 "$LOG_DIR"' "$RUNTIME_ENTRYPOINT"
+grep -qF "find \"\$LOG_DIR\" -maxdepth 1 -type f -name '*.log' -exec chmod 0660 {} +" "$RUNTIME_ENTRYPOINT"
 echo "runtime host privilege and session gate OK"
