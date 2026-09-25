@@ -20,6 +20,18 @@ jobs:
       - name: Checkout diagnostic ref
         uses: actions/checkout@v7
 
+      - name: Repair host dev null permissions if needed
+        run: |
+          set -euo pipefail
+          if [ ! -c /dev/null ] || [ "$(stat -c '%a:%U:%G' /dev/null)" != "666:root:root" ]; then
+            echo "Repairing /dev/null metadata"
+            sudo -n chown root:root /dev/null
+            sudo -n chmod 0666 /dev/null
+          fi
+          test -c /dev/null
+          test "$(stat -c '%a:%U:%G' /dev/null)" = "666:root:root"
+          printf 'dev-null-ok\n' >/dev/null
+
       - name: Check runner temp and workspace are writable
         run: |
           set -euo pipefail

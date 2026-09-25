@@ -76,6 +76,7 @@ const serverOperatorCommands = [
   'RUN:harness_upload_diag',
   'RUN:harness_upload_fix:MERCASTO',
   'RUN:harness_workspace_audit',
+  'RUN:harness_workspace_repair:MERCASTO',
   'RUN:hermes_install:MERCASTO',
   'RUN:hermes_publish:MERCASTO',
   'RUN:restart_frontend:MERCASTO',
