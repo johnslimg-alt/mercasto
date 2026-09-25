@@ -68,6 +68,8 @@ const serverOperatorCommands = [
   'RUN:seo_aeo_smoke',
   'RUN:content_quality_audit',
   'RUN:runner_health',
+  'RUN:defapi_jev_prepare:MERCASTO',
+  'RUN:defapi_jev_bench:MERCASTO',
   'RUN:logs_frontend',
   'RUN:logs_backend',
   'RUN:deploy_main:MERCASTO',
