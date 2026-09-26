@@ -168,12 +168,12 @@ class ErrorBoundary extends React.Component {
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
           <h1 className="text-[24px] font-bold text-white mb-2">{t.shell_error_title}</h1>
           <p className="text-slate-300 mb-6 max-w-md">{t.shell_error_desc}</p>
-          <div className="text-left bg-slate-900 text-red-300 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-900/50 shadow-sm whitespace-pre-wrap">
+          <div data-testid="fatal-error-code" className="no-scrollbar text-left bg-slate-900 text-red-300 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-900/50 shadow-sm whitespace-pre-wrap">
             <strong>{t.shell_error_code}:</strong> {errorMessage}
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">{t.shell_open_guest}</button>
-            <button onClick={() => ErrorBoundary.recoverFromStaleApp()} className="px-6 py-3 bg-slate-800 text-white rounded-xl shadow-md hover:bg-slate-700 transition-colors">{t.shell_reload}</button>
+            <button data-testid="fatal-open-guest" onClick={() => ErrorBoundary.resetSessionAndReload()} className="min-h-12 px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] hover:text-white transition-colors">{t.shell_open_guest}</button>
+            <button data-testid="fatal-reload" onClick={() => ErrorBoundary.recoverFromStaleApp()} className="min-h-12 px-6 py-3 bg-slate-800 text-white rounded-xl shadow-md hover:bg-slate-700 transition-colors">{t.shell_reload}</button>
           </div>
         </div>
       );
