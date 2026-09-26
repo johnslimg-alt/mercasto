@@ -96,7 +96,8 @@ async function assertHeaderControls(page, lang, mobile) {
 
   if (mobile) {
     await expect(page.getByTestId('golden-mobile-account-tab')).toHaveAccessibleName(t.my_account);
-    await expect(page.getByTestId('golden-mobile-notifications-tab')).toHaveAccessibleName(t.notifications);
+    await expect(page.getByTestId('golden-mobile-categories-tab')).toHaveAccessibleName(t.categories);
+    await expect(page.getByTestId('golden-mobile-notifications-tab')).toHaveCount(0);
   } else {
     await expect(page.getByTestId('golden-account-button')).toHaveAccessibleName(t.my_account);
     const notificationsLink = page.getByTestId('golden-notifications-link');

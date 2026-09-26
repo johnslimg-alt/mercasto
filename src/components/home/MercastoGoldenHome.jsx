@@ -56,6 +56,18 @@ export default function MercastoGoldenHome({serverAds=[],featuredAds=[],executeS
  const nav=useNavigate(); const {isDarkMode,toggleDarkMode,setLang}=useUI(); const [q,setQ]=React.useState(''); const openAi=React.useCallback(()=>{window.dispatchEvent(new CustomEvent('mercasto:open-ai-chat'))},[]);
  const ads=React.useMemo(()=>{const seen=new Set();return [...featuredAds,...serverAds].filter(a=>a?.id&&!seen.has(a.id)&&seen.add(a.id)).slice(0,12)},[featuredAds,serverAds]);
  React.useEffect(()=>{document.body.classList.add('mc-golden-home-active','mc-golden-shell-active');return()=>document.body.classList.remove('mc-golden-home-active','mc-golden-shell-active')},[]);
+ React.useEffect(()=>{
+  const scrollToCategories=()=>{
+   if(window.location.hash!=='#golden-categories')return;
+   window.requestAnimationFrame(()=>{
+    const target=[...document.querySelectorAll('[data-golden-categories]')].find(node=>node.getClientRects().length>0);
+    target?.scrollIntoView({block:'start'});
+   });
+  };
+  scrollToCategories();
+  window.addEventListener('hashchange',scrollToCategories);
+  return()=>window.removeEventListener('hashchange',scrollToCategories);
+ },[]);
  const search=()=>{setSearchQuery&&setSearchQuery(q);executeSearch&&executeSearch(q,null,undefined,{pathname:'/listings',source:'homepage_search'})};
  const searchTerm=term=>{setQ(term);setSearchQuery&&setSearchQuery(term);executeSearch&&executeSearch(term,null,undefined,{pathname:'/listings',source:'homepage_recent_search'})};
  const category=s=>{events.categorySelected(s,{source:'homepage_category_rail'});const routes={motor:'/motor',inmobiliaria:'/inmuebles',electronica:'/electronica',moda:'/moda',hogar:'/hogar',ocio:'/ocio',mascotas:'/mascotas',empleo:'/empleos',servicios:'/servicios',infantil:'/infantil',negocios:'/negocios',productos:'/productos'};nav(routes[s]||'/listings')};
@@ -107,7 +119,7 @@ export default function MercastoGoldenHome({serverAds=[],featuredAds=[],executeS
     </div>
   </section>
 
-  <section className="mcg-ref-category-section" aria-label="Explora por categorías">
+  <section className="mcg-ref-category-section" data-golden-categories aria-label="Explora por categorías">
     <div className="mcg-ref-section-heading"><h2>Explora por categorías</h2><a href="/listings">Ver todas las categorías <Icon name="right" size={15}/></a></div>
     <div className="mcg-ref-cats">{cats.map(c=><button key={c[0]} onClick={()=>category(c[1])}><span><Icon name={c[2]} size={24}/></span><b>{c[0]}</b></button>)}</div>
   </section>
@@ -187,16 +199,16 @@ export default function MercastoGoldenHome({serverAds=[],featuredAds=[],executeS
     <small className="mcg-ref-copyright">© 2026 Mercasto. Todos los derechos reservados.</small>
   </footer>
  </div>
- <DeviceLayouts q={q} setQ={setQ} search={search} searchTerm={searchTerm} category={category} publish={publish} nav={nav} openAi={openAi} ads={ads} lang={lang} getImageUrl={getImageUrl} handleViewAd={handleViewAd} account={account} notifications={notifications} unreadCount={unreadCount} t={t}/>
+ <DeviceLayouts q={q} setQ={setQ} search={search} searchTerm={searchTerm} category={category} publish={publish} nav={nav} openAi={openAi} ads={ads} lang={lang} getImageUrl={getImageUrl} handleViewAd={handleViewAd} account={account} unreadCount={unreadCount} t={t}/>
  </div>
 }
 function Section({title,sub,link,children}){return <section className="mcg-section"><div className="mcg-section-head"><div><h2>{title}</h2>{sub&&<p>{sub}</p>}</div>{link&&<a href={link}>Ver todos <Icon name="right" size={15}/></a>}</div>{children}</section>}
-function DeviceLayouts({q,setQ,search,searchTerm,category,publish,nav,openAi,ads,lang,getImageUrl,handleViewAd,account,notifications,unreadCount,t}){
+function DeviceLayouts({q,setQ,search,searchTerm,category,publish,nav,openAi,ads,lang,getImageUrl,handleViewAd,account,unreadCount,t}){
  const actions=[['search','Buscar productos','Explora anuncios cerca de ti'],['compare','Comparar opciones','Encuentra la mejor opción'],['plus','Crear publicación','Vende fácil y rápido'],['home','Ideas para mi hogar','Consejos e inspiración']];
  return <><div className="mcg-tablet"><div className="mcg-intro"><div className="mcg-tablet-title-spacer" aria-hidden="true"/><p>Un México con más oportunidades para todos</p></div><div className="mcg-dsearch"><div><Icon name="search"/><input data-testid="golden-tablet-search-input" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} placeholder="Qué estás buscando?"/></div><button data-testid="golden-tablet-filter" onClick={()=>nav('/listings')}><Icon name="filter"/>Filtros</button></div><section className="mcg-device-ai"><div className="main"><span>NUEVO</span><h2>Mercasto AI</h2><p>Te ayuda a encontrar justo<br/>lo que necesitas</p><button onClick={()=>openAi?.()}>Probar ahora</button><div className="bigbot"><Icon name="bot" size={88}/></div><div className="bubble">Hola<br/>Soy Mercasto AI<br/>En qué te puedo ayudar hoy?</div></div><div className="chat"><h3>Chat con Mercasto AI</h3><Icon name="bot" size={34}/><p>Obtén recomendaciones,<br/>compara opciones y mucho más</p><button onClick={()=>openAi?.()}>Hablar ahora</button></div></section><div className="mcg-actions">{actions.map((a,i)=><button key={a[1]} onClick={i===2?publish:()=>nav('/listings')}><span><Icon name={a[0]}/></span><b>{a[1]}</b><small>{a[2]}</small></button>)}</div><DeviceCategories category={category}/><div className="mcg-device-section"><Head title="Búsquedas recientes"/><div className="mcg-recents">{['laptop','sofá','iphone','casa en renta','bicicleta'].map(x=><button key={x} onClick={()=>searchTerm(x)}><Icon name="search"/><span><b>{x}</b><small>Ver resultados</small></span><Icon name="right"/></button>)}</div></div><DeviceAds ads={ads} lang={lang} getImageUrl={getImageUrl} handleViewAd={handleViewAd}/></div>
  <div className="mcg-mobile"><div className="mcg-msearch"><div><Icon name="search"/><input data-testid="golden-mobile-search-input" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} placeholder="Buscar en Mercasto..."/></div><button data-testid="golden-mobile-filter" aria-label="Filtros" onClick={()=>nav('/listings')}><Icon name="filter"/></button></div><section className="mcg-mobile-ai"><div className="mcg-mobile-title-spacer" aria-hidden="true"/><h2>Tu asistente inteligente<br/>para <em>comprar, vender</em><br/>y crear publicaciones.</h2><div><Icon name="bot" size={70}/></div></section><section className="mcg-mobile-chat"><Icon name="bot"/><p><b>Mercasto AI</b><br/>Hola! En qué te puedo ayudar hoy?</p><button onClick={()=>openAi?.()}><Icon name="right"/></button></section><div className="mcg-mactions">{actions.slice(0,3).map((a,i)=><button key={a[1]} onClick={i===2?publish:()=>nav('/listings')}><span><Icon name={a[0]}/></span><b>{a[1]}</b><Icon name="right"/></button>)}</div><DeviceCategories category={category}/><DeviceAds ads={ads} lang={lang} getImageUrl={getImageUrl} handleViewAd={handleViewAd}/></div>
- <MercastoGoldenBottomNav active="home" publish={publish} onNotifications={notifications} onAccount={account} unreadCount={unreadCount} t={t}/></>
+ <MercastoGoldenBottomNav active="home" publish={publish} onAccount={account} unreadCount={unreadCount} t={t}/></>
 }
 function Head({title}){return <div className="mcg-device-head"><h2>{title}</h2><a href="/listings">Ver todas</a></div>}
-function DeviceCategories({category}){return <div className="mcg-device-section"><Head title="Explora por categoría"/><div className="mcg-device-categories">{cats.slice(0,9).map(c=><button key={c[0]} onClick={()=>category(c[1])}><span><Icon name={c[2]}/></span>{c[0]}</button>)}</div></div>}
+function DeviceCategories({category}){return <div className="mcg-device-section" data-golden-categories><Head title="Explora por categoría"/><div className="mcg-device-categories">{cats.slice(0,9).map(c=><button key={c[0]} onClick={()=>category(c[1])}><span><Icon name={c[2]}/></span>{c[0]}</button>)}</div></div>}
 function DeviceAds({ads,lang,getImageUrl,handleViewAd}){return <div className="mcg-device-section"><Head title="Resultados recomendados para ti"/><div className="mcg-device-ads">{ads.length?ads.slice(0,4).map(a=><Ad key={String(a.id)+'d'} ad={a} lang={lang} getImageUrl={getImageUrl} onOpen={handleViewAd}/>):<EmptyListings/>}</div></div>}

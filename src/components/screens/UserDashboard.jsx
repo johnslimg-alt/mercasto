@@ -226,7 +226,7 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
   );
 };
 
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsLoading = false, analyticsLoadError = false, loadUserAnalytics, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, favoriteAdsLoading = false, favoriteAdsLoadError = false, loadFavoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userAdsLoading = false, userAdsLoadError = false, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsLoading = false, analyticsLoadError = false, loadUserAnalytics, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, favoriteAdsLoading = false, favoriteAdsLoadError = false, loadFavoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, unreadCount = 0, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userAdsLoading = false, userAdsLoadError = false, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
   const navigate = useNavigate();
   const { toggleDarkMode, setLang } = useUI();
   const [dashToast, setDashToast] = React.useState(null);
@@ -420,6 +420,17 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             <p className="truncate text-sm font-extrabold text-slate-900 dark:text-white">{user?.name || t.my_account}</p>
             {user?.email && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>}
           </div>
+          <button
+            type="button"
+            role="menuitem"
+            data-testid="golden-account-notifications"
+            onClick={() => { setShowGoldenAccountMenu(false); navigate('/notificaciones'); }}
+            className="mt-1 flex min-h-12 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <Bell size={17} aria-hidden="true" />
+            <span className="min-w-0 flex-1">{t.notifications || 'Notificaciones'}</span>
+            {unreadCount > 0 && <span className="min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-black text-white">{unreadCount}</span>}
+          </button>
           <button type="button" role="menuitem" onClick={logoutFromGoldenMenu} className="mt-1 flex min-h-12 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
             <LogOut size={17} aria-hidden="true" />
             {t.logout || 'Cerrar sesión'}
@@ -1427,9 +1438,8 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
       <MercastoGoldenBottomNav
         active="account"
         publish={() => setCurrentTab('post')}
-        onNotifications={() => navigate('/notificaciones')}
         onAccount={toggleGoldenAccountMenu}
-        unreadCount={0}
+        unreadCount={unreadCount}
         t={t}
       />
     </div>
