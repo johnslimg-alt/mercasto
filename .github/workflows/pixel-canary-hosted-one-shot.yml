@@ -1,4 +1,4 @@
-name: One-shot Pixel Canary hosted apply
+name: One-shot Pixel Canary cleanup verify
 
 on:
   push:
@@ -9,9 +9,9 @@ permissions:
   contents: read
 
 jobs:
-  apply:
+  cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - name: Validate SSH secrets
         shell: bash
@@ -31,173 +31,58 @@ jobs:
         run: |
           set -euo pipefail
           install -d -m 0700 ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/pixel_canary_key
-          chmod 600 ~/.ssh/pixel_canary_key
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/pixel_canary_cleanup_key
+          chmod 600 ~/.ssh/pixel_canary_cleanup_key
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      - name: Apply Pixel Canary to Harness
+      - name: Remove ephemeral handoff keys and verify Harness config
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          CIPHERTEXT_B64: "LAAdhoxHqK429HBoR0Maew1h/a3iIptw+k9o6nJZY7hR7BTx2dmhciWangsMZ/KTJpl8at5O5NAnBL50sOaa+YWQ+oqP1iDwJFDSeIFPfwRMLRfDEH1xJcmoYIJli+lzHD+tvffwLPXGGLSBWF3/S8mexIwouOPj5qxsu16fauq026sJCWyp92xBYNdCqQIzeII/DAJK7ZrqPDSlE/1RRAxv+6DXqYESoRWTeA981G4ZlxV4paXSYQXl103+YfOtq4cHeBt+wjaSOR6rFV5w7QCY/LEIjJNTBSrykzSt9vxS3+DD3hPI/75lDD4jQ/t6cuyrwQ9MF403yd5Z49Np4vhaLRN8wlsaHyNciLgOmS1uzvRKPHeTkeewjF9PNQMHlvmAyXVSKLG2HjNtB0U2iC2bCIfx31JoFpZPdb0nx/okqzEWxC0eVIA/hDHEAsxuzXMmd+9SKhoeFMzSg/6J5OGpWUVyzp9Gb8A20UYsjzliGaVdT6i1ViqakKs6tgKa"
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pixel_canary_key "root@$SERVER_HOST" \
-            "CIPHERTEXT_B64='$CIPHERTEXT_B64' bash -s" <<'REMOTE'
+          ssh -i ~/.ssh/pixel_canary_cleanup_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
 
-          DSH_HOME=/root/.dsh
-          HANDOFF_DIR="$DSH_HOME/.chatgpt-pixel-canary"
-          PRIVKEY="$HANDOFF_DIR/ephemeral-rsa.pem"
-          CIPHER="$HANDOFF_DIR/pixel-canary.cipher"
-          PLAIN="$HANDOFF_DIR/pixel-canary.key"
+          HANDOFF_DIR=/root/.dsh/.chatgpt-pixel-canary
+          rm -f \
+            "$HANDOFF_DIR/ephemeral-rsa.pem" \
+            "$HANDOFF_DIR/ephemeral-rsa.pub.pem" \
+            "$HANDOFF_DIR/pixel-canary.cipher" \
+            "$HANDOFF_DIR/pixel-canary.key"
 
-          test -s "$PRIVKEY"
-          install -d -m 0700 "$HANDOFF_DIR"
-          trap 'rm -f "$CIPHER" "$PLAIN"' EXIT
-
-          printf '%s' "$CIPHERTEXT_B64" | base64 -d > "$CIPHER"
-          chmod 0600 "$CIPHER"
-          openssl pkeyutl -decrypt \
-            -inkey "$PRIVKEY" \
-            -in "$CIPHER" \
-            -out "$PLAIN" \
-            -pkeyopt rsa_padding_mode:oaep \
-            -pkeyopt rsa_oaep_md:sha256 \
-            -pkeyopt rsa_mgf1_md:sha256
-          chmod 0600 "$PLAIN"
-
-          KEY_LEN="$(wc -c < "$PLAIN" | tr -d ' ')"
-          test "$KEY_LEN" -ge 20
-          test "$KEY_LEN" -le 512
-          test "$(head -c 4 "$PLAIN")" = "vck_"
-
-          python3 - "$PLAIN" <<'PY'
-          import os
-          import shutil
-          import sys
-          import tempfile
-          from datetime import datetime, timezone
+          python3 - <<'PY'
           from pathlib import Path
           import yaml
 
-          key = Path(sys.argv[1]).read_text().strip()
           home = Path('/root/.dsh')
-          settings_path = home / 'settings.yaml'
-          creds_path = home / '.credentials.yaml'
-          if not settings_path.is_file() or not creds_path.is_file():
-              raise SystemExit('Harness settings/credentials file missing')
+          settings = yaml.safe_load((home / 'settings.yaml').read_text()) or {}
+          creds = yaml.safe_load((home / '.credentials.yaml').read_text()) or {}
 
-          stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-          backup = home / 'backups' / 'pixel-canary' / stamp
-          backup.mkdir(parents=True, exist_ok=False)
-          os.chmod(backup, 0o700)
-          shutil.copy2(settings_path, backup / 'settings.yaml')
-          shutil.copy2(creds_path, backup / '.credentials.yaml')
+          refs = creds.get('refs') or {}
+          assert bool(refs.get('AI_GATEWAY_API_KEY'))
 
-          creds = yaml.safe_load(creds_path.read_text()) or {}
-          refs = creds.setdefault('refs', {})
-          refs['AI_GATEWAY_API_KEY'] = key
-
-          settings = yaml.safe_load(settings_path.read_text()) or {}
-          current_default = settings.get('agent-default-model')
-          providers = settings.setdefault('llm-pi-ai', {}).setdefault('providers', {})
-          providers['vercel-ai-gateway'] = {
-              'displayName': 'Vercel AI Gateway',
-              'apiKeyEnv': 'AI_GATEWAY_API_KEY',
-              'api': 'openai-completions',
-              'baseURL': 'https://ai-gateway.vercel.sh/v1',
-              'models': [{
-                  'id': 'stealth/pixel-canary',
-                  'name': 'Pixel Canary',
-                  'contextWindow': 262144,
-                  'maxOutputTokens': 131072,
-                  'input': ['text', 'image'],
-              }],
-          }
-
-          def atomic_yaml(path, data):
-              fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix='.' + path.name + '.', text=True)
-              try:
-                  with os.fdopen(fd, 'w') as fh:
-                      yaml.safe_dump(data, fh, sort_keys=False, allow_unicode=True)
-                      fh.flush()
-                      os.fsync(fh.fileno())
-                  os.chmod(tmp, 0o600)
-                  os.replace(tmp, path)
-              finally:
-                  if os.path.exists(tmp):
-                      os.unlink(tmp)
-
-          atomic_yaml(creds_path, creds)
-          atomic_yaml(settings_path, settings)
-          print('backup=' + str(backup))
-          print('provider=vercel-ai-gateway')
-          print('model=stealth/pixel-canary')
-          print('default_preserved=' + str(current_default))
-          PY
-
-          python3 - <<'PY'
-          import json
-          import urllib.error
-          import urllib.request
-          from pathlib import Path
-          import yaml
-
-          creds = yaml.safe_load(Path('/root/.dsh/.credentials.yaml').read_text()) or {}
-          key = (creds.get('refs') or {}).get('AI_GATEWAY_API_KEY')
-          if not key:
-              raise SystemExit('AI_GATEWAY_API_KEY missing after write')
-
-          payload = json.dumps({
-              'model': 'stealth/pixel-canary',
-              'messages': [{'role': 'user', 'content': 'Reply with exactly PIXEL_CANARY_OK'}],
-              'max_tokens': 64,
-          }).encode()
-
-          req = urllib.request.Request(
-              'https://ai-gateway.vercel.sh/v1/chat/completions',
-              data=payload,
-              headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
-              method='POST',
-          )
-          try:
-              with urllib.request.urlopen(req, timeout=120) as r:
-                  status = r.status
-                  data = json.loads(r.read().decode())
-          except urllib.error.HTTPError as e:
-              body = e.read().decode(errors='replace')[:1200]
-              raise SystemExit(f'Pixel Canary HTTP {e.code}: {body}')
-          if status != 200:
-              raise SystemExit(f'Pixel Canary unexpected HTTP {status}')
-          choices = data.get('choices') or []
-          if not choices:
-              raise SystemExit('Pixel Canary smoke returned no choices')
-          content = (((choices[0].get('message') or {}).get('content')) or '').strip()
-          if not content:
-              raise SystemExit('Pixel Canary smoke returned empty content')
-          print('pixel_canary_http=200')
-          print('pixel_canary_response_nonempty=true')
-          print('pixel_canary_model=' + str(data.get('model') or 'stealth/pixel-canary'))
-          PY
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import yaml
-
-          settings = yaml.safe_load(Path('/root/.dsh/settings.yaml').read_text()) or {}
           route = (((settings.get('llm-pi-ai') or {}).get('providers') or {}).get('vercel-ai-gateway') or {})
           assert route.get('apiKeyEnv') == 'AI_GATEWAY_API_KEY'
           assert route.get('api') == 'openai-completions'
           assert route.get('baseURL') == 'https://ai-gateway.vercel.sh/v1'
           assert any(isinstance(m, dict) and m.get('id') == 'stealth/pixel-canary' for m in (route.get('models') or []))
           assert settings.get('agent-default-model') == {'provider': 'openai', 'model': 'gpt-6-luna'}
-          print('harness_settings_pixel_canary=ok')
-          print('harness_default_preserved=openai/gpt-6-luna')
+
+          print('pixel_canary_credential_ref=present')
+          print('pixel_canary_provider=vercel-ai-gateway')
+          print('pixel_canary_model=stealth/pixel-canary')
+          print('default_preserved=openai/gpt-6-luna')
           PY
+
+          test ! -e "$HANDOFF_DIR/ephemeral-rsa.pem"
+          test ! -e "$HANDOFF_DIR/ephemeral-rsa.pub.pem"
+          test ! -e "$HANDOFF_DIR/pixel-canary.cipher"
+          test ! -e "$HANDOFF_DIR/pixel-canary.key"
 
           systemctl is-active --quiet deepseek-harness.service
           systemctl is-active --quiet deepseek-harness-proxy.service
+
           CODE="$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 20 https://harness.flyaicrm.com/ || true)"
           echo "harness_public_http=$CODE"
           case "$CODE" in
@@ -205,12 +90,10 @@ jobs:
             *) echo "Unexpected Harness public HTTP status: $CODE" >&2; exit 68 ;;
           esac
 
-          rm -f "$PRIVKEY" "$HANDOFF_DIR/ephemeral-rsa.pub.pem" "$CIPHER" "$PLAIN"
-          trap - EXIT
-          echo "PIXEL_CANARY_HARNESS_SETUP_OK"
+          echo "PIXEL_CANARY_CONFIG_INSTALLED_PENDING_VERCEL_PAYMENT_METHOD"
           REMOTE
 
       - name: Remove SSH key
         if: always()
         shell: bash
-        run: rm -f ~/.ssh/pixel_canary_key
+        run: rm -f ~/.ssh/pixel_canary_cleanup_key
