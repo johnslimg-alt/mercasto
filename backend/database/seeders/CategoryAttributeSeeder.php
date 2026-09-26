@@ -13,82 +13,6 @@ class CategoryAttributeSeeder extends Seeder
     public function run(): void
     {
         $attributes = [
-            // --- coches (Cars) ---
-            [
-                'category_slug' => 'coches',
-                'key' => 'brand',
-                'label' => [
-                    'es' => 'Marca',
-                    'en' => 'Brand'
-                ],
-                'type' => 'select',
-                'options' => [
-                    ['value' => 'toyota', 'label' => ['es' => 'Toyota', 'en' => 'Toyota']],
-                    ['value' => 'nissan', 'label' => ['es' => 'Nissan', 'en' => 'Nissan']],
-                    ['value' => 'ford', 'label' => ['es' => 'Ford', 'en' => 'Ford']],
-                    ['value' => 'chevrolet', 'label' => ['es' => 'Chevrolet', 'en' => 'Chevrolet']],
-                    ['value' => 'honda', 'label' => ['es' => 'Honda', 'en' => 'Honda']],
-                    ['value' => 'volkswagen', 'label' => ['es' => 'Volkswagen', 'en' => 'Volkswagen']],
-                    ['value' => 'bmw', 'label' => ['es' => 'BMW', 'en' => 'BMW']],
-                    ['value' => 'mercedes', 'label' => ['es' => 'Mercedes-Benz', 'en' => 'Mercedes-Benz']]
-                ],
-                'required' => true,
-                'sort_order' => 10
-            ],
-            [
-                'category_slug' => 'coches',
-                'key' => 'model',
-                'label' => [
-                    'es' => 'Modelo',
-                    'en' => 'Model'
-                ],
-                'type' => 'text',
-                'options' => null,
-                'required' => true,
-                'sort_order' => 20
-            ],
-            [
-                'category_slug' => 'coches',
-                'key' => 'year',
-                'label' => [
-                    'es' => 'Año',
-                    'en' => 'Year'
-                ],
-                'type' => 'number',
-                'options' => null,
-                'required' => true,
-                'sort_order' => 30
-            ],
-            [
-                'category_slug' => 'coches',
-                'key' => 'kms',
-                'label' => [
-                    'es' => 'Kilómetros',
-                    'en' => 'Kilometers'
-                ],
-                'type' => 'number',
-                'options' => null,
-                'required' => true,
-                'sort_order' => 40
-            ],
-            [
-                'category_slug' => 'coches',
-                'key' => 'fuel',
-                'label' => [
-                    'es' => 'Combustible',
-                    'en' => 'Fuel'
-                ],
-                'type' => 'select',
-                'options' => [
-                    ['value' => 'gasolina', 'label' => ['es' => 'Gasolina', 'en' => 'Gasoline']],
-                    ['value' => 'diesel', 'label' => ['es' => 'Diésel', 'en' => 'Diesel']],
-                    ['value' => 'hibrido', 'label' => ['es' => 'Híbrido', 'en' => 'Hybrid']],
-                    ['value' => 'electrico', 'label' => ['es' => 'Eléctrico', 'en' => 'Electric']]
-                ],
-                'required' => true,
-                'sort_order' => 50
-            ],
-
             // --- inmobiliaria (Real Estate) ---
             [
                 'category_slug' => 'inmobiliaria',
@@ -274,7 +198,7 @@ class CategoryAttributeSeeder extends Seeder
             ],
         ];
 
-        foreach (['coches', 'inmobiliaria', 'empleo'] as $categorySlug) {
+        foreach (['inmobiliaria', 'empleo'] as $categorySlug) {
             $attributes[] = [
                 'category_slug' => $categorySlug,
                 'key' => 'subcategory',
