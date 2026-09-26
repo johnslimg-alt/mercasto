@@ -1348,9 +1348,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                   <form onSubmit={handlePasswordSubmit} className="max-w-md space-y-3 mb-8">
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">{t.change_password || 'Cambiar contraseña'}</h3>
-                    <input type="password" aria-label={t.curr_password} required value={passwordForm.current_password} onChange={e => setPasswordForm({ ...passwordForm, current_password: e.target.value })} placeholder={t.curr_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
-                    <input type="password" aria-label={t.new_password} required minLength={8} value={passwordForm.new_password} onChange={e => setPasswordForm({ ...passwordForm, new_password: e.target.value })} placeholder={t.new_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
-                    <input type="password" aria-label={t.conf_password} required value={passwordForm.confirm_password} onChange={e => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })} placeholder={t.conf_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <input type="password" aria-label={t.curr_password} required value={passwordForm.current_password} onChange={e => setPasswordForm({ ...passwordForm, current_password: e.target.value })} placeholder={t.curr_password} className="w-full min-h-12 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <input type="password" aria-label={t.new_password} required minLength={8} value={passwordForm.new_password} onChange={e => setPasswordForm({ ...passwordForm, new_password: e.target.value })} placeholder={t.new_password} className="w-full min-h-12 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <input type="password" aria-label={t.conf_password} required value={passwordForm.confirm_password} onChange={e => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })} placeholder={t.conf_password} className="w-full min-h-12 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
                     <button type="submit" disabled={passwordLoading} className="min-h-12 sm:min-h-10 btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
                       {passwordLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
                     </button>
@@ -1359,8 +1359,8 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   <form onSubmit={handleEmailSubmit} className="max-w-md space-y-3 mb-8 pt-6 border-t border-slate-100 dark:border-slate-700">
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">{t.change_email || 'Cambiar correo electrónico'}</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
-                    <input type="email" aria-label={t.new_email} required value={emailForm.new_email} onChange={e => setEmailForm({ ...emailForm, new_email: e.target.value })} placeholder={t.new_email} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
-                    <input type="password" aria-label={t.curr_password} required value={emailForm.password} onChange={e => setEmailForm({ ...emailForm, password: e.target.value })} placeholder={t.curr_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <input type="email" aria-label={t.new_email} required value={emailForm.new_email} onChange={e => setEmailForm({ ...emailForm, new_email: e.target.value })} placeholder={t.new_email} className="w-full min-h-12 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <input type="password" aria-label={t.curr_password} required value={emailForm.password} onChange={e => setEmailForm({ ...emailForm, password: e.target.value })} placeholder={t.curr_password} className="w-full min-h-12 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
                     <button type="submit" disabled={emailLoading} className="min-h-12 sm:min-h-10 btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
                       {emailLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
                     </button>
@@ -1368,19 +1368,19 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                   <form onSubmit={handleNotificationsSubmit} className="max-w-md space-y-3 pt-6 border-t border-slate-100 dark:border-slate-700">
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">{t.notifications || 'Notificaciones'}</h3>
-                    <label className="flex items-center justify-between py-1.5">
+                    <label className="flex min-h-12 items-center justify-between py-1.5">
                       <span className="text-sm text-slate-700 dark:text-slate-300">{t.email_alerts || 'Alertas por correo'}</span>
                       <input type="checkbox" checked={notificationsForm.email_alerts} onChange={e => setNotificationsForm({ ...notificationsForm, email_alerts: e.target.checked })} className="w-4 h-4 accent-lime-500" />
                     </label>
-                    <label className={`flex items-center justify-between py-1.5 pl-3 ${notificationsForm.email_alerts ? '' : 'opacity-50'}`}>
+                    <label className={`flex min-h-12 items-center justify-between py-1.5 pl-3 ${notificationsForm.email_alerts ? '' : 'opacity-50'}`}>
                       <span className="text-sm text-slate-700 dark:text-slate-300">{t.email_new_message}</span>
                       <input type="checkbox" data-testid="email-new-message-toggle" checked={notificationsForm.email_new_message} disabled={!notificationsForm.email_alerts} onChange={e => setNotificationsForm({ ...notificationsForm, email_new_message: e.target.checked })} className="w-4 h-4 accent-lime-500 disabled:cursor-not-allowed" />
                     </label>
-                    <label className="flex items-center justify-between py-1.5">
+                    <label className="flex min-h-12 items-center justify-between py-1.5">
                       <span className="text-sm text-slate-700 dark:text-slate-300">{t.push_notifications || 'Notificaciones push'}</span>
                       <input type="checkbox" checked={notificationsForm.push_notifications} onChange={e => setNotificationsForm({ ...notificationsForm, push_notifications: e.target.checked })} className="w-4 h-4 accent-lime-500" />
                     </label>
-                    <label className="flex items-center justify-between py-1.5">
+                    <label className="flex min-h-12 items-center justify-between py-1.5">
                       <span className="text-sm text-slate-700 dark:text-slate-300">{t.marketing || 'Ofertas y novedades'}</span>
                       <input type="checkbox" checked={notificationsForm.marketing} onChange={e => setNotificationsForm({ ...notificationsForm, marketing: e.target.checked })} className="w-4 h-4 accent-lime-500" />
                     </label>
