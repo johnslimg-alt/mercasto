@@ -151,7 +151,9 @@ test('notifications use the shared Golden shell with active mobile notifications
     if (viewport.name === 'mobile') {
       await expect(page.getByTestId('golden-bottom-nav')).toBeVisible();
       await expect(page.locator('.mobile-tabbar')).toBeHidden();
-      await expect(page.getByTestId('golden-mobile-notifications-tab')).toHaveClass(/active/);
+      await expect(page.getByTestId('golden-mobile-categories-tab')).toBeVisible();
+      await expect(page.getByTestId('golden-mobile-notifications-tab')).toHaveCount(0);
+      await expect(page.getByTestId('golden-mobile-account-tab')).toHaveClass(/active/);
     }
   }
 });
