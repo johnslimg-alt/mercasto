@@ -56,6 +56,12 @@ $legacySubscriptionCount = Schema::hasTable("category_subscriptions")
 $legacyAlertCount = Schema::hasTable("search_alerts")
     ? DB::table("search_alerts")->whereIn("category_slug", $legacySlugs)->count()
     : 0;
+$legacyAlertFilterCount = Schema::hasTable("search_alerts")
+    ? DB::table("search_alerts")->whereIn("filters->category", $legacySlugs)->count()
+    : 0;
+$legacySavedSearchCount = Schema::hasTable("saved_searches")
+    ? DB::table("saved_searches")->whereIn("filters->category", $legacySlugs)->count()
+    : 0;
 
 $checks["categories_count"] = $categoryCount > 0 ? "ready" : "not_ready";
 $checks["category_attributes_count"] = $attributeCount > 0 ? "ready" : "not_ready";
@@ -65,6 +71,8 @@ $checks["canonical_categories_present"] = $canonicalCategoryCount === count($can
 $checks["legacy_ads_absent"] = $legacyAdCount === 0 ? "ready" : "not_ready";
 $checks["legacy_category_subscriptions_absent"] = $legacySubscriptionCount === 0 ? "ready" : "not_ready";
 $checks["legacy_search_alerts_absent"] = $legacyAlertCount === 0 ? "ready" : "not_ready";
+$checks["legacy_search_alert_filters_absent"] = $legacyAlertFilterCount === 0 ? "ready" : "not_ready";
+$checks["legacy_saved_searches_absent"] = $legacySavedSearchCount === 0 ? "ready" : "not_ready";
 
 foreach ($checks as $name => $status) {
     echo $name . "=" . $status . PHP_EOL;
@@ -76,6 +84,8 @@ echo "canonical_categories_total=" . (int) $canonicalCategoryCount . PHP_EOL;
 echo "legacy_ads_total=" . (int) $legacyAdCount . PHP_EOL;
 echo "legacy_category_subscriptions_total=" . (int) $legacySubscriptionCount . PHP_EOL;
 echo "legacy_search_alerts_total=" . (int) $legacyAlertCount . PHP_EOL;
+echo "legacy_search_alert_filters_total=" . (int) $legacyAlertFilterCount . PHP_EOL;
+echo "legacy_saved_searches_total=" . (int) $legacySavedSearchCount . PHP_EOL;
 ')"
 
 echo "$RESULTS"
