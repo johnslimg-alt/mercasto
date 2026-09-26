@@ -460,7 +460,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             {userRole !== 'business' && (
             <button 
               onClick={() => setAccountType('particular')} 
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+              className={`min-h-12 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                 accountType === 'particular' 
                   ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-white' 
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -471,7 +471,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             )}
             <button 
               onClick={() => setAccountType('pro')} 
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+              className={`min-h-12 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                 accountType === 'pro' 
                   ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-white' 
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -519,7 +519,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                       showDashToast(t.connection_error || 'Error de conexión.', 'error'); 
                     }
                   }} 
-                  className="btn-sm bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs"
+                  className="min-h-12 sm:min-h-10 btn-sm bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs"
                 >
                   {t.verify_email || 'Verificar email'}
                 </button>
@@ -602,7 +602,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               {user?.unlimited_balance ? (t.unlimited_balance_label || '∞ Ilimitado') : `${parseFloat(user?.balance || 0).toFixed(0)} ${t.credits_unit || 'Créditos'}`}
               <button 
                 onClick={() => handleClipPayment(100, `100 ${t.credits_unit || 'Créditos'} Mercasto`, null, 'credits_100')} 
-                className="ml-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white w-7 h-7 rounded-lg flex items-center justify-center hover:from-amber-600 hover:to-orange-600 transition-all shadow-md" 
+                className="ml-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white w-12 h-12 md:w-8 md:h-8 rounded-lg flex items-center justify-center hover:from-amber-600 hover:to-orange-600 transition-all shadow-md" 
                 title={t.credits_btn_title || 'Comprar créditos'}
               >
                 +
@@ -611,7 +611,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 <button 
                   type="button"
                   onClick={() => setShowCouponModal(true)} 
-                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5"
+                  className="min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5"
                 >
                   <Ticket size={14}/> {t.redeem_coupon || 'Canjear cupón'}
                 </button>
@@ -621,7 +621,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               type="button"
               data-testid="dashboard-mobile-redeem-coupon"
               onClick={() => setShowCouponModal(true)}
-              className="md:hidden btn-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5"
+              className="md:hidden min-h-12 btn-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5"
             >
               <Ticket size={14}/> {t.redeem_coupon || 'Canjear cupón'}
             </button>
@@ -784,7 +784,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               ) : userAdsLoadError && userAds.length === 0 ? (
                 <div data-testid="dashboard-my-ads-load-error" role="alert" className="flex min-h-48 flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-800">
                   <p className="text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
-                  <button type="button" data-testid="dashboard-my-ads-retry" onClick={onRefreshAds} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                  <button type="button" data-testid="dashboard-my-ads-retry" onClick={onRefreshAds} className="min-h-12 sm:min-h-10 btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
                     {t.retry_btn || 'Reintentar'}
                   </button>
                 </div>
@@ -820,7 +820,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   ) : favoriteAdsLoadError && displayedAds.length === 0 ? (
                     <div data-testid="dashboard-favorites-load-error" role="alert" className="flex flex-col items-center justify-center gap-4 p-12 text-center">
                       <p className="text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
-                      <button type="button" data-testid="dashboard-favorites-retry" onClick={loadFavoriteAds} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                      <button type="button" data-testid="dashboard-favorites-retry" onClick={loadFavoriteAds} className="min-h-12 sm:min-h-10 btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
                         {t.retry_btn || 'Reintentar'}
                       </button>
                     </div>
@@ -890,7 +890,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                   href={`/#ad-${ad.id}`}
                                   onClick={() => setCurrentTab('home')}
                                   title={t.view_ad || 'Ver anuncio'}
-                                  className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 flex items-center justify-center"
+                                  className="min-h-12 sm:min-h-10 btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 flex items-center justify-center"
                                 >
                                   <Eye className="w-4 h-4" />
                                 </a>
@@ -909,14 +909,14 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                             <button
                               onClick={() => setDashboardPage(Math.max(1, safeDashboardPage - 1))}
                               disabled={safeDashboardPage === 1}
-                              className="btn-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all"
+                              className="min-h-12 sm:min-h-10 btn-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all"
                             >
                               {t.prev_btn || 'Anterior'}
                             </button>
                             <button
                               onClick={() => setDashboardPage(Math.min(totalPages, safeDashboardPage + 1))}
                               disabled={safeDashboardPage === totalPages}
-                              className="btn-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all"
+                              className="min-h-12 sm:min-h-10 btn-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all"
                             >
                               {t.next_btn || 'Siguiente'}
                             </button>
@@ -961,7 +961,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   ) : accountType === 'pro' && analyticsLoadError && !(analyticsData?.length > 0) ? (
                     <div data-testid="dashboard-analytics-load-error" role="alert" className="flex h-64 flex-col items-center justify-center gap-4 text-center">
                       <p className="text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
-                      <button type="button" data-testid="dashboard-analytics-retry" onClick={loadUserAnalytics} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                      <button type="button" data-testid="dashboard-analytics-retry" onClick={loadUserAnalytics} className="min-h-12 sm:min-h-10 btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
                         {t.retry_btn || 'Reintentar'}
                       </button>
                     </div>
@@ -1017,7 +1017,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 ) : userPaymentsLoadError && !(userPayments?.length > 0) ? (
                   <div data-testid="dashboard-transactions-load-error" role="alert" className="flex flex-col items-center justify-center gap-4 py-12 text-center">
                     <p className="text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
-                    <button type="button" data-testid="dashboard-transactions-retry" onClick={() => loadUserPayments(1)} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                    <button type="button" data-testid="dashboard-transactions-retry" onClick={() => loadUserPayments(1)} className="min-h-12 sm:min-h-10 btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
                       {t.retry_btn || 'Reintentar'}
                     </button>
                   </div>
@@ -1081,7 +1081,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                               </p>
                             </div>
                           </div>
-                          <Link to={`/?ad=${item.adId}`} className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                          <Link to={`/?ad=${item.adId}`} className="min-h-12 sm:min-h-10 btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 flex items-center gap-1">
                             {t.view} <ExternalLink size={14} />
                           </Link>
                         </div>
@@ -1121,9 +1121,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                         setProfileVisible(newVal);
                         localStorage.setItem('mercasto_privacy_profile_visible', String(newVal));
                       }}
-                      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${profileVisible ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                      className="w-12 h-12 flex items-center justify-center flex-shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500"
                     >
-                      <span className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform ${profileVisible ? 'translate-x-5' : ''}`} />
+                      <span className={`relative block w-11 h-6 rounded-full transition-colors ${profileVisible ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}><span className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform ${profileVisible ? 'translate-x-5' : ''}`} /></span>
                     </button>
                   </div>
 
@@ -1153,9 +1153,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                           if (allowed && synced) notify();
                         });
                       }}
-                      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${trackingConsent ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                      className="w-12 h-12 flex items-center justify-center flex-shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500"
                     >
-                      <span className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform ${trackingConsent ? 'translate-x-5' : ''}`} />
+                      <span className={`relative block w-11 h-6 rounded-full transition-colors ${trackingConsent ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}><span className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform ${trackingConsent ? 'translate-x-5' : ''}`} /></span>
                     </button>
                   </div>
 
@@ -1175,7 +1175,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                           showDashToast(t.local_data_cleared || 'Historial y datos locales eliminados', 'success');
                         }
                       }}
-                      className="btn-sm bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 whitespace-nowrap text-xs font-semibold"
+                      className="min-h-12 sm:min-h-10 btn-sm bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 whitespace-nowrap text-xs font-semibold"
                     >
                       Limpiar datos
                     </button>
@@ -1283,7 +1283,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                         <button
                                           key={star}
                                           onClick={() => setRs({ rating: star })}
-                                          className="transition-transform hover:scale-110"
+                                          className="inline-flex h-12 w-12 items-center justify-center transition-transform hover:scale-110"
                                           aria-label={`${star} / 5`}
                                           aria-pressed={rating === star}
                                           title={`${star} / 5`}
@@ -1319,7 +1319,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                         <button
                                           onClick={handleSubmit}
                                           disabled={loading}
-                                          className="btn-sm bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold flex items-center gap-2 disabled:opacity-60"
+                                          className="min-h-12 sm:min-h-10 btn-sm bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold flex items-center gap-2 disabled:opacity-60"
                                         >
                                           {loading ? (
                                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -1351,7 +1351,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                     <input type="password" aria-label={t.curr_password} required value={passwordForm.current_password} onChange={e => setPasswordForm({ ...passwordForm, current_password: e.target.value })} placeholder={t.curr_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
                     <input type="password" aria-label={t.new_password} required minLength={8} value={passwordForm.new_password} onChange={e => setPasswordForm({ ...passwordForm, new_password: e.target.value })} placeholder={t.new_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
                     <input type="password" aria-label={t.conf_password} required value={passwordForm.confirm_password} onChange={e => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })} placeholder={t.conf_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
-                    <button type="submit" disabled={passwordLoading} className="btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
+                    <button type="submit" disabled={passwordLoading} className="min-h-12 sm:min-h-10 btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
                       {passwordLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
                     </button>
                   </form>
@@ -1361,7 +1361,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                     <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
                     <input type="email" aria-label={t.new_email} required value={emailForm.new_email} onChange={e => setEmailForm({ ...emailForm, new_email: e.target.value })} placeholder={t.new_email} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
                     <input type="password" aria-label={t.curr_password} required value={emailForm.password} onChange={e => setEmailForm({ ...emailForm, password: e.target.value })} placeholder={t.curr_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
-                    <button type="submit" disabled={emailLoading} className="btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
+                    <button type="submit" disabled={emailLoading} className="min-h-12 sm:min-h-10 btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
                       {emailLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
                     </button>
                   </form>
@@ -1384,7 +1384,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                       <span className="text-sm text-slate-700 dark:text-slate-300">{t.marketing || 'Ofertas y novedades'}</span>
                       <input type="checkbox" checked={notificationsForm.marketing} onChange={e => setNotificationsForm({ ...notificationsForm, marketing: e.target.checked })} className="w-4 h-4 accent-lime-500" />
                     </label>
-                    <button type="submit" disabled={notificationsLoading} className="btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
+                    <button type="submit" disabled={notificationsLoading} className="min-h-12 sm:min-h-10 btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
                       {notificationsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
                     </button>
                   </form>
@@ -1395,7 +1395,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-red-200 dark:border-red-500/30 p-6">
                   <h3 className="font-bold text-sm text-red-600 dark:text-red-400 mb-1">{t.danger_zone || 'Zona de Peligro'}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 max-w-md">{t.del_warning || 'Una vez que elimines tu cuenta perderás todo...'}</p>
-                  <button onClick={handleDeleteAccount} className="btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/50 dark:text-red-300 dark:border-red-800/60">
+                  <button onClick={handleDeleteAccount} className="min-h-12 sm:min-h-10 btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/50 dark:text-red-300 dark:border-red-800/60">
                     {t.del_account || 'Eliminar Cuenta'}
                   </button>
                 </div>
