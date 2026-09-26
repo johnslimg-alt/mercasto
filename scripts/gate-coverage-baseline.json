@@ -109,10 +109,6 @@
     },
     {
       "check": "no-negative-control",
-      "gate": "scripts/category-data-smoke.sh"
-    },
-    {
-      "check": "no-negative-control",
       "gate": "scripts/category-schema-audit.mjs"
     },
     {
