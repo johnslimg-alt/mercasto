@@ -30,8 +30,8 @@ export default function ContactoScreen({ shellProps = {} }) {
   const acknowledgementCopy = getSupportRequestAcknowledgementCopy(lang);
   const subjects = getContactSubjects(lang);
   const contactInfo = [
-    { icon: Mail, title: copy.emailCardTitle, value: 'soporte@mercasto.com', sub: copy.emailCardSub, href: 'mailto:soporte@mercasto.com', color: 'bg-lime-50 text-lime-600' },
-    { icon: Clock, title: copy.responseTitle, value: copy.responseValue, sub: copy.responseSub, href: null, color: 'bg-sky-50 text-sky-600' },
+    { icon: Mail, title: copy.emailCardTitle, value: 'soporte@mercasto.com', sub: copy.emailCardSub, href: 'mailto:soporte@mercasto.com', color: 'bg-lime-50 text-lime-700 dark:bg-lime-500/10 dark:text-lime-300' },
+    { icon: Clock, title: copy.responseTitle, value: copy.responseValue, sub: copy.responseSub, href: null, color: 'bg-slate-100 text-lime-700 dark:bg-slate-800 dark:text-lime-300' },
   ];
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
@@ -96,13 +96,13 @@ export default function ContactoScreen({ shellProps = {} }) {
       {/* Breadcrumb */}
       <div className="bg-white border-b border-slate-200 sticky mcg-public-sticky z-10 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2 text-sm">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors">
+          <button type="button" data-testid="contact-back" onClick={() => navigate(-1)} className="inline-flex min-h-12 items-center gap-1 px-1 text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white transition-colors">
             <ChevronLeft className="w-4 h-4" /> {t.back}
           </button>
           <span className="text-slate-300 mx-1">|</span>
-          <button type="button" className="text-slate-400 cursor-pointer hover:text-lime-600" onClick={() => navigate('/')}>Mercasto</button>
+          <button type="button" data-testid="contact-home" className="inline-flex min-h-12 items-center px-1 text-slate-400 cursor-pointer hover:text-lime-600 dark:text-slate-300 dark:hover:text-lime-300" onClick={() => navigate('/')}>Mercasto</button>
           <span className="text-slate-300">›</span>
-          <span className="text-slate-600 font-medium">{copy.breadcrumb}</span>
+          <span className="text-slate-600 font-medium dark:text-slate-300">{copy.breadcrumb}</span>
         </div>
       </div>
 
@@ -146,16 +146,16 @@ export default function ContactoScreen({ shellProps = {} }) {
             )}
 
             {status === 'error' && (
-              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 mb-6 dark:border-red-900/60 dark:bg-red-950/30">
                 <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-                <p className="text-sm text-red-700">{serverMsg}</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{serverMsg}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} noValidate className="space-y-5">
               {/* Nombre */}
               <div>
-                <label htmlFor="contact-name" className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="contact-name" className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-200">
                   {copy.name} <span aria-hidden="true" className="text-red-400">*</span>
                 </label>
                 <input
@@ -167,14 +167,14 @@ export default function ContactoScreen({ shellProps = {} }) {
                   value={form.name}
                   onChange={e => handleChange('name', e.target.value)}
                   placeholder={copy.namePlaceholder}
-                  className={`w-full rounded-lg border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition ${errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
+                  className={`w-full min-h-12 rounded-lg border px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-lime-400 transition dark:text-white dark:placeholder:text-slate-500 ${errors.name ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950'}`}
                 />
                 {errors.name && <p id="contact-name-error" className="text-xs text-red-500 mt-1">{errors.name}</p>}
               </div>
 
               {/* Email */}
               <div>
-                <label htmlFor="contact-email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="contact-email" className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-200">
                   {copy.email} <span aria-hidden="true" className="text-red-400">*</span>
                 </label>
                 <input
@@ -186,14 +186,14 @@ export default function ContactoScreen({ shellProps = {} }) {
                   value={form.email}
                   onChange={e => handleChange('email', e.target.value)}
                   placeholder={copy.emailPlaceholder}
-                  className={`w-full rounded-lg border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition ${errors.email ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
+                  className={`w-full min-h-12 rounded-lg border px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-lime-400 transition dark:text-white dark:placeholder:text-slate-500 ${errors.email ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950'}`}
                 />
                 {errors.email && <p id="contact-email-error" className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </div>
 
               {/* Asunto */}
               <div>
-                <label htmlFor="contact-subject" className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="contact-subject" className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-200">
                   {copy.subject} <span aria-hidden="true" className="text-red-400">*</span>
                 </label>
                 <select
@@ -203,7 +203,7 @@ export default function ContactoScreen({ shellProps = {} }) {
                   aria-describedby={errors.subject ? 'contact-subject-error' : undefined}
                   value={form.subject}
                   onChange={e => handleChange('subject', e.target.value)}
-                  className={`w-full rounded-lg border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition bg-white ${errors.subject ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
+                  className={`w-full min-h-12 rounded-lg border px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-lime-400 transition bg-white dark:bg-slate-950 dark:text-white ${errors.subject ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : 'border-slate-200 dark:border-slate-700'}`}
                 >
                   <option value="" disabled>{copy.subjectPlaceholder}</option>
                   {subjects.map(item => (
@@ -215,7 +215,7 @@ export default function ContactoScreen({ shellProps = {} }) {
 
               {/* Mensaje */}
               <div>
-                <label htmlFor="contact-message" className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="contact-message" className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-200">
                   {copy.message} <span aria-hidden="true" className="text-red-400">*</span>
                 </label>
                 <textarea
@@ -228,7 +228,7 @@ export default function ContactoScreen({ shellProps = {} }) {
                   placeholder={copy.messagePlaceholder}
                   rows={5}
                   maxLength={2000}
-                  className={`w-full rounded-lg border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition resize-none ${errors.message ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
+                  className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-lime-400 transition resize-none dark:text-white dark:placeholder:text-slate-500 ${errors.message ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950'}`}
                 />
                 <div className="flex justify-between items-center mt-1">
                   {errors.message ? <p id="contact-message-error" className="text-xs text-red-500">{errors.message}</p> : <span />}
@@ -238,8 +238,9 @@ export default function ContactoScreen({ shellProps = {} }) {
 
               <button
                 type="submit"
+                data-testid="contact-submit"
                 disabled={status === 'loading'}
-                className="w-full flex items-center justify-center gap-2 bg-lime-500 hover:bg-lime-600 disabled:bg-lime-300 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+                className="w-full min-h-12 flex items-center justify-center gap-2 bg-[#84CC16] hover:bg-[#65A30D] disabled:bg-lime-300 text-slate-950 hover:text-white font-bold rounded-xl py-3 text-sm transition-colors"
               >
                 {status === 'loading' ? (
                   <>
@@ -260,16 +261,16 @@ export default function ContactoScreen({ shellProps = {} }) {
         <div className="md:col-span-2 space-y-5">
           {/* Contact cards */}
           <div className="space-y-3">
-            {contactInfo.map(({ icon: Icon, title, value, sub, href, color }) => (
-              <div key={title} className="bg-white rounded-xl border border-slate-200 p-4 flex items-start gap-3 hover:shadow-sm transition-shadow dark:border-slate-800 dark:bg-slate-900">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color.split(' ')[0]}`}>
-                  <Icon className={`w-4.5 h-4.5 ${color.split(' ')[1]}`} />
+            {contactInfo.map(({ icon: Icon, title, value, sub, href, color }, index) => (
+              <div key={title} data-testid={`contact-info-${index}`} className="bg-white rounded-xl border border-slate-200 p-4 flex items-start gap-3 hover:shadow-sm transition-shadow dark:border-slate-800 dark:bg-slate-900">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color.split(' ')[0]} ${color.split(' ')[2] || ''}`}>
+                  <Icon className={`w-4.5 h-4.5 ${color.split(' ')[1]} ${color.split(' ')[3] || ''}`} />
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-0.5">{title}</p>
                   {href ? (
                     <a href={href} target="_blank" rel="noopener noreferrer"
-                      className="font-semibold text-slate-800 hover:text-lime-600 transition-colors text-sm flex items-center gap-1 dark:text-slate-100">
+                      className="font-semibold text-slate-800 hover:text-lime-600 transition-colors text-sm inline-flex min-h-12 items-center gap-1 dark:text-slate-100">
                       {value} <ExternalLink className="w-3 h-3 opacity-60" />
                     </a>
                   ) : (
@@ -288,7 +289,8 @@ export default function ContactoScreen({ shellProps = {} }) {
               {SOCIALS.map(({ icon: Icon, label, href, color }) => (
                 <a key={label} href={href} target="_blank" rel="noopener noreferrer"
                   aria-label={label}
-                  className={`w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 ${color} transition-colors dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300`}>
+                  data-testid="contact-social"
+                  className={`w-12 h-12 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 ${color} transition-colors dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300`}>
                   <Icon className="w-4.5 h-4.5" />
                 </a>
               ))}
@@ -297,14 +299,15 @@ export default function ContactoScreen({ shellProps = {} }) {
 
           {/* FAQ teaser */}
           <button
+            data-testid="contact-help"
             onClick={() => navigate('/ayuda')}
-            className="w-full bg-lime-50 border border-lime-200 rounded-xl p-4 text-left hover:bg-lime-100 transition-colors group"
+            className="w-full min-h-12 bg-lime-50 border border-lime-200 rounded-xl p-4 text-left hover:bg-lime-100 transition-colors group dark:border-lime-800/60 dark:bg-lime-950/30 dark:hover:bg-lime-950/50"
           >
             <div className="flex items-start gap-3">
               <HelpCircle className="w-5 h-5 text-lime-600 mt-0.5 shrink-0" />
               <div>
-                <p className="font-semibold text-lime-800 text-sm">{copy.faqTitle}</p>
-                <p className="text-xs text-lime-700 mt-0.5">{copy.faqBody}</p>
+                <p className="font-semibold text-lime-800 text-sm dark:text-lime-300">{copy.faqTitle}</p>
+                <p className="text-xs text-lime-700 mt-0.5 dark:text-lime-200">{copy.faqBody}</p>
                 <p className="text-xs font-medium text-lime-600 mt-2 flex items-center gap-1 group-hover:gap-2 transition-all">
                   {copy.faqLink} <ChevronLeft className="w-3 h-3 rotate-180" />
                 </p>

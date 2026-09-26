@@ -33,48 +33,51 @@ export default function NotFoundScreen({ shellProps = {} }) {
 
   return (
     <GoldenPublicPageShell {...shellProps} testId="golden-not-found-main" className="mcg-not-found-page">
-    <div data-testid="not-found-screen" className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-16">
+    <div data-testid="not-found-screen" className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center px-4 py-16 dark:bg-slate-950 dark:text-white">
       {/* Illustration */}
       <div className="relative mb-8 select-none">
         <div className="text-[100px] leading-none text-center filter drop-shadow-sm">🌵</div>
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-24 h-3 bg-amber-200 rounded-full blur-sm opacity-60" />
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-24 h-3 bg-lime-200 dark:bg-lime-900/60 rounded-full blur-sm opacity-60" />
       </div>
 
       {/* Error badge */}
-      <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-500 text-sm font-mono px-3 py-1.5 rounded-full mb-6">
+      <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-500 text-sm font-mono px-3 py-1.5 rounded-full mb-6 dark:bg-slate-800 dark:text-slate-300">
         Error 404
       </div>
 
       {/* Title */}
-      <h1 className="text-3xl md:text-4xl font-bold text-slate-900 text-center mb-3">
+      <h1 className="text-3xl md:text-4xl font-bold text-slate-900 text-center mb-3 dark:text-white">
         {t('errors.notFound')}
       </h1>
-      <p className="text-slate-500 text-center max-w-md mb-2">
+      <p className="text-slate-500 text-center max-w-md mb-2 dark:text-slate-300">
         {t('home.noResults')}
       </p>
-      <p className="text-slate-400 text-sm text-center max-w-sm mb-10">
+      <p className="text-slate-400 text-sm text-center max-w-sm mb-10 dark:text-slate-400">
         {t('home.tryDifferentFilters')}
       </p>
 
       {/* Action buttons */}
       <div className="flex flex-wrap gap-3 justify-center">
         <button
+          data-testid="not-found-back"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:border-slate-300 hover:shadow-sm transition-all"
+          className="flex min-h-12 items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:border-slate-300 hover:shadow-sm transition-all dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500"
         >
           <ArrowLeft className="w-4 h-4" />
           {t('common.back')}
         </button>
         <button
+          data-testid="not-found-home"
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-lime-500 text-white rounded-xl text-sm font-medium hover:bg-lime-600 transition-colors shadow-sm"
+          className="flex min-h-12 items-center gap-2 px-5 py-2.5 bg-[#84CC16] text-slate-950 rounded-xl text-sm font-bold hover:bg-[#65A30D] hover:text-white transition-colors shadow-sm"
         >
           <Home className="w-4 h-4" />
           {t('home.home')}
         </button>
         <button
+          data-testid="not-found-search"
           onClick={() => { navigate('/'); setTimeout(() => { const el = document.querySelector('input[type="search"], input[placeholder*="busca"], input[placeholder*="Busca"]'); if (el) el.focus(); }, 300); }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:border-slate-300 hover:shadow-sm transition-all"
+          className="flex min-h-12 items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:border-slate-300 hover:shadow-sm transition-all dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500"
         >
           <Search className="w-4 h-4" />
           {t('common.search')}
@@ -83,7 +86,7 @@ export default function NotFoundScreen({ shellProps = {} }) {
 
       {/* Suggested categories */}
       <div className="mt-12 text-center">
-        <p className="text-sm text-slate-400 mb-4">{t('home.trending')}</p>
+        <p className="text-sm text-slate-400 mb-4 dark:text-slate-400">{t('home.trending')}</p>
         <div className="flex flex-wrap gap-2 justify-center">
           {[
             { label: `🚗 ${t('home.motor')}`, path: '/autos' },
@@ -93,8 +96,9 @@ export default function NotFoundScreen({ shellProps = {} }) {
           ].map((cat) => (
             <button
               key={cat.path}
+              data-testid="not-found-category"
               onClick={() => navigate(cat.path)}
-              className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm hover:border-lime-400 hover:text-lime-700 transition-colors"
+              className="min-h-12 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm hover:border-lime-400 hover:text-lime-700 transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-lime-500 dark:hover:text-lime-300"
             >
               {cat.label}
             </button>
@@ -103,11 +107,11 @@ export default function NotFoundScreen({ shellProps = {} }) {
       </div>
 
       {/* Footer note */}
-      <p className="mt-16 text-xs text-slate-300">
+      <p className="mt-16 text-xs text-slate-400 dark:text-slate-500">
         © 2026 Mercasto México •{' '}
-        <button onClick={() => navigate('/terminos')} className="hover:text-slate-400 transition-colors underline underline-offset-2">{t('footer.terms')}</button>
+        <button data-testid="not-found-terms" onClick={() => navigate('/terminos')} className="inline-flex min-h-12 items-center hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline underline-offset-2">{t('footer.terms')}</button>
         {' '}•{' '}
-        <button onClick={() => navigate('/privacidad')} className="hover:text-slate-400 transition-colors underline underline-offset-2">{t('footer.privacy')}</button>
+        <button data-testid="not-found-privacy" onClick={() => navigate('/privacidad')} className="inline-flex min-h-12 items-center hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline underline-offset-2">{t('footer.privacy')}</button>
       </p>
     </div>
     </GoldenPublicPageShell>
