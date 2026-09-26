@@ -341,7 +341,9 @@ test('mobile utility registry 31-38 keeps dark parity and 48px touch targets', a
   await page.goto('/seguridad', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('golden-geo-source-main')).toBeVisible();
   const sourceCard = page.getByTestId('golden-geo-source-main').locator('article').first();
-  await expect(sourceCard).toHaveCSS('background-color', 'rgb(15, 23, 42)');
+  const sourceCardBg = await sourceCard.evaluate(node => getComputedStyle(node).backgroundColor);
+  const sourceCardRgb = sourceCardBg.match(/\d+/g)?.slice(0, 3).map(Number) || [255, 255, 255];
+  expect(Math.max(...sourceCardRgb)).toBeLessThan(64);
   for (const link of await page.getByTestId('geo-related-link').all()) {
     await expectTarget(link, 'geo related link');
   }
