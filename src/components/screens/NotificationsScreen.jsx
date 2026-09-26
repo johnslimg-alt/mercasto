@@ -187,9 +187,8 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
         )}
       </div>
       <MercastoGoldenBottomNav
-        active="notifications"
+        active="account"
         publish={() => navigate('/post')}
-        onNotifications={() => navigate('/notificaciones')}
         onAccount={() => navigate('/profile')}
         unreadCount={unread}
         t={t}
