@@ -30,7 +30,7 @@ export default function ContactoScreen({ shellProps = {} }) {
   const acknowledgementCopy = getSupportRequestAcknowledgementCopy(lang);
   const subjects = getContactSubjects(lang);
   const contactInfo = [
-    { icon: Mail, title: copy.emailCardTitle, value: 'soporte@mercasto.com', sub: copy.emailCardSub, href: 'mailto:soporte@mercasto.com', color: 'bg-lime-50 text-lime-600' },
+    { icon: Mail, title: copy.emailCardTitle, value: 'soporte@mercasto.com', sub: copy.emailCardSub, href: 'mailto:soporte@mercasto.com', color: 'bg-lime-50 text-lime-700 dark:bg-lime-500/10 dark:text-lime-300' },
     { icon: Clock, title: copy.responseTitle, value: copy.responseValue, sub: copy.responseSub, href: null, color: 'bg-slate-100 text-lime-700 dark:bg-slate-800 dark:text-lime-300' },
   ];
   const [form, setForm] = useState(EMPTY);
