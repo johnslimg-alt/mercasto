@@ -264,6 +264,17 @@ test('contact dialog exposes modal semantics and restores its opener on desktop 
 
     const opener = page.getByTestId('contact-dialog-open');
     await expect(opener).toBeVisible();
+    const openerStyle = await opener.evaluate(node => {
+      const style = getComputedStyle(node);
+      return {
+        backgroundColor: style.backgroundColor,
+        borderTopWidth: style.borderTopWidth,
+        minHeight: parseFloat(style.minHeight) || node.getBoundingClientRect().height,
+      };
+    });
+    expect(openerStyle.backgroundColor).not.toBe('rgb(37, 99, 235)');
+    expect(parseFloat(openerStyle.borderTopWidth)).toBeGreaterThan(0);
+    expect(openerStyle.minHeight).toBeGreaterThanOrEqual(48);
     await opener.focus();
     await opener.click();
     const dialog = page.locator('[role="dialog"][aria-labelledby="contact-dialog-title"]');
