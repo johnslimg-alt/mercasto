@@ -189,6 +189,7 @@ export function MercastoGoldenBottomNav({
   active = 'home',
   publish,
   onAccount,
+  unreadCount = 0,
   t = {},
 }) {
   return (
@@ -201,6 +202,7 @@ export function MercastoGoldenBottomNav({
       </a>
       <button type="button" data-testid="golden-mobile-account-tab" className={`mcg-bottom-action ${active === 'account' ? 'active' : ''}`} onClick={onAccount}>
         <Icon name="user"/><span>{t.my_account || ''}</span>
+        {unreadCount > 0 && <i data-testid="golden-mobile-notifications-unread" className="mcg-unread-dot" aria-hidden="true"/>}
       </button>
     </nav>
   );
