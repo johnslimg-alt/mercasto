@@ -987,6 +987,49 @@ function App() {
     executeSearch(null, locationLabel);
   }, [executeSearch, locCity, locState]);
 
+  const resetCatalogFilters = useCallback(() => {
+    skipFilterUrlSyncRef.current = true;
+    skipCategoryFilterResetRef.current = true;
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setActiveCat('');
+    setActiveSub('');
+    setSelectedState('');
+    setSearchLocation(null);
+    setSearchLocationInput('');
+    setDebouncedLocInput('');
+    setLocState('');
+    setLocCity('');
+    setRadius(50);
+    setMinPrice('');
+    setMaxPrice('');
+    setConditionFilter([]);
+    setDynamicFilters({});
+    setViewedAd(null);
+    setViewedCompany(null);
+    navigate('/listings');
+    window.scrollTo(0, 0);
+  }, [
+    navigate,
+    setActiveCat,
+    setActiveSub,
+    setConditionFilter,
+    setDebouncedLocInput,
+    setDebouncedSearch,
+    setDynamicFilters,
+    setLocCity,
+    setLocState,
+    setMaxPrice,
+    setMinPrice,
+    setRadius,
+    setSearchLocation,
+    setSearchLocationInput,
+    setSearchQuery,
+    setSelectedState,
+    setViewedAd,
+    setViewedCompany,
+  ]);
+
   const fetchSuggestions = useCallback((q) => {
     clearTimeout(suggestionDebounceRef.current);
     suggestionSequenceRef.current += 1;
@@ -4165,6 +4208,7 @@ function App() {
       maxPrice={maxPrice}
       minPrice={minPrice}
       onRetryAds={() => loadAds(1)}
+      onResetEmpty={resetCatalogFilters}
       onSearchArea={handleSearchArea}
       renderAdCard={renderAdCard}
       savingSearchAlert={savingSearchAlert}
