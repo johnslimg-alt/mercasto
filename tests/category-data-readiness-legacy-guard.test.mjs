@@ -15,6 +15,8 @@ test('category readiness blocks retired slugs across production data surfaces', 
     'legacy_ads_absent',
     'legacy_category_subscriptions_absent',
     'legacy_search_alerts_absent',
+    'legacy_search_alert_filters_absent',
+    'legacy_saved_searches_absent',
   ]) {
     assert.ok(smoke.includes(`$checks["${check}"]`), `missing readiness check ${check}`);
   }
@@ -22,6 +24,8 @@ test('category readiness blocks retired slugs across production data surfaces', 
   assert.match(smoke, /whereIn\("slug", \$legacySlugs\)/);
   assert.match(smoke, /whereIn\("category", \$legacySlugs\)/);
   assert.match(smoke, /whereIn\("category_slug", \$legacySlugs\)/);
+  assert.match(smoke, /whereIn\("filters->category", \$legacySlugs\)/);
+  assert.match(smoke, /Schema::hasTable\("saved_searches"\)/);
 });
 
 test('category readiness requires all canonical aliases to resolve', () => {
