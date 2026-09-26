@@ -292,3 +292,81 @@ test('active marketplace location survives client navigation into a vertical rou
   await expect(page.getByTestId('golden-autos-main')).toBeVisible();
   await expect(page.getByTestId('golden-location-button')).toContainText('Veracruz');
 });
+
+
+test('mobile utility registry 31-38 keeps dark parity and 48px touch targets', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+  await installSession(page);
+  await mockApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const expectTarget = async (locator, label) => {
+    await expect(locator, label).toBeVisible();
+    const rect = await locator.boundingBox();
+    expect(rect, label).not.toBeNull();
+    expect(rect.height, label).toBeGreaterThanOrEqual(48);
+  };
+
+  await page.goto('/ayuda', { waitUntil: 'domcontentloaded' });
+  for (const [locator, label] of [
+    [page.getByTestId('help-back'), 'help back'],
+    [page.getByTestId('help-home'), 'help home'],
+    [page.getByTestId('help-search'), 'help search'],
+    [page.getByTestId('help-contact-support'), 'help contact'],
+    [page.getByTestId('help-section-publicar'), 'help section'],
+  ]) await expectTarget(locator, label);
+
+  await page.getByTestId('help-search').fill('seguridad');
+  await expectTarget(page.getByTestId('help-search-clear'), 'help search clear');
+  await page.getByTestId('golden-theme-toggle').click();
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(true);
+  const helpSurface = await page.getByTestId('golden-help-main').locator('.mcg-help-page, .min-h-screen').first().evaluate(node => getComputedStyle(node).backgroundColor);
+  expect(helpSurface).not.toBe('rgb(248, 250, 252)');
+
+  await page.goto('/contacto', { waitUntil: 'domcontentloaded' });
+  for (const [locator, label] of [
+    [page.getByTestId('contact-back'), 'contact back'],
+    [page.getByTestId('contact-home'), 'contact home'],
+    [page.locator('#contact-name'), 'contact name'],
+    [page.locator('#contact-email'), 'contact email'],
+    [page.locator('#contact-subject'), 'contact subject'],
+    [page.getByTestId('contact-submit'), 'contact submit'],
+    [page.getByTestId('contact-social').first(), 'contact social'],
+    [page.getByTestId('contact-help'), 'contact help'],
+  ]) await expectTarget(locator, label);
+  const contactBg = await page.locator('#contact-name').evaluate(node => getComputedStyle(node).backgroundColor);
+  const contactRgb = contactBg.match(/\d+/g)?.slice(0, 3).map(Number) || [255, 255, 255];
+  expect(Math.max(...contactRgb)).toBeLessThan(64);
+
+  await page.goto('/seguridad', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('golden-geo-source-main')).toBeVisible();
+  const sourceCard = page.getByTestId('golden-geo-source-main').locator('article').first();
+  const sourceCardBg = await sourceCard.evaluate(node => getComputedStyle(node).backgroundColor);
+  const sourceCardRgb = sourceCardBg.match(/\d+/g)?.slice(0, 3).map(Number) || [255, 255, 255];
+  expect(Math.max(...sourceCardRgb)).toBeLessThan(64);
+  for (const link of await page.getByTestId('geo-related-link').all()) {
+    await expectTarget(link, 'geo related link');
+  }
+
+  await page.goto('/blog', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('golden-blog-main')).toBeVisible();
+  const secondBlogArt = page.getByTestId('blog-card').nth(1).locator('div').first();
+  const blogGradient = await secondBlogArt.evaluate(node => getComputedStyle(node).backgroundImage);
+  expect(blogGradient).not.toContain('14, 165, 233');
+
+  await page.goto('/ruta-inexistente-golden', { waitUntil: 'domcontentloaded' });
+  for (const [locator, label] of [
+    [page.getByTestId('not-found-back'), 'not found back'],
+    [page.getByTestId('not-found-home'), 'not found home'],
+    [page.getByTestId('not-found-search'), 'not found search'],
+    [page.getByTestId('not-found-category').first(), 'not found category'],
+    [page.getByTestId('not-found-terms'), 'not found terms'],
+    [page.getByTestId('not-found-privacy'), 'not found privacy'],
+  ]) await expectTarget(locator, label);
+  const notFoundBg = await page.getByTestId('not-found-screen').evaluate(node => getComputedStyle(node).backgroundColor);
+  const notFoundRgb = notFoundBg.match(/\d+/g)?.slice(0, 3).map(Number) || [255, 255, 255];
+  expect(Math.max(...notFoundRgb)).toBeLessThan(64);
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});

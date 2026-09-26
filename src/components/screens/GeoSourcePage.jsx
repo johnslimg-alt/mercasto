@@ -106,7 +106,7 @@ export default function GeoSourcePage({ slug, shellProps = {} }) {
 
   return (
     <GoldenPublicPageShell {...shellProps} testId="golden-geo-source-main" className="mcg-geo-source-page">
-    <div className="min-h-screen bg-slate-50 text-slate-950">
+    <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-white">
       <SEO
         title={page.title}
         description={page.description}
@@ -116,7 +116,7 @@ export default function GeoSourcePage({ slug, shellProps = {} }) {
       <SourceSchema page={page} lang={lang} homeLabel={shell.home} />
 
       <section>
-        <section className="border-b border-slate-200 bg-slate-950 text-white">
+        <section className="border-b border-slate-200 bg-slate-950 text-white dark:border-slate-800">
           <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-lime-300/25 bg-lime-300/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-lime-300">
               <ShieldCheck className="h-4 w-4" />
@@ -139,12 +139,12 @@ export default function GeoSourcePage({ slug, shellProps = {} }) {
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <div className="grid gap-5 lg:grid-cols-3">
             {page.sections.map((section) => (
-              <article key={section.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <article key={section.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <h2 className="text-xl font-black tracking-tight">{section.title}</h2>
-                <p className="mt-3 text-sm leading-7 text-slate-600">{section.body}</p>
+                <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">{section.body}</p>
                 <ul className="mt-5 space-y-3">
                   {section.points.map((point) => (
-                    <li key={point} className="flex gap-3 text-sm leading-6 text-slate-700">
+                    <li key={point} className="flex gap-3 text-sm leading-6 text-slate-700 dark:text-slate-200">
                       <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-lime-600" />
                       <span>{point}</span>
                     </li>
@@ -154,13 +154,13 @@ export default function GeoSourcePage({ slug, shellProps = {} }) {
             ))}
           </div>
           {page.faqs?.length > 0 && (
-            <section className="mt-12 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
+            <section className="mt-12 rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 sm:p-8">
               <h2 className="text-2xl font-black tracking-tight">{shell.faqTitle}</h2>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 {page.faqs.map((faq) => (
-                  <article key={faq.question} className="rounded-2xl bg-slate-50 p-5">
-                    <h3 className="font-black text-slate-900">{faq.question}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{faq.answer}</p>
+                  <article key={faq.question} className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800">
+                    <h3 className="font-black text-slate-900 dark:text-white">{faq.question}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{faq.answer}</p>
                   </article>
                 ))}
               </div>
@@ -177,7 +177,8 @@ export default function GeoSourcePage({ slug, shellProps = {} }) {
                 <Link
                   key={item.href}
                   to={item.href}
-                  className="flex items-center justify-between rounded-2xl border border-lime-300 bg-white px-5 py-4 font-bold text-slate-900 transition hover:border-lime-500 hover:shadow-sm dark:border-lime-800/60 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-lime-500"
+                  data-testid="geo-related-link"
+                  className="flex min-h-12 items-center justify-between rounded-2xl border border-lime-300 bg-white px-5 py-4 font-bold text-slate-900 transition hover:border-lime-500 hover:shadow-sm dark:border-lime-800/60 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-lime-500"
                 >
                   <span>{item.label}</span>
                   <ArrowRight className="h-5 w-5 text-lime-700 dark:text-lime-400 rtl:rotate-180" />
