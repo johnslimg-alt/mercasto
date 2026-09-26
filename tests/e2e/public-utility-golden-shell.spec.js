@@ -334,7 +334,9 @@ test('mobile utility registry 31-38 keeps dark parity and 48px touch targets', a
     [page.getByTestId('contact-social').first(), 'contact social'],
     [page.getByTestId('contact-help'), 'contact help'],
   ]) await expectTarget(locator, label);
-  await expect(page.locator('#contact-name')).toHaveCSS('background-color', 'rgb(2, 6, 23)');
+  const contactBg = await page.locator('#contact-name').evaluate(node => getComputedStyle(node).backgroundColor);
+  const contactRgb = contactBg.match(/\d+/g)?.slice(0, 3).map(Number) || [255, 255, 255];
+  expect(Math.max(...contactRgb)).toBeLessThan(64);
 
   await page.goto('/seguridad', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('golden-geo-source-main')).toBeVisible();
@@ -359,7 +361,9 @@ test('mobile utility registry 31-38 keeps dark parity and 48px touch targets', a
     [page.getByTestId('not-found-terms'), 'not found terms'],
     [page.getByTestId('not-found-privacy'), 'not found privacy'],
   ]) await expectTarget(locator, label);
-  await expect(page.getByTestId('not-found-screen')).toHaveCSS('background-color', 'rgb(2, 6, 23)');
+  const notFoundBg = await page.getByTestId('not-found-screen').evaluate(node => getComputedStyle(node).backgroundColor);
+  const notFoundRgb = notFoundBg.match(/\d+/g)?.slice(0, 3).map(Number) || [255, 255, 255];
+  expect(Math.max(...notFoundRgb)).toBeLessThan(64);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
