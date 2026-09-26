@@ -15,6 +15,7 @@ const icons = {
   chat: <><path d="M5 5.5h14v10.2H9l-4 3v-13.2Z"/><path d="M8 9h8M8 12h5"/></>,
   home: <><path d="m4 11 8-6.5 8 6.5v8.2a1.3 1.3 0 0 1-1.3 1.3H5.3A1.3 1.3 0 0 1 4 19.2V11Z"/><path d="M9.2 20.5v-6.2h5.6v6.2"/></>,
   search: <><circle cx="10.7" cy="10.7" r="6.5"/><path d="m15.6 15.6 4.2 4.2"/></>,
+  grid: <><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></>,
   plus: <path d="M12 5v14M5 12h14"/>,
   bell: <><path d="M6.5 17.5h11l-1.3-1.8V11a4.2 4.2 0 0 0-8.4 0v4.7l-1.3 1.8Z"/><path d="M10 19.5a2.2 2.2 0 0 0 4 0"/></>,
   user: <><circle cx="12" cy="8.2" r="3.4"/><path d="M5.3 20c.8-4.2 3-6.2 6.7-6.2s5.9 2 6.7 6.2"/></>,
@@ -187,9 +188,7 @@ export default function MercastoGoldenHeader({
 export function MercastoGoldenBottomNav({
   active = 'home',
   publish,
-  onNotifications,
   onAccount,
-  unreadCount = 0,
   t = {},
 }) {
   return (
@@ -197,10 +196,9 @@ export function MercastoGoldenBottomNav({
       <Link to="/" className={active === 'home' ? 'active' : ''}><Icon name="home"/><span>{t.home || ''}</span></Link>
       <Link to="/listings" className={active === 'search' ? 'active' : ''}><Icon name="search"/><span>{t.search_btn || ''}</span></Link>
       <button type="button" onClick={publish} className="publish"><i><Icon name="plus"/></i><b>{t.publish_btn || ''}</b></button>
-      <button type="button" data-testid="golden-mobile-notifications-tab" className={`mcg-bottom-action ${active === 'notifications' ? 'active' : ''}`} aria-label={t.notifications || ''} onClick={onNotifications}>
-        <Icon name="bell"/><span>{t.notifications || ''}</span>
-        {unreadCount > 0 && <i data-testid="golden-mobile-notifications-unread" className="mcg-unread-dot" aria-hidden="true"/>}
-      </button>
+      <a href="/#golden-categories" data-testid="golden-mobile-categories-tab" className={active === 'categories' ? 'active' : ''} aria-label={t.categories || 'Categorías'}>
+        <Icon name="grid"/><span>{t.categories || 'Categorías'}</span>
+      </a>
       <button type="button" data-testid="golden-mobile-account-tab" className={`mcg-bottom-action ${active === 'account' ? 'active' : ''}`} onClick={onAccount}>
         <Icon name="user"/><span>{t.my_account || ''}</span>
       </button>
