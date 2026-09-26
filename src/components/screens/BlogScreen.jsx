@@ -89,11 +89,11 @@ export default function BlogScreen({ shellProps = {} }) {
                   index === 0
                     ? 'bg-gradient-to-br from-lime-200 via-lime-100 to-white dark:from-lime-900/70 dark:via-slate-900 dark:to-slate-950'
                     : index === 1
-                      ? 'bg-gradient-to-br from-sky-200 via-sky-100 to-white dark:from-sky-900/60 dark:via-slate-900 dark:to-slate-950'
+                      ? 'bg-gradient-to-br from-slate-200 via-slate-100 to-white dark:from-slate-800 dark:via-slate-900 dark:to-slate-950'
                       : 'bg-gradient-to-br from-amber-200 via-amber-100 to-white dark:from-amber-900/60 dark:via-slate-900 dark:to-slate-950'
                 )}>
                   {index === 1
-                    ? <ShieldCheck className="h-9 w-9 text-sky-700 dark:text-sky-300" aria-hidden="true" />
+                    ? <ShieldCheck className="h-9 w-9 text-lime-700 dark:text-lime-300" aria-hidden="true" />
                     : index === 2
                       ? <Sparkles className="h-9 w-9 text-amber-700 dark:text-amber-300" aria-hidden="true" />
                       : <BookOpen className="h-9 w-9 text-lime-800 dark:text-lime-300" aria-hidden="true" />}
