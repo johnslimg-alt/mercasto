@@ -146,9 +146,9 @@ export default function ContactoScreen({ shellProps = {} }) {
             )}
 
             {status === 'error' && (
-              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 mb-6 dark:border-red-900/60 dark:bg-red-950/30">
                 <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-                <p className="text-sm text-red-700">{serverMsg}</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{serverMsg}</p>
               </div>
             )}
 
