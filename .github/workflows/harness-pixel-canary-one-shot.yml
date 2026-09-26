@@ -1,0 +1,266 @@
+name: Harness Pixel Canary one-shot
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  pixel-canary:
+    if: >-
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      (
+        github.event.comment.body == 'RUN:harness_pixel_prepare:MERCASTO' ||
+        startsWith(github.event.comment.body, 'RUN:harness_pixel_apply:')
+      )
+    runs-on: [self-hosted]
+    timeout-minutes: 15
+    concurrency:
+      group: chatgpt-harness-pixel-canary
+      cancel-in-progress: false
+
+    steps:
+      - name: Prepare or apply
+        id: op
+        shell: bash
+        env:
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          DSH_HOME=/root/.dsh
+          HANDOFF_DIR="$DSH_HOME/.chatgpt-pixel-canary"
+          PRIVKEY="$HANDOFF_DIR/ephemeral-rsa.pem"
+
+          if [ "$BODY" = "RUN:harness_pixel_prepare:MERCASTO" ]; then
+            sudo -n install -d -m 0700 "$HANDOFF_DIR"
+            sudo -n rm -f "$PRIVKEY" "$HANDOFF_DIR/ephemeral-rsa.pub.pem"
+            sudo -n openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out "$PRIVKEY" >/dev/null 2>&1
+            sudo -n chmod 0600 "$PRIVKEY"
+            sudo -n openssl pkey -in "$PRIVKEY" -pubout -out "$HANDOFF_DIR/ephemeral-rsa.pub.pem" >/dev/null 2>&1
+            PUB_B64="$(sudo -n base64 -w0 "$HANDOFF_DIR/ephemeral-rsa.pub.pem")"
+            echo "PUBLIC_KEY_B64=$PUB_B64"
+            echo "operation=prepare" >> "$GITHUB_OUTPUT"
+
+            echo "== Safe Harness model snapshot =="
+            sudo -n python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import yaml
+
+          home = Path('/root/.dsh')
+          settings = yaml.safe_load((home / 'settings.yaml').read_text()) or {}
+          creds = yaml.safe_load((home / '.credentials.yaml').read_text()) or {}
+          providers = (((settings.get('llm-pi-ai') or {}).get('providers')) or {})
+          safe = {
+              'default': settings.get('agent-default-model'),
+              'provider_ids': sorted(map(str, providers.keys())),
+              'providers': {
+                  str(k): {
+                      'displayName': (v or {}).get('displayName'),
+                      'api': (v or {}).get('api'),
+                      'baseURL': (v or {}).get('baseURL'),
+                      'apiKeyEnv': (v or {}).get('apiKeyEnv'),
+                      'models': [m.get('id') for m in ((v or {}).get('models') or []) if isinstance(m, dict)],
+                  }
+                  for k, v in providers.items() if isinstance(v, dict)
+              },
+              'credential_refs': sorted(map(str, ((creds.get('refs') or {}).keys()))),
+          }
+          print(json.dumps(safe, ensure_ascii=False, sort_keys=True))
+          PY
+            exit 0
+          fi
+
+          PREFIX='RUN:harness_pixel_apply:'
+          case "$BODY" in
+            "$PREFIX"*) ;;
+            *) echo "Unsupported request" >&2; exit 64 ;;
+          esac
+          CIPHERTEXT_B64="${BODY#"$PREFIX"}"
+          [ -n "$CIPHERTEXT_B64" ] || { echo "Missing encrypted payload" >&2; exit 65; }
+
+          sudo -n install -d -m 0700 "$HANDOFF_DIR"
+          sudo -n test -s "$PRIVKEY"
+
+          CIPHER="$(mktemp)"
+          PLAIN="$(mktemp)"
+          trap 'rm -f "$CIPHER" "$PLAIN"' EXIT
+          chmod 0600 "$CIPHER" "$PLAIN"
+          printf '%s' "$CIPHERTEXT_B64" | base64 -d > "$CIPHER"
+
+          sudo -n openssl pkeyutl -decrypt \
+            -inkey "$PRIVKEY" \
+            -in "$CIPHER" \
+            -out "$PLAIN" \
+            -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 \
+            -pkeyopt rsa_mgf1_md:sha256
+          sudo -n chown "$(id -u):$(id -g)" "$PLAIN"
+
+          KEY_LEN="$(wc -c < "$PLAIN" | tr -d ' ')"
+          [ "$KEY_LEN" -ge 20 ] && [ "$KEY_LEN" -le 512 ] || { echo "Invalid key length" >&2; exit 66; }
+          [ "$(head -c 4 "$PLAIN")" = "vck_" ] || { echo "Payload is not a Vercel AI Gateway key" >&2; exit 67; }
+
+          sudo -n python3 - "$PLAIN" <<'PY'
+          import os
+          import shutil
+          import sys
+          import tempfile
+          from datetime import datetime, timezone
+          from pathlib import Path
+          import yaml
+
+          key = Path(sys.argv[1]).read_text().strip()
+          home = Path('/root/.dsh')
+          settings_path = home / 'settings.yaml'
+          creds_path = home / '.credentials.yaml'
+          if not settings_path.is_file() or not creds_path.is_file():
+              raise SystemExit('Harness settings/credentials file missing')
+
+          stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+          backup = home / 'backups' / 'pixel-canary' / stamp
+          backup.mkdir(parents=True, exist_ok=False)
+          os.chmod(backup, 0o700)
+          shutil.copy2(settings_path, backup / 'settings.yaml')
+          shutil.copy2(creds_path, backup / '.credentials.yaml')
+
+          creds = yaml.safe_load(creds_path.read_text()) or {}
+          refs = creds.setdefault('refs', {})
+          refs['AI_GATEWAY_API_KEY'] = key
+
+          settings = yaml.safe_load(settings_path.read_text()) or {}
+          pi = settings.setdefault('llm-pi-ai', {})
+          providers = pi.setdefault('providers', {})
+          providers['vercel-ai-gateway'] = {
+              'displayName': 'Vercel AI Gateway',
+              'apiKeyEnv': 'AI_GATEWAY_API_KEY',
+              'api': 'openai-completions',
+              'baseURL': 'https://ai-gateway.vercel.sh/v1',
+              'models': [{
+                  'id': 'stealth/pixel-canary',
+                  'name': 'Pixel Canary',
+                  'contextWindow': 262144,
+                  'maxOutputTokens': 131072,
+                  'input': ['text', 'image'],
+              }],
+          }
+
+          def atomic_yaml(path, data):
+              fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix='.' + path.name + '.', text=True)
+              try:
+                  with os.fdopen(fd, 'w') as fh:
+                      yaml.safe_dump(data, fh, sort_keys=False, allow_unicode=True)
+                      fh.flush()
+                      os.fsync(fh.fileno())
+                  os.chmod(tmp, 0o600)
+                  os.replace(tmp, path)
+              finally:
+                  if os.path.exists(tmp):
+                      os.unlink(tmp)
+
+          atomic_yaml(creds_path, creds)
+          atomic_yaml(settings_path, settings)
+          print('backup=' + str(backup))
+          print('provider=vercel-ai-gateway')
+          print('model=stealth/pixel-canary')
+          print('default_preserved=' + str(settings.get('agent-default-model')))
+          PY
+
+          echo "== Direct Pixel Canary smoke =="
+          sudo -n python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import urllib.request
+          import yaml
+
+          creds = yaml.safe_load(Path('/root/.dsh/.credentials.yaml').read_text()) or {}
+          key = (creds.get('refs') or {}).get('AI_GATEWAY_API_KEY')
+          if not key:
+              raise SystemExit('AI_GATEWAY_API_KEY missing after write')
+
+          payload = json.dumps({
+              'model': 'stealth/pixel-canary',
+              'messages': [{'role': 'user', 'content': 'Reply with exactly PIXEL_CANARY_OK'}],
+              'max_tokens': 64,
+          }).encode()
+
+          req = urllib.request.Request(
+              'https://ai-gateway.vercel.sh/v1/chat/completions',
+              data=payload,
+              headers={
+                  'Authorization': 'Bearer ' + key,
+                  'Content-Type': 'application/json',
+              },
+              method='POST',
+          )
+
+          with urllib.request.urlopen(req, timeout=120) as r:
+              data = json.loads(r.read().decode())
+
+          choices = data.get('choices') or []
+          if not choices:
+              raise SystemExit('Pixel Canary smoke returned no choices')
+          content = (((choices[0].get('message') or {}).get('content')) or '').strip()
+          if not content:
+              raise SystemExit('Pixel Canary smoke returned empty content')
+          print('pixel_canary_http=200')
+          print('pixel_canary_response_nonempty=true')
+          print('pixel_canary_model=' + str(data.get('model') or 'stealth/pixel-canary'))
+          PY
+
+          echo "== Harness verification =="
+          sudo -n python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          settings = yaml.safe_load(Path('/root/.dsh/settings.yaml').read_text()) or {}
+          route = (((settings.get('llm-pi-ai') or {}).get('providers') or {}).get('vercel-ai-gateway') or {})
+          assert route.get('apiKeyEnv') == 'AI_GATEWAY_API_KEY'
+          assert route.get('baseURL') == 'https://ai-gateway.vercel.sh/v1'
+          assert any(isinstance(m, dict) and m.get('id') == 'stealth/pixel-canary' for m in (route.get('models') or []))
+          print('harness_settings_pixel_canary=ok')
+          PY
+
+          sudo -n systemctl is-active --quiet deepseek-harness.service
+          sudo -n systemctl is-active --quiet deepseek-harness-proxy.service
+          CODE="$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 20 https://harness.flyaicrm.com/ || true)"
+          echo "harness_public_http=$CODE"
+          case "$CODE" in
+            200|302|401|403) ;;
+            *) echo "Unexpected Harness public HTTP status: $CODE" >&2; exit 68 ;;
+          esac
+
+          sudo -n rm -f "$PRIVKEY" "$HANDOFF_DIR/ephemeral-rsa.pub.pem"
+          echo "PIXEL_CANARY_HARNESS_SETUP_OK"
+          echo "operation=apply" >> "$GITHUB_OUTPUT"
+
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v9
+        env:
+          JOB_STATUS: ${{ job.status }}
+          OPERATION: ${{ steps.op.outputs.operation }}
+        with:
+          script: |
+            const status = process.env.JOB_STATUS || 'unknown';
+            const operation = process.env.OPERATION || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body: [
+                'HARNESS_PIXEL_CANARY_RESULT',
+                `operation=${operation}`,
+                `status=${status}`,
+                `run_id=${context.runId}`,
+                `run=${runUrl}`,
+              ].join('\n'),
+            });
