@@ -92,7 +92,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
         type="button"
         data-testid="contact-dialog-open"
         onClick={() => setIsOpen(true)}
-        className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all ${className}`}
+        className={`inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 font-bold text-slate-800 shadow-sm transition-all hover:border-[#84CC16] hover:bg-[#84CC16]/10 hover:text-[#365314] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-[#84CC16] dark:hover:bg-[#84CC16]/10 dark:hover:text-[#BEF264] ${className}`}
       >
         <MessageCircle size={20} />
         <span>{t.ct_contact_btn}</span>
@@ -124,7 +124,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                 {ad?.user?.avatar ? (
                   <img src={ad.user.avatar} alt="" className="w-12 h-12 rounded-full object-cover" />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-lg font-bold text-[#4D7C0F] dark:bg-slate-800 dark:text-[#BEF264]">
                     {String(sellerName).charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -134,7 +134,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                       {sellerName}
                     </h3>
                     {isVerified && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#84CC16]/15 px-2 py-0.5 text-xs font-bold text-[#4D7C0F] dark:bg-[#84CC16]/10 dark:text-[#BEF264]">
                         <Shield size={12} />
                         {t.verified}
                       </span>
@@ -161,7 +161,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
             <div className="p-6">
               {(!user || !user.id) ? (
                 <div className="text-center py-4 px-2 space-y-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-2">
+                  <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#84CC16]/15 text-[#4D7C0F] dark:bg-[#84CC16]/10 dark:text-[#BEF264]">
                     <Shield className="w-6 h-6" />
                   </div>
                   <h4 className="font-bold text-[16px] text-gray-900 dark:text-white leading-tight">
@@ -175,7 +175,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                       setIsOpen(false);
                       window.location.href = '/profile';
                     }}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                    className="w-full rounded-xl bg-[#84CC16] py-2.5 text-sm font-bold text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
                   >
                     {t.login_register}
                   </button>
