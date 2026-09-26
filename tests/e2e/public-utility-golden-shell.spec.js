@@ -153,7 +153,7 @@ test('authenticated utility shell preserves live unread notification state', asy
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByTestId('golden-mobile-categories-tab')).toBeVisible();
-  await expect(page.getByTestId('golden-mobile-notifications-unread')).toHaveCount(0);
+  await expect(page.getByTestId('golden-mobile-account-tab').getByTestId('golden-mobile-notifications-unread')).toBeVisible();
 });
 
 
@@ -252,7 +252,8 @@ test('vertical Golden shell keeps guest auth local and avoids a duplicate header
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByTestId('golden-mobile-search-input')).toHaveCount(0);
-  await page.getByTestId('golden-mobile-notifications-tab').click();
+  await expect(page.getByTestId('golden-mobile-categories-tab')).toBeVisible();
+  await page.getByTestId('golden-mobile-account-tab').click();
   await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible();
   await expect(page).toHaveURL(/\/motor$/);
 });
@@ -272,7 +273,7 @@ test('vertical Golden shell preserves live unread notification state', async ({ 
   await expect(page.getByTestId('golden-notifications-unread')).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByTestId('golden-mobile-notifications-unread')).toBeVisible();
+  await expect(page.getByTestId('golden-mobile-account-tab').getByTestId('golden-mobile-notifications-unread')).toBeVisible();
 });
 
 test('active marketplace location survives client navigation into a vertical route', async ({ page }) => {
