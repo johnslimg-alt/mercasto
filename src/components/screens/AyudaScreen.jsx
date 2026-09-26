@@ -143,7 +143,7 @@ export default function AyudaScreen({ shellProps = {} }) {
             <p className="font-medium">{copy.noResults} "{query}"</p>
             <p className="text-sm mt-1">
               {copy.tryOther}{' '}
-              <button type="button" onClick={() => setQuery('')} className="text-lime-600 underline">{copy.clearSearch}</button>.
+              <button type="button" onClick={() => setQuery('')} className="inline-flex min-h-12 items-center text-lime-600 underline dark:text-lime-300">{copy.clearSearch}</button>.
             </p>
           </div>
         )}
