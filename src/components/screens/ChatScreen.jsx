@@ -316,7 +316,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             aria-label={t.back}
           >
             <ArrowLeft size={20} />
@@ -337,7 +337,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
               loadConversations();
               if (selectedConversationId) loadMessages(selectedConversationId);
             }}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             aria-label={t.retry}
           >
             <RefreshCw size={19} />
@@ -431,7 +431,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
                     setConversation(null);
                     setSearchParams({}, { replace: true });
                   }}
-                  className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden"
+                  className="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden"
                   aria-label={t.back}
                 >
                   <ArrowLeft size={20} />
