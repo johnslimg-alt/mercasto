@@ -47,7 +47,10 @@ async function mockApi(page) {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/ads')) {
       const category = url.searchParams.get('category');
-      const data = category ? ads.filter(ad => ad.category === category) : ads;
+      const search = url.searchParams.get('search');
+      const data = search === 'sin-resultados'
+        ? []
+        : (category ? ads.filter(ad => ad.category === category) : ads);
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, total: data.length, current_page: 1, last_page: 1 }) });
     }
     if (url.pathname.endsWith('/category-attributes')) {
@@ -85,6 +88,34 @@ test('catalog uses the shared Golden shell and primary search', async ({ page },
   await page.getByTestId('catalog-primary-search').fill('laptop');
   await page.getByTestId('catalog-primary-search-submit').click();
   await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe('laptop');
+});
+
+test('empty catalog offers recovery actions and reset removes every filter from the URL', async ({ page }, testInfo) => {
+  await installSession(page);
+  await mockApi(page);
+  const mobile = testInfo.project.name.includes('mobile');
+  await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+  await page.goto('/listings?search=sin-resultados&category=motor&subcategory=sedan&state=Veracruz&city=Boca%20del%20R%C3%ADo&location=Boca%20del%20R%C3%ADo&lat=19.16&lng=-96.10&radius=25&min_price=100000&max_price=300000&condition=usado&filters%5Bcolor%5D=negro', { waitUntil: 'domcontentloaded' });
+
+  const empty = page.getByTestId('catalog-empty');
+  await expect(empty).toBeVisible();
+  await expect(page.getByTestId('catalog-empty-reset')).toBeVisible();
+  await expect(page.getByTestId('catalog-empty-categories')).toBeVisible();
+  await expect(page.getByTestId('catalog-empty-publish')).toBeVisible();
+
+  for (const testId of ['catalog-empty-reset', 'catalog-empty-categories', 'catalog-empty-publish']) {
+    const box = await page.getByTestId(testId).boundingBox();
+    expect(box?.height, testId).toBeGreaterThanOrEqual(48);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+
+  await page.getByTestId('catalog-empty-reset').click();
+  await expect.poll(() => {
+    const url = new URL(page.url());
+    return { pathname: url.pathname, search: url.search };
+  }).toEqual({ pathname: '/listings', search: '' });
+  await expect(page.getByTestId('catalog-primary-search')).toHaveValue('');
+  await expect(page.getByTestId('catalog-empty')).toHaveCount(0);
 });
 
 test('catalog list mode is a compact horizontal list and persists across reload', async ({ page }) => {

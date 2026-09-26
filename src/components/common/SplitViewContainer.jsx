@@ -31,6 +31,9 @@ export default function SplitViewContainer({
   adsLoadError = false,
   onAdClick,
   onRetryAds,
+  onEmptyReset,
+  onEmptyCategories,
+  onEmptyPublish,
   renderAdCard,
   title = '',
   selectedState,
@@ -353,10 +356,21 @@ export default function SplitViewContainer({
             </button>
           </div>
         ) : ads.length === 0 ? (
-          <div data-testid="catalog-empty" className="py-20 text-center flex flex-col items-center">
-            <Search size={48} className="text-slate-300 mb-4" aria-hidden="true" />
-            <span className="text-slate-400 font-bold uppercase tracking-widest text-sm">{t.no_results_found}</span>
-            <p className="text-slate-400 text-sm mt-2">{t.change_filters_or_search}</p>
+          <div data-testid="catalog-empty" className="flex flex-col items-center px-4 py-16 text-center sm:py-20">
+            <Search size={48} className="mb-4 text-slate-300" aria-hidden="true" />
+            <span className="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-300">{t.no_results_found}</span>
+            <p className="mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">{t.change_filters_or_search}</p>
+            <div className="mt-5 flex w-full max-w-xl flex-col gap-2 sm:flex-row sm:justify-center">
+              <button type="button" data-testid="catalog-empty-reset" onClick={onEmptyReset} className="min-h-12 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+                {t.clear_filters}
+              </button>
+              <button type="button" data-testid="catalog-empty-categories" onClick={onEmptyCategories} className="min-h-12 flex-1 rounded-xl border border-[#84CC16]/60 bg-[#84CC16]/10 px-4 py-2.5 text-sm font-bold text-[#365314] transition-colors hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                {t.categories}
+              </button>
+              <button type="button" data-testid="catalog-empty-publish" onClick={onEmptyPublish} className="min-h-12 flex-1 rounded-xl bg-[#84CC16] px-4 py-2.5 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D]">
+                {t.publish_btn}
+              </button>
+            </div>
           </div>
         ) : viewLayout === 'grid' ? (
           /* ═══ GRID VIEW ═══ */
