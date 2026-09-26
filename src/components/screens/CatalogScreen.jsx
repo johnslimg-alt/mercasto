@@ -30,6 +30,7 @@ export default function CatalogScreen({
   maxPrice,
   minPrice,
   onRetryAds,
+  onResetEmpty,
   onSearchArea,
   renderAdCard,
   savingSearchAlert,
@@ -472,6 +473,9 @@ export default function CatalogScreen({
             lastAdElementRef={lastAdElementRef}
             getImageUrl={getImageUrl}
             onRetryAds={onRetryAds}
+            onEmptyReset={onResetEmpty}
+            onEmptyCategories={() => navigate('/#golden-categories')}
+            onEmptyPublish={() => navigate('/post')}
             onSearchArea={area => {
               onSearchArea?.(area);
               if (!area?.suppressToast) showCatalogToast(t.search_area_applied);
