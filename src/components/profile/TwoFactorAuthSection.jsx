@@ -125,7 +125,7 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
                 type="button"
                 onClick={() => setDisableOpen(true)}
                 disabled={loading}
-                className="btn-sm bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-50"
+                className="min-h-12 sm:min-h-10 btn-sm bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-50"
               >
                 {t.disable || 'Desactivar'}
               </button>
@@ -149,7 +149,7 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
                 value={disablePassword}
                 onChange={(e) => setDisablePassword(e.target.value)}
                 placeholder={t.password || 'Contraseña'}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30"
+                className="w-full min-h-12 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30"
               />
               <div className="text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 {t.or || 'o'}
@@ -161,7 +161,7 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
                 value={disableCode}
                 onChange={(e) => setDisableCode(e.target.value.trim())}
                 placeholder={t.twofa_reauth_code || 'Código de autenticación o recuperación'}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30"
+                className="w-full min-h-12 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30"
               />
               <div className="flex justify-end gap-2">
                 <button
@@ -172,14 +172,14 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
                     setDisableCode('');
                   }}
                   disabled={loading}
-                  className="btn-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
+                  className="min-h-12 sm:min-h-10 btn-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
                 >
                   {t.cancel || 'Cancelar'}
                 </button>
                 <button
                   type="submit"
                   disabled={loading || (!disablePassword && !disableCode)}
-                  className="btn-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                  className="min-h-12 sm:min-h-10 btn-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.twofa_disable_confirm_action || t.disable || 'Desactivar')}
                 </button>
@@ -188,7 +188,7 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
           )}
         </div>
       ) : step === 'idle' ? (
-        <button onClick={startSetup} disabled={loading} className="btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
+        <button onClick={startSetup} disabled={loading} className="min-h-12 sm:min-h-10 btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.twofa_enable || 'Activar 2FA')}
         </button>
       ) : step === 'setup' ? (
@@ -207,9 +207,9 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
               onChange={(e) => setCode(e.target.value)}
               maxLength={6}
               placeholder="123456"
-              className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30"
+              className="flex-1 min-h-12 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30"
             />
-            <button type="submit" disabled={loading || code.length !== 6} className="btn-sm bg-lime-500 hover:bg-lime-600 text-white disabled:opacity-50">
+            <button type="submit" disabled={loading || code.length !== 6} className="min-h-12 sm:min-h-10 btn-sm bg-lime-500 hover:bg-lime-600 text-white disabled:opacity-50">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.verify || 'Verificar')}
             </button>
           </form>
