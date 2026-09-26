@@ -118,7 +118,7 @@ export default function PushNotificationManager({ user, compact = false, lang = 
           </div>
         </div>
         <button onClick={subscribed ? unsubscribe : subscribe} disabled={loading}
-          className={`px-4 py-2 rounded-lg font-medium transition ${subscribed ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' : 'bg-lime-500 text-white hover:bg-lime-600'} disabled:opacity-50`}>
+          className={`min-h-12 px-4 py-2 rounded-lg font-medium transition ${subscribed ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' : 'bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white'} disabled:opacity-50`}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : subscribed ? t.deactivate_alerts : t.activate}
         </button>
       </div>
@@ -148,10 +148,10 @@ export default function PushNotificationManager({ user, compact = false, lang = 
             <p className="font-medium text-lime-900 dark:text-lime-100">{copy.enabledTitle}</p>
             <p className="text-sm text-lime-700 dark:text-lime-300 mt-1">{copy.enabledDesc}</p>
             <div className="flex gap-2 mt-3">
-              <button onClick={sendTest} disabled={loading} className="px-3 py-1.5 text-sm bg-lime-500 text-white rounded-lg hover:bg-lime-600 disabled:opacity-50">
+              <button onClick={sendTest} disabled={loading} className="min-h-12 px-3 py-1.5 text-sm bg-[#84CC16] text-slate-950 rounded-lg hover:bg-[#65A30D] hover:text-white disabled:opacity-50">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : copy.sendTest}
               </button>
-              <button onClick={unsubscribe} disabled={loading} className="px-3 py-1.5 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600">{t.deactivate_alerts}</button>
+              <button onClick={unsubscribe} disabled={loading} className="min-h-12 px-3 py-1.5 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600">{t.deactivate_alerts}</button>
             </div>
           </div>
         </div>
@@ -160,17 +160,17 @@ export default function PushNotificationManager({ user, compact = false, lang = 
   }
 
   return (
-    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+    <div className="p-4 bg-lime-50 dark:bg-lime-500/10 border border-lime-200 dark:border-lime-500/30 rounded-lg">
       <div className="flex items-start gap-3">
-        <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+        <Bell className="w-5 h-5 text-lime-700 dark:text-lime-300 mt-0.5" />
         <div className="flex-1">
-          <p className="font-medium text-blue-900 dark:text-blue-100">{copy.enableTitle}</p>
-          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">{copy.enableDesc}</p>
-          <button onClick={subscribe} disabled={loading} className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2">
+          <p className="font-medium text-lime-900 dark:text-lime-100">{copy.enableTitle}</p>
+          <p className="text-sm text-lime-800 dark:text-lime-200 mt-1">{copy.enableDesc}</p>
+          <button onClick={subscribe} disabled={loading} className="mt-3 min-h-12 px-4 py-2 bg-[#84CC16] text-slate-950 rounded-lg font-bold hover:bg-[#65A30D] hover:text-white disabled:opacity-50 flex items-center gap-2">
             {loading ? (<><Loader2 className="w-4 h-4 animate-spin" />{copy.enabling}</>) : (<><Bell className="w-4 h-4" />{t.activate}</>)}
           </button>
         </div>
-        <button type="button" onClick={() => setDismissed(true)} aria-label={t.close_btn || t.close} className="text-blue-400 hover:text-blue-600"><X className="w-5 h-5" /></button>
+        <button type="button" onClick={() => setDismissed(true)} aria-label={t.close_btn || t.close} className="flex h-12 w-12 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"><X className="w-5 h-5" /></button>
       </div>
     </div>
   );
