@@ -100,8 +100,13 @@ test('mobile seller opens a first-response notification and lands in the exact c
 
   const tabbar = page.locator('.mcg-bottom-nav');
   await expect(tabbar).toBeVisible();
-  await expect(tabbar.getByTestId('golden-mobile-notifications-unread')).toBeVisible();
-  await tabbar.getByTestId('golden-mobile-notifications-tab').click();
+  const accountTab = tabbar.getByTestId('golden-mobile-account-tab');
+  await expect(accountTab.getByTestId('golden-mobile-notifications-unread')).toBeVisible();
+  await accountTab.click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await page.getByTestId('golden-mobile-account-tab').click();
+  await expect(page.getByTestId('golden-account-menu')).toBeVisible();
+  await page.getByTestId('golden-account-notifications').click();
   await expect(page).toHaveURL(/\/notificaciones$/);
   await expect(page.getByText('Comprador QA', { exact: true })).toBeVisible();
   await expect(page.getByText('Hola, sigue disponible?', { exact: true })).toBeVisible();
