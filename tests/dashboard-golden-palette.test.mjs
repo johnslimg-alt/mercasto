@@ -16,3 +16,12 @@ test('semantic status colors remain explicit', () => {
   assert.match(source, /bg-red-50/);
   assert.match(source, /from-amber-100 to-orange-100/);
 });
+
+
+test('dashboard mobile actions keep 48px touch targets', () => {
+  assert.equal(source.includes('w-7 h-7'), false, 'credit purchase control must not remain 28px');
+  assert.match(source, /dashboard-mobile-redeem-coupon[\s\S]*?min-h-12/);
+  assert.match(source, /privacy-profile-visible-switch[\s\S]*?w-12 h-12/);
+  assert.match(source, /privacy-tracking-consent-switch[\s\S]*?w-12 h-12/);
+  assert.match(source, /aria-label=\{\`\$\{star\} \/ 5\`\}[\s\S]*?h-12 w-12/);
+});
