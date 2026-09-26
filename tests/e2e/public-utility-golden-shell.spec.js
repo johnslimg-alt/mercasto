@@ -116,7 +116,8 @@ test('guest auth stays on the utility route and search remains available', async
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByTestId('golden-mobile-search-input')).toBeVisible();
-  await page.getByTestId('golden-mobile-notifications-tab').click();
+  await expect(page.getByTestId('golden-mobile-categories-tab')).toBeVisible();
+  await page.getByTestId('golden-mobile-account-tab').click();
   await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible();
   await expect(page).toHaveURL(/\/ayuda$/);
 });
@@ -151,7 +152,8 @@ test('authenticated utility shell preserves live unread notification state', asy
   await expect(page.getByTestId('golden-notifications-unread')).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByTestId('golden-mobile-notifications-unread')).toBeVisible();
+  await expect(page.getByTestId('golden-mobile-categories-tab')).toBeVisible();
+  await expect(page.getByTestId('golden-mobile-notifications-unread')).toHaveCount(0);
 });
 
 
