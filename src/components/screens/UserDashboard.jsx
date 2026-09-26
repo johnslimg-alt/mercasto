@@ -21,9 +21,9 @@ const DashboardCharts = React.lazy(() => import('./dashboard/DashboardCharts'));
 import SavedSearchesPanel from '../common/SavedSearchesPanel';
 
 // Stat Card Component
-const StatCard = ({ icon: Icon, label, value, change, trend, color = 'blue' }) => {
+const StatCard = ({ icon: Icon, label, value, change, trend, color = 'lime' }) => {
   const colorClasses = {
-    blue: 'from-blue-500 to-blue-600',
+    lime: 'from-[#84CC16] to-[#65A30D]',
     green: 'from-emerald-500 to-emerald-600',
     purple: 'from-purple-500 to-purple-600',
     orange: 'from-orange-500 to-orange-600',
@@ -61,7 +61,7 @@ const TabButton = ({ icon: Icon, label, active, onClick, count, color = 'lime', 
   const activeColors = {
     lime: 'text-lime-700 dark:text-lime-400 bg-lime-50 dark:bg-lime-500/10 border-lime-200 dark:border-lime-500/30',
     red: 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30',
-    blue: 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30',
+
     purple: 'text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/30',
   };
 
@@ -175,8 +175,8 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
           {/* Response Rate */}
           <div className="flex items-center justify-between py-3 px-4 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <div className="w-8 h-8 rounded-lg bg-lime-100 dark:bg-lime-500/10 flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-lime-700 dark:text-lime-300" />
               </div>
               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.response_rate || 'Response rate'}</span>
             </div>
@@ -211,7 +211,7 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">{t.verified_account || 'Verified'}</span>
               )}
               {hasTrustBadge && (
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 flex items-center gap-1">
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-lime-100 dark:bg-lime-500/10 text-lime-800 dark:text-lime-300 flex items-center gap-1">
                   <BadgeCheck className="w-3 h-3" /> Pro
                 </span>
               )}
@@ -577,7 +577,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 </span>
               )}
               {hasTrustBadge && (
-                <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-500/30">
+                <span className="inline-flex items-center gap-1 bg-lime-50 dark:bg-lime-500/10 text-lime-800 dark:text-lime-300 px-2 py-0.5 rounded-lg text-xs font-bold border border-lime-200 dark:border-lime-500/30">
                   <BadgeCheck size={14}/> {t.verified_seller || 'Vendedor verificado'}
                 </span>
               )}
@@ -643,7 +643,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               icon={Package}
               label={t.active_ads_count || 'Anuncios activos'}
               value={activeAds.length}
-              color="blue"
+              color="lime"
             />
             <StatCard 
               icon={Eye}
@@ -698,7 +698,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 tabId="saved_searches"
                 onClick={() => setDashboardTab('saved_searches')}
                 count={searchAlerts.length}
-                color="blue"
+                color="lime"
               />
               {accountType === 'pro' && (
                 <TabButton
