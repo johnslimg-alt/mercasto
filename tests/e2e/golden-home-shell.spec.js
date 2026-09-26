@@ -76,7 +76,11 @@ test('approved mobile home keeps one shell without horizontal overflow', async (
   await expect(page.getByTestId('golden-language-select')).toBeVisible();
   await expect(page.getByTestId('golden-theme-toggle')).toBeVisible();
   await expect(page.getByTestId('golden-mobile-search-input')).toBeVisible();
-  await expect(page.locator('.mcg-bottom-nav')).toBeVisible();
+  const bottomNav = page.getByTestId('golden-bottom-nav');
+  await expect(bottomNav).toBeVisible();
+  await expect(bottomNav.locator(':scope > a, :scope > button')).toHaveCount(5);
+  await expect(page.getByTestId('golden-mobile-categories-tab')).toBeVisible();
+  await expect(page.getByTestId('golden-mobile-notifications-tab')).toHaveCount(0);
 
   const visibleH1 = page.locator('h1:visible');
   await expect(visibleH1).toHaveCount(1);
@@ -87,6 +91,10 @@ test('approved mobile home keeps one shell without horizontal overflow', async (
 
   const visibleFooters = page.locator('footer:visible');
   await expect(visibleFooters).toHaveCount(1);
+
+  await page.getByTestId('golden-mobile-categories-tab').click();
+  await expect(page).toHaveURL(/\/#golden-categories$/);
+  await expect(page.locator('[data-golden-categories]:visible')).toBeInViewport();
 
   await page.getByTestId('golden-mobile-search-input').fill('iPhone');
   await page.getByTestId('golden-mobile-search-input').press('Enter');
