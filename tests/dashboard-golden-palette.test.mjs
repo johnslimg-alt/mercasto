@@ -5,6 +5,7 @@ import test from 'node:test';
 const source = fs.readFileSync('src/components/screens/UserDashboard.jsx', 'utf8');
 const chatSource = fs.readFileSync('src/components/screens/ChatScreen.jsx', 'utf8');
 const twoFactorSource = fs.readFileSync('src/components/profile/TwoFactorAuthSection.jsx', 'utf8');
+const pushSource = fs.readFileSync('src/components/ui/PushNotificationManager.jsx', 'utf8');
 
 test('dashboard generic chrome stays on the Mercasto Golden palette', () => {
   assert.equal(/\b(?:bg|text|border|from|to)-blue-/.test(source), false, 'generic dashboard blue tokens must not return');
@@ -45,4 +46,12 @@ test('dashboard 2FA controls inherit the 48px mobile contract', () => {
   assert.equal(twoFactorSource.includes('className="btn-sm '), false);
   assert.ok((twoFactorSource.match(/min-h-12 sm:min-h-10 btn-sm/g) || []).length >= 5);
   assert.ok((twoFactorSource.match(/min-h-12 px-3\.5 py-2\.5/g) || []).length >= 3);
+});
+
+
+test('push notification manager uses Golden palette and mobile hit targets', () => {
+  assert.equal(/\b(?:bg|text|border|from|to)-blue-/.test(pushSource), false);
+  assert.ok((pushSource.match(/min-h-12/g) || []).length >= 4);
+  assert.match(pushSource, /className="flex h-12 w-12 items-center justify-center/);
+  assert.match(pushSource, /bg-\[#84CC16\]/);
 });
